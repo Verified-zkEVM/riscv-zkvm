@@ -6,7 +6,7 @@ the Verified-zkEVM projects. It is scoped to the RV64IM surface needed by the
 [`eth-act/zkevm-standards`](https://github.com/eth-act/zkevm-standards) RISC-V
 target, with the Zicsr definitions required by Sail's extension gating.
 
-The checked-in `Out` library is generated, not hand-maintained. Its source,
+The checked-in `RiscvZkvm.Sail` library is generated, not hand-maintained. Its source,
 compiler, runtime, configuration, module scope, and content digest are pinned in
 [`sail-import/PROVENANCE.toml`](sail-import/PROVENANCE.toml). Normal consumers
 need only Lean and Lake; Sail, OCaml, CMake, and Z3 are regeneration tools.
@@ -19,13 +19,13 @@ Pin a release tag so Lake can download the prebuilt oleans:
 [[require]]
 name = "riscv-zkvm"
 git = "https://github.com/Verified-zkEVM/riscv-zkvm"
-rev = "v0.1.0"
+rev = "v0.1.1"
 ```
 
 Then import the generated root module:
 
 ```lean
-import Out
+import RiscvZkvm.Sail
 ```
 
 Each release includes `riscv-zkvm-oleans.tar.gz`. Lake downloads that archive
@@ -37,7 +37,7 @@ builds from source; cold builds require substantial memory (see maintenance).
 
 ```bash
 scripts/check-model-pin.sh
-lake build Out
+lake build RiscvZkvm.Sail
 ```
 
 The [upstream Sail RISC-V Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator)
@@ -53,7 +53,7 @@ module scope, and configuration, then optionally runs the upstream ELF tests.
 For execution only, the adapter treats extension clauses omitted by that module
 scope as disabled; this is necessary because upstream initialization probes all
 extensions. The transformation is documented in [validation](docs/validation.md)
-and never touches the proof-oriented `Out` library or its release archive.
+and never touches the proof-oriented `RiscvZkvm.Sail` library or its release archive.
 
 See [maintenance](docs/maintenance.md) for pin updates, regeneration, review,
 and release instructions, and [validation](docs/validation.md) for the trust

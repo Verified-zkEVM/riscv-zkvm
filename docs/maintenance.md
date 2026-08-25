@@ -3,7 +3,8 @@
 This repository has two layers:
 
 1. the hand-owned pins, configuration, scripts, package metadata, and docs;
-2. the machine-generated proof model in `Out.lean` and `Out/`.
+2. the machine-generated proof model in `RiscvZkvm/Sail.lean` and
+   `RiscvZkvm/Sail/`.
 
 The generated layer must change only through the regeneration script.
 
@@ -43,7 +44,7 @@ upstream emulator initialization probes every extension. The validation script
 therefore rewrites only the executable artifact's generated fallback to return
 `false`, meaning “omitted is disabled.” Review this adapter whenever upstream
 changes the scattered function or its initialization sequence. Do not apply it
-to `Out`: a proof-model scope change must instead be regenerated and reviewed.
+to `RiscvZkvm.Sail`: a proof-model scope change must instead be regenerated and reviewed.
 
 ## Regenerate
 
@@ -75,7 +76,7 @@ Then build and validate:
 ```bash
 scripts/check-model-pin.sh
 lake update Sail
-lake build Out
+lake build RiscvZkvm.Sail
 scripts/validate-lean-emulator.sh --test
 ```
 
@@ -86,7 +87,7 @@ runner can own `main`. These are validation-artifact transformations, checked
 by a full emulator build. The omitted-extension fallback described above is
 additionally exercised by the ELF suite during model initialization.
 
-A cold Lean 4.33 build is resource-intensive: `Out.RvfiDii` alone has been
+A cold Lean 4.33 build is resource-intensive: `RiscvZkvm.Sail.RvfiDii` alone has been
 observed near 14 GiB resident memory and tens of minutes of CPU time. Use a
 runner with comfortable headroom and a two-hour timeout when cutting a cache.
 This cost belongs in release production; downstream tagged consumers should
@@ -110,19 +111,19 @@ When changing Lean:
 1. update `lean-toolchain`;
 2. prove the pinned `lean-sail` runtime builds on it, or pin a reviewed fix;
 3. update `lakefile.toml` and `PROVENANCE.toml` together;
-4. regenerate and build `Out`;
+4. regenerate and build `RiscvZkvm.Sail`;
 5. run the emulator validation;
 6. cut a new `riscv-zkvm` release and update downstream pins.
 
 ## Releasing cached oleans
 
 1. Merge a green extraction commit.
-2. Create and push an annotated semver tag such as `v0.1.0`.
+2. Create and push an annotated semver tag such as `v0.1.1`.
 3. The `release-oleans.yml` workflow creates the GitHub release if needed,
-   checks out that exact tag, builds only `Out`, and uploads
+   checks out that exact tag, builds only `RiscvZkvm.Sail`, and uploads
    `riscv-zkvm-oleans.tar.gz`.
 4. In a clean consumer, pin the tag and run `lake build`. Confirm the log says
-   the release archive was downloaded and that no `Out.*` module was rebuilt.
+   the release archive was downloaded and that no `RiscvZkvm.Sail.*` module was rebuilt.
 5. Only after that update evm-asm's dependency pin.
 
 Lake uses release archives only for tagged dependencies. Pinning `main` or a raw

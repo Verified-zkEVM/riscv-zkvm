@@ -49,7 +49,7 @@ The official Sail binary release bundles Z3. Set SAIL_BIN_DIR and Z3_BIN_DIR
 to its bin directory when they are not already on PATH.
 
   $0 --check   regenerate in a temporary directory and compare
-  $0 --write   regenerate and replace Out.lean + Out/
+  $0 --write   regenerate and replace RiscvZkvm/Sail.lean + RiscvZkvm/Sail/
 EOF
   exit 0
 fi
@@ -115,19 +115,38 @@ echo ">> generate proof model (${SAIL_MODULES[*]})" >&2
     --config "$config_abs" \
     riscv.sail_project "${SAIL_MODULES[@]}" )
 
-# Sail derives the package directory directly from `-o Out`; keep this explicit
-# because changing the output name also changes the generated Lake package path.
-candidate="$candidate_parent/Out"
-[[ -f "$candidate/Out.lean" && -d "$candidate/Out" ]] || {
+# Sail derives the package directory directly from `-o Out`. Normalize that
+# backend-internal name into this package's public module/namespace after
+# generation. This transformation changes only module imports and the generated
+# `Functions` namespace; it is deterministic and covered by the model digest.
+generated_package="$candidate_parent/Out"
+[[ -f "$generated_package/Out.lean" && -d "$generated_package/Out" ]] || {
   echo "regen-model: generator did not produce expected Out package" >&2
   find "$candidate_parent" -maxdepth 2 -type f -print >&2
   exit 1
 }
+public_parent="$candidate_parent/RiscvZkvm"
+candidate_root="$public_parent/Sail.lean"
+candidate="$public_parent/Sail"
+mkdir -p "$public_parent"
+mv "$generated_package/Out.lean" "$candidate_root"
+mv "$generated_package/Out" "$candidate"
+while IFS= read -r -d '' generated_file; do
+  sed -i.bak \
+    -e 's/^import Out\./import RiscvZkvm.Sail./' \
+    -e 's/Out\.Functions/RiscvZkvm.Sail.Functions/g' \
+    "$generated_file"
+  rm -f "$generated_file.bak"
+done < <(find "$candidate_root" "$candidate" -name '*.lean' -print0)
+if grep -R -n -w Out "$candidate_root" "$candidate"; then
+  echo "regen-model: backend-internal Out name survived normalization" >&2
+  exit 1
+fi
 
 if [[ "$mode" == "--check" ]]; then
   status=0
-  diff -q "$candidate/Out.lean" Out.lean || status=1
-  diff -qr "$candidate/Out" Out || status=1
+  diff -q "$candidate_root" RiscvZkvm/Sail.lean || status=1
+  diff -qr "$candidate" RiscvZkvm/Sail || status=1
   if (( status )); then
     echo "regen-model: checked-in extraction differs from pinned regeneration" >&2
     exit 1
@@ -138,8 +157,7 @@ fi
 
 # `--write` is explicit and the targets are fixed repository paths. Validate the
 # candidate before replacing the generated tree so a failed generation is harmless.
-rm -rf "$ROOT/Out"
-cp -a "$candidate/Out" "$ROOT/Out"
-cp --remove-destination "$candidate/Out.lean" "$ROOT/Out.lean"
-echo "regen-model: replaced Out.lean and Out/ from ${SAIL_RISCV_TAG}"
+rm -rf "$ROOT/RiscvZkvm"
+cp -a "$public_parent" "$ROOT/RiscvZkvm"
+echo "regen-model: replaced RiscvZkvm/Sail.lean and RiscvZkvm/Sail/ from ${SAIL_RISCV_TAG}"
 echo "regen-model: run scripts/check-model-pin.sh --write, then review the diff"

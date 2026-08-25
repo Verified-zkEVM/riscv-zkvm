@@ -25,7 +25,7 @@ After the extraction/cache split is stable:
 4. Differentially compare instruction and memory traces with Sail's C++ emulator
    for the same source/configuration.
 5. Only then decide whether any executable definitions should be related by
-   theorem to the proof-oriented `Out` model. Do not replace proof definitions
+   theorem to the proof-oriented `RiscvZkvm.Sail` model. Do not replace proof definitions
    with computable variants merely to obtain an interpreter.
 
 Keep the interpreter as a separate target and release asset. This preserves the

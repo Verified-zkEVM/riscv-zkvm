@@ -27,4 +27,4 @@ jobs:
         run: scripts/check-model-pin.sh
 
       - name: Build proof model
-        run: lake build Out
+        run: lake build RiscvZkvm.Sail

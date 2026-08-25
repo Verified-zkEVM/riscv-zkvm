@@ -1,21 +1,19 @@
 # Scoped RV64IM Lean model extracted from riscv/sail-riscv for zkVM use.
-# `Out` is the Sail-generated library name and intentionally remains stable across
-# regenerations. The public Lake package is named after this repository.
 name = "riscv-zkvm"
-version = "0.1.0"
-defaultTargets = ["Out"]
+version = "0.1.1"
+defaultTargets = ["RiscvZkvm.Sail"]
 moreLeanArgs = ["--tstack=400000"]
 
-# Downstream users pinned to a release tag fetch the platform-independent `Out`
-# artifacts instead of rebuilding the generated model. Root builds still compile
-# from source. See docs/maintenance.md.
+# Downstream users pinned to a release tag fetch the platform-independent
+# `RiscvZkvm.Sail` artifacts instead of rebuilding the generated model. Root
+# builds still compile from source. See docs/maintenance.md.
 preferReleaseBuild = true
 releaseRepo = "https://github.com/Verified-zkEVM/riscv-zkvm"
 buildArchive = "riscv-zkvm-oleans.tar.gz"
 fixedToolchain = true
 
 [[lean_lib]]
-name = "Out"
+name = "RiscvZkvm.Sail"
 platformIndependent = true
 leanOptions.weak.linter.style.nameCheck = false
 moreLeancArgs = ["-fbracket-depth=500"]

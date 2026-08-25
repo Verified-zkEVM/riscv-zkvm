@@ -17,12 +17,12 @@ lean_sail_rev = "8d57a8b537f1a4e7cdf558c3d87a79f453bf3817"
 lean_toolchain = "leanprover/lean4:v4.33.0"
 
 [extraction]
-root_module = "Out"
+root_module = "RiscvZkvm.Sail"
 sail_modules = ["main", "I_insts", "M_insts", "Zicsr_insts"]
 config_file = "sail-import/rv64d_v256_e64.json"
 config_sha256 = "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674"
 # Rewritten after the 0.13.1 refresh by `scripts/check-model-pin.sh --write`.
-model_sha256 = "449ee6b48fa2425cb39fea5d851e8913386c3b21ef49f24a005b546c9092eca7"
+model_sha256 = "b16eec69d139a36fa3803750d7a0f4b9248f11e3d7244e71b9b8bbae231932c2"
 expected_lean_files = 116
 
 [validation]

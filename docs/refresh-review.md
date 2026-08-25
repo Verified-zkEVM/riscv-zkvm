@@ -6,7 +6,7 @@ were extracted with Sail 0.20.2, the same JSON configuration, and the same
 module scope (`main I_insts M_insts Zicsr_insts`).
 
 The refresh keeps the generated package shape stable: 116 Lean source files,
-the `Out` root library, and the lean-sail v4 runtime API. Twenty-seven generated
+the `RiscvZkvm.Sail` root library, and the lean-sail v4 runtime API. Twenty-seven generated
 files changed:
 
 ```text

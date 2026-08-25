@@ -18,6 +18,19 @@ toml_string() {
 
 CONFIG_FILE="$(toml_string config_file)"
 LEAN_SAIL_REV="$(toml_string lean_sail_rev)"
+MODEL_ROOT="$(toml_string root_module)"
+MODEL_PATH="$(printf '%s' "$MODEL_ROOT" | tr '.' '/')"
+MODEL_FILE="${MODEL_PATH}.lean"
+MODEL_DIR="$MODEL_PATH"
+
+if [[ "$MODEL_ROOT" != "RiscvZkvm.Sail" ]]; then
+  echo "check-model-pin: public root module must be RiscvZkvm.Sail, got $MODEL_ROOT" >&2
+  exit 1
+fi
+if [[ -e Out.lean || -e Out ]]; then
+  echo "check-model-pin: backend-internal Out tree must not be checked in" >&2
+  exit 1
+fi
 
 mode="${1:---check}"
 case "$mode" in
@@ -26,9 +39,13 @@ case "$mode" in
   *) echo "usage: $0 [--check | --write]" >&2; exit 2 ;;
 esac
 
-for path in "$PROVENANCE" "$CONFIG_FILE" Out.lean Out lakefile.toml lean-toolchain; do
+for path in "$PROVENANCE" "$CONFIG_FILE" "$MODEL_FILE" "$MODEL_DIR" lakefile.toml lean-toolchain; do
   [[ -e "$path" ]] || { echo "check-model-pin: missing $path" >&2; exit 1; }
 done
+if grep -R -n -w --include='*.lean' Out "$MODEL_FILE" "$MODEL_DIR"; then
+  echo "check-model-pin: backend-internal Out prefix remains in generated Lean" >&2
+  exit 1
+fi
 
 SHA_BIN=""
 for candidate in "sha256sum" "shasum -a 256" "gsha256sum"; do
@@ -47,7 +64,7 @@ fi
 compute_model_hash() {
   # Paths deliberately begin with `./`; this output format is part of the pin.
   # shellcheck disable=SC2086
-  find ./Out.lean ./Out -name '*.lean' -print0 \
+  find "./$MODEL_FILE" "./$MODEL_DIR" -name '*.lean' -print0 \
     | LC_ALL=C sort -z \
     | xargs -0 $SHA_BIN \
     | $SHA_BIN \
@@ -67,7 +84,7 @@ toml_number() {
 
 actual_model="$(compute_model_hash)"
 actual_config="$(compute_config_hash)"
-actual_count="$(find ./Out.lean ./Out -name '*.lean' | wc -l | tr -d ' ')"
+actual_count="$(find "./$MODEL_FILE" "./$MODEL_DIR" -name '*.lean' | wc -l | tr -d ' ')"
 pinned_model="$(toml_string model_sha256)"
 pinned_config="$(toml_string config_sha256)"
 pinned_count="$(toml_number expected_lean_files)"

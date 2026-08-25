@@ -111,7 +111,7 @@ generated_pkg="$build_dir/model/Lean_RV64D_executable"
 # no clauses for those extensions and the backend emits a failing catch-all.
 # Upstream initialization queries every extension, including omitted ones.
 # Totalize only the executable validation artifact by treating an omitted
-# extension as disabled. The theorem-facing `Out` extraction is never patched.
+# extension as disabled. The theorem-facing `RiscvZkvm.Sail` extraction is never patched.
 platform_config="$generated_pkg/LeanRV64DExecutable/PlatformConfig.lean"
 partial_extension_assert='      assert false "Pattern match failure at extensions/Zicsr/zicsr_insts.sail:12.0-12.69"'
 if grep -Fxq "$partial_extension_assert" "$platform_config"; then
