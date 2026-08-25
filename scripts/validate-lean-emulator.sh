@@ -71,11 +71,23 @@ fi
 # The 0.13.1 support files contain a namespace-opening line intended for a newer
 # backend. Sail 0.20.2 emits top-level declarations, so remove the same reviewed
 # compatibility line used by the proof-model extraction.
-sed -i.bak '/^open THE_MODULE_NAME\.Defs$/d' \
+for support in \
   "$source_dir/handwritten_support/RiscvExtras.lean" \
   "$source_dir/handwritten_support/RiscvExtrasExecutable.lean"
-rm -f "$source_dir/handwritten_support/RiscvExtras.lean.bak" \
-  "$source_dir/handwritten_support/RiscvExtrasExecutable.lean.bak"
+do
+  if grep -Fxq 'open THE_MODULE_NAME.Defs' "$support"; then
+    sed -i.bak '/^open THE_MODULE_NAME\.Defs$/d' "$support"
+    rm -f "$support.bak"
+  fi
+done
+# The PR #1777 wrapper targets a backend that nests declarations under `Defs`.
+# Sail 0.20.2 emits the types at the generated module's top level, so its
+# `open Defs` compatibility line must be removed alongside the support-file
+# namespace line above.
+if grep -Fxq 'open Defs' "$source_dir/lean_emulator/LeanRiscv.lean"; then
+  sed -i.bak '/^open Defs$/d' "$source_dir/lean_emulator/LeanRiscv.lean"
+  rm -f "$source_dir/lean_emulator/LeanRiscv.lean.bak"
+fi
 
 test_flag=FALSE
 [[ "$mode" == "--test" ]] && test_flag=TRUE
@@ -94,6 +106,38 @@ cmake --build "$build_dir" --target generated_lean_executable_rv64d
 
 # Align the executable validation build with this repository's Lean/runtime pins.
 generated_pkg="$build_dir/model/Lean_RV64D_executable"
+# The zkVM scope intentionally omits instruction modules such as A, H, and V.
+# `currentlyEnabled` is a scattered Sail function, so the scoped extraction has
+# no clauses for those extensions and the backend emits a failing catch-all.
+# Upstream initialization queries every extension, including omitted ones.
+# Totalize only the executable validation artifact by treating an omitted
+# extension as disabled. The theorem-facing `Out` extraction is never patched.
+platform_config="$generated_pkg/LeanRV64DExecutable/PlatformConfig.lean"
+partial_extension_assert='      assert false "Pattern match failure at extensions/Zicsr/zicsr_insts.sail:12.0-12.69"'
+if grep -Fxq "$partial_extension_assert" "$platform_config"; then
+  sed -i.bak \
+    '/^      assert false "Pattern match failure at extensions\/Zicsr\/zicsr_insts\.sail:12\.0-12\.69"$/,+1c\
+      pure false)' \
+    "$platform_config"
+  rm -f "$platform_config.bak"
+fi
+if ! sed -n '/| \.Ext_Zicsr =>/,+4p' "$platform_config" \
+  | grep -Fxq '      pure false)'
+then
+  echo "validate-lean-emulator: omitted-extension fallback was not totalized" >&2
+  exit 1
+fi
+# Sail 0.20.2 emits its own executable stub as a root-level `main`; PR #1777
+# supplies the real ELF-emulator `main`, so keep the generated helper under a
+# non-conflicting validation-only name.
+if grep -Fxq 'def main (_ : List String) : IO UInt32 := do' \
+  "$generated_pkg/LeanRV64DExecutable.lean"
+then
+  sed -i.bak \
+    's/^def main (_ : List String) : IO UInt32 := do$/def sailGeneratedMain (_ : List String) : IO UInt32 := do/' \
+    "$generated_pkg/LeanRV64DExecutable.lean"
+  rm -f "$generated_pkg/LeanRV64DExecutable.lean.bak"
+fi
 sed -i -E "s|^(git[[:space:]]*=[[:space:]]*)\"[^\"]+\"|\1\"${LEAN_SAIL_REPO}\"|" \
   "$generated_pkg/lakefile.toml"
 sed -i -E "s|^(rev[[:space:]]*=[[:space:]]*)\"[^\"]+\"|\1\"${LEAN_SAIL_REV}\"|" \

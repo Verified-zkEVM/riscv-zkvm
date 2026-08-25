@@ -29,3 +29,5 @@ expected_lean_files = 116
 lean_emulator_upstream_pr = 1777
 lean_emulator_first_release = "0.13"
 notes = "The executable Lean emulator is a validation artifact and is not included in the proof-model release archive."
+omitted_extension_policy = "Executable validation only: extensions omitted by sail_modules are treated as disabled; the theorem-facing extraction remains unchanged."
+last_elf_validation = "2026-08-25: 50/50 selected rv64ui-p tests passed"

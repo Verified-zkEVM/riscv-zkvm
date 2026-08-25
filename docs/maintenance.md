@@ -36,6 +36,15 @@ module clauses, and omitting this module changed unrelated execution through the
 fallback arm. Scope changes therefore require semantic review, not just a file
 count comparison.
 
+Even with `Zicsr_insts`, the scoped model intentionally has no
+`currentlyEnabled` clauses for excluded extensions such as A, H, or V. That is
+harmless for theorem-facing instruction definitions that never query them, but
+upstream emulator initialization probes every extension. The validation script
+therefore rewrites only the executable artifact's generated fallback to return
+`false`, meaning “omitted is disabled.” Review this adapter whenever upstream
+changes the scattered function or its initialization sequence. Do not apply it
+to `Out`: a proof-model scope change must instead be regenerated and reviewed.
+
 ## Regenerate
 
 Use the official Sail binary release where possible; it bundles a compatible
@@ -69,6 +78,13 @@ lake update Sail
 lake build Out
 scripts/validate-lean-emulator.sh --test
 ```
+
+The emulator command also applies two Sail-0.20.2 compatibility adaptations to
+the upstream PR #1777 wrapper: generated definitions are top-level rather than
+under `Defs`, and the backend's generated CLI stub must be renamed so the ELF
+runner can own `main`. These are validation-artifact transformations, checked
+by a full emulator build. The omitted-extension fallback described above is
+additionally exercised by the ELF suite during model initialization.
 
 A cold Lean 4.33 build is resource-intensive: `Out.RvfiDii` alone has been
 observed near 14 GiB resident memory and tens of minutes of CPU time. Use a

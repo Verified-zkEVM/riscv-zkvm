@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Made the PR #1777 emulator wrapper compatible with the pinned Sail 0.20.2
+  output and documented its executable-only adaptations.
+- Defined omitted extension clauses as disabled in the executable validator;
+  the scoped emulator now builds and passes all 50 selected RV64I ELF tests.
+
 ## v0.1.0 — initial standalone release
 
 - Split the proof-oriented `Out` extraction from EvmAsm into its own package.

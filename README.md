@@ -51,7 +51,10 @@ scripts/validate-lean-emulator.sh --test
 
 This builds an executable extraction from the same pinned Sail RISC-V source,
 module scope, and configuration, then optionally runs the upstream ELF tests.
-It is intentionally separate from the proof-oriented `Out` release archive.
+For execution only, the adapter treats extension clauses omitted by that module
+scope as disabled; this is necessary because upstream initialization probes all
+extensions. The transformation is documented in [validation](docs/validation.md)
+and never touches the proof-oriented `Out` library or its release archive.
 
 See [maintenance](docs/maintenance.md) for pin updates, regeneration, review,
 and release instructions, and [validation](docs/validation.md) for the trust

@@ -19,6 +19,24 @@ the upstream executable extraction and emulator, and optionally runs those ELF
 tests. The executable extraction is a validation artifact; it is not imported by
 the theorem-facing `Out` library and is not packed into release oleans.
 
+## Scoped-model execution adapter
+
+The selected Sail modules deliberately exclude extensions such as A, H, and V.
+Because `currentlyEnabled` is a scattered function, their clauses are absent
+from the generated model. Sail 0.20.2 represents an omitted clause as a failing
+catch-all, while PR #1777's emulator initialization queries every extension.
+
+The validation script totalizes that catch-all in the executable artifact as
+`pure false`: an extension omitted from the zkVM scope is disabled. It also
+removes two obsolete `Defs` namespace openings and renames Sail's generated CLI
+stub so the PR #1777 ELF runner can provide `main`. None of these compatibility
+adaptations modify `Out`, its provenance digest, or release oleans.
+
+This is an explicit validation assumption, not a theorem equating the two
+backend modes. If a future Sail release provides a native scoped-model default,
+delete the adapter and review the resulting behavior instead of preserving the
+textual rewrite by habit.
+
 ## Commands
 
 ```bash
@@ -33,6 +51,9 @@ The script accepts `VALIDATION_DIR` to preserve a build between runs. It also
 honours `SAIL_BIN_DIR` and `Z3_BIN_DIR`. The official Sail binary distribution
 bundles both tools.
 
+The 0.13.1 refresh was exercised locally on 2026-08-25: the emulator built with
+Sail 0.20.2 and all 50 selected `rv64ui-p-*` ELF tests passed.
+
 ## What a pass establishes
 
 A pass provides evidence that the executable output of the pinned Sail→Lean
@@ -41,6 +62,8 @@ does not prove:
 
 - that Sail itself is a perfect specification of hardware;
 - that the proof-oriented and executable backend modes are identical;
+- that the executable-only omitted-extension adapter matches the partial
+  theorem-facing fallback in all contexts;
 - that untested instructions or platform hooks are correct;
 - that evm-asm's hand-written state projection is correct.
 
