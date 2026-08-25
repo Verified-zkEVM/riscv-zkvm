@@ -26,7 +26,7 @@ model_sha256 = "449ee6b48fa2425cb39fea5d851e8913386c3b21ef49f24a005b546c9092eca7
 expected_lean_files = 116
 
 [validation]
-lean_emulator_upstream_pr = 1777
+lean_emulator_source = "https://github.com/riscv/sail-riscv/tree/main/lean_emulator"
 lean_emulator_first_release = "0.13"
 notes = "The executable Lean emulator is a validation artifact and is not included in the proof-model release archive."
 omitted_extension_policy = "Executable validation only: extensions omitted by sail_modules are treated as disabled; the theorem-facing extraction remains unchanged."

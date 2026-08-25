@@ -40,9 +40,8 @@ scripts/check-model-pin.sh
 lake build Out
 ```
 
-The upstream Lean emulator added by
-[`sail-riscv` PR #1777](https://github.com/riscv/sail-riscv/pull/1777) is exposed
-as a validation path:
+The [upstream Sail RISC-V Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator)
+is exposed as a validation path:
 
 ```bash
 scripts/validate-lean-emulator.sh --build

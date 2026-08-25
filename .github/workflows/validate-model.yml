@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       run_emulator_tests:
-        description: Build the PR #1777 emulator and run its ELF tests
+        description: Build the upstream Lean emulator and run its ELF tests
         required: true
         default: false
         type: boolean

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build the executable Lean extraction and emulator added upstream by
-# riscv/sail-riscv#1777, using this repository's pinned source and module scope.
+# Build Sail RISC-V's executable Lean extraction and emulator using this
+# repository's pinned source and module scope.
 
 set -euo pipefail
 
@@ -80,7 +80,7 @@ do
     rm -f "$support.bak"
   fi
 done
-# The PR #1777 wrapper targets a backend that nests declarations under `Defs`.
+# The upstream emulator wrapper targets a backend that nests declarations under `Defs`.
 # Sail 0.20.2 emits the types at the generated module's top level, so its
 # `open Defs` compatibility line must be removed alongside the support-file
 # namespace line above.
@@ -127,7 +127,7 @@ then
   echo "validate-lean-emulator: omitted-extension fallback was not totalized" >&2
   exit 1
 fi
-# Sail 0.20.2 emits its own executable stub as a root-level `main`; PR #1777
+# Sail 0.20.2 emits its own executable stub as a root-level `main`; the emulator
 # supplies the real ELF-emulator `main`, so keep the generated helper under a
 # non-conflicting validation-only name.
 if grep -Fxq 'def main (_ : List String) : IO UInt32 := do' \

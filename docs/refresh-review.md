@@ -27,7 +27,7 @@ Review these files as generated output, grouped by semantic concern:
 
 The content digest in `sail-import/PROVENANCE.toml` pins the reviewed result.
 `scripts/regen-model.sh --check` independently reproduces it. EvmAsm's
-`Rv64/SailEquiv` build is the downstream compatibility gate. The PR #1777 Lean
+`Rv64/SailEquiv` build is the downstream compatibility gate. The upstream Lean
 emulator also built from this pin and passed all 50 selected RV64I ELF tests on
 2026-08-25, using the documented executable-only rule that omitted extension
 clauses are disabled.

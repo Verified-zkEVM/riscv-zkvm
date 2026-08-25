@@ -80,7 +80,7 @@ scripts/validate-lean-emulator.sh --test
 ```
 
 The emulator command also applies two Sail-0.20.2 compatibility adaptations to
-the upstream PR #1777 wrapper: generated definitions are top-level rather than
+the upstream Lean emulator wrapper: generated definitions are top-level rather than
 under `Defs`, and the backend's generated CLI stub must be renamed so the ELF
 runner can own `main`. These are validation-artifact transformations, checked
 by a full emulator build. The omitted-extension fallback described above is

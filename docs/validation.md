@@ -5,8 +5,9 @@ backend. Pinning makes changes visible and reproducible, but it does not prove
 the backend faithful. Executing the independently generated model against
 architecture tests is the practical mitigation.
 
-Sail RISC-V 0.13 added a Lean emulator in
-[`riscv/sail-riscv#1777`](https://github.com/riscv/sail-riscv/pull/1777). It:
+Sail RISC-V 0.13 added an
+[upstream Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator).
+It:
 
 - generates an executable Lean model from Sail;
 - loads RISC-V ELF files through `ELFSage`;
@@ -24,12 +25,12 @@ the theorem-facing `Out` library and is not packed into release oleans.
 The selected Sail modules deliberately exclude extensions such as A, H, and V.
 Because `currentlyEnabled` is a scattered function, their clauses are absent
 from the generated model. Sail 0.20.2 represents an omitted clause as a failing
-catch-all, while PR #1777's emulator initialization queries every extension.
+catch-all, while the emulator's initialization queries every extension.
 
 The validation script totalizes that catch-all in the executable artifact as
 `pure false`: an extension omitted from the zkVM scope is disabled. It also
 removes two obsolete `Defs` namespace openings and renames Sail's generated CLI
-stub so the PR #1777 ELF runner can provide `main`. None of these compatibility
+stub so the upstream ELF runner can provide `main`. None of these compatibility
 adaptations modify `Out`, its provenance digest, or release oleans.
 
 This is an explicit validation assumption, not a theorem equating the two

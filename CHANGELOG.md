@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Made the PR #1777 emulator wrapper compatible with the pinned Sail 0.20.2
+- Made the upstream Lean emulator wrapper compatible with the pinned Sail 0.20.2
   output and documented its executable-only adaptations.
 - Defined omitted extension clauses as disabled in the executable validator;
   the scoped emulator now builds and passes all 50 selected RV64I ELF tests.
@@ -16,5 +16,5 @@
   `M_insts`, and `Zicsr_insts`.
 - Added reproducibility hashes, documented regeneration and release procedures,
   and platform-independent Lake release archives.
-- Exposed the executable Lean emulator introduced by `sail-riscv` PR #1777 as
+- Exposed the executable Lean emulator shipped with `sail-riscv` as
   an opt-in ELF validation workflow, separate from the proof model.
