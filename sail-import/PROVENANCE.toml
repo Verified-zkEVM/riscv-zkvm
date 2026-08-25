@@ -1,0 +1,31 @@
+# Reproducibility record for the checked-in Sail RISC-V Lean extraction.
+# Update version/revision/scope fields deliberately, regenerate, then use
+# `scripts/check-model-pin.sh --write` to refresh only the digest fields.
+
+[source]
+sail_riscv_repo = "https://github.com/riscv/sail-riscv.git"
+sail_riscv_tag = "0.13.1"
+sail_riscv_rev = "27224ccb2290f022e46213c05b3e72e8a9ea635e"
+sail_compiler_version = "0.20.2"
+sail_compiler_rev = "3b7af38d66466ecadad563158b07ce2f82fe05da"
+
+[runtime]
+# Sail 0.20.2 emits code for lean-sail v4. The dhsorens revision is upstream v4
+# (79b4d08) plus the two-line Lean >=4.32 dependent-match elaborator fix.
+lean_sail_repo = "https://github.com/dhsorens/lean-sail"
+lean_sail_rev = "8d57a8b537f1a4e7cdf558c3d87a79f453bf3817"
+lean_toolchain = "leanprover/lean4:v4.33.0"
+
+[extraction]
+root_module = "Out"
+sail_modules = ["main", "I_insts", "M_insts", "Zicsr_insts"]
+config_file = "sail-import/rv64d_v256_e64.json"
+config_sha256 = "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674"
+# Rewritten after the 0.13.1 refresh by `scripts/check-model-pin.sh --write`.
+model_sha256 = "449ee6b48fa2425cb39fea5d851e8913386c3b21ef49f24a005b546c9092eca7"
+expected_lean_files = 116
+
+[validation]
+lean_emulator_upstream_pr = 1777
+lean_emulator_first_release = "0.13"
+notes = "The executable Lean emulator is a validation artifact and is not included in the proof-model release archive."

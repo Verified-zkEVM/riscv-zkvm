@@ -1,0 +1,51 @@
+name: Regenerate and validate model
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_emulator_tests:
+        description: Build the PR #1777 emulator and run its ELF tests
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+
+      - name: Install official Sail binary and bundled Z3
+        run: |
+          mkdir -p "$RUNNER_TEMP/sail"
+          curl -L \
+            https://github.com/rems-project/sail/releases/download/0.20.2-binary/sail-Linux-x86_64.tar.gz \
+            -o "$RUNNER_TEMP/sail.tar.gz"
+          tar xzf "$RUNNER_TEMP/sail.tar.gz" -C "$RUNNER_TEMP/sail" --strip-components=1
+          echo "$RUNNER_TEMP/sail/bin" >> "$GITHUB_PATH"
+
+      - name: Reproduce checked-in proof extraction
+        env:
+          SAIL_BIN_DIR: ${{ runner.temp }}/sail/bin
+          Z3_BIN_DIR: ${{ runner.temp }}/sail/bin
+        run: scripts/regen-model.sh --check
+
+      - name: Build and test executable Lean emulator
+        if: ${{ inputs.run_emulator_tests }}
+        env:
+          SAIL_BIN_DIR: ${{ runner.temp }}/sail/bin
+          Z3_BIN_DIR: ${{ runner.temp }}/sail/bin
+        run: scripts/validate-lean-emulator.sh --test

@@ -1,0 +1,79 @@
+# Attach platform-independent Out oleans to each GitHub release. Lake downloads
+# this archive automatically for consumers pinned to the release tag.
+name: Release prebuilt oleans
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build or backfill
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish-oleans:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tag
+        id: resolve
+        run: |
+          case "${{ github.event_name }}" in
+            workflow_dispatch) tag='${{ inputs.tag }}' ;;
+            push) tag='${{ github.ref_name }}' ;;
+          esac
+          test -n "$tag" || { echo "::error::could not resolve release tag"; exit 1; }
+          git fetch --tags --force --quiet
+          git rev-parse -q --verify "refs/tags/$tag" >/dev/null \
+            || { echo "::error::tag '$tag' does not exist"; exit 1; }
+          git checkout --quiet "refs/tags/$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Create release if needed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag='${{ steps.resolve.outputs.tag }}'
+          gh release view "$tag" >/dev/null 2>&1 \
+            || gh release create "$tag" --verify-tag --title "$tag" --generate-notes
+
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+
+      - name: Build only the platform-independent library
+        run: |
+          rm -rf .lake/build
+          lake build Out
+
+      - name: Pack and attach archive
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: lake upload "${{ steps.resolve.outputs.tag }}"
+
+      - name: Report archive
+        run: |
+          archive=.lake/riscv-zkvm-oleans.tar.gz
+          test -f "$archive"
+          {
+            echo "### riscv-zkvm oleans for \`${{ steps.resolve.outputs.tag }}\`"
+            echo
+            echo "- Archive size: $(du -h "$archive" | cut -f1)"
+            echo "- Entries: $(tar tzf "$archive" | wc -l | tr -d ' ')"
+            echo "- .olean files: $(tar tzf "$archive" | grep -c '\.olean$')"
+          } >> "$GITHUB_STEP_SUMMARY"
