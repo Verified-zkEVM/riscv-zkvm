@@ -93,7 +93,7 @@ jobs:
           cd "$consumer"
           {
             lake update
-            lake build
+            lake build CacheSmoke
           } 2>&1 | tee build.log
           if grep -Eq 'Built RiscvZkvm\.Sail(\.| )' build.log; then
             echo "::error::tagged consumer rebuilt the generated Sail model"
