@@ -10,11 +10,15 @@ Change the upstream pin, module scope, config, or regeneration tooling; run
 
 ## Required checks
 
-Run these before submitting changes:
+Run these before submitting changes. `.github/workflows/build.yml` runs the same
+set, in this order.
 
 ```bash
-scripts/check-model-pin.sh
+scripts/check-model-pin.sh            # generated tree matches PROVENANCE.toml
+scripts/check-forbidden-tactics.sh    # no native_decide / bv_decide anywhere
+scripts/check-unimported.py           # hand-owned Lean reachable from a root
 lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Interpreter
+scripts/check-axioms.sh               # kernel truth: only documented axioms
 ```
 
 For an interpreter or machine-model change, also run:
@@ -22,7 +26,17 @@ For an interpreter or machine-model change, also run:
 ```bash
 lake build RiscvZkvm.Interpreter.DecodeTests
 lake build riscv-zkvm-run && scripts/run-interpreter-tests.sh
+scripts/check-no-warnings.sh          # builds and checks its own log
 ```
+
+Each gate takes `--report` to print its census and exit 0.
+
+`scripts/check-axioms.sh` is the load-bearing one: it walks every declaration
+under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` (1946 of them today) and
+fails on any axiom outside the seven `docs/validation.md` documents. If a Sail
+pin bump adds a platform axiom, update `scripts/AxiomSweep.lean`'s
+`allowedAxioms` and that document in the same change -- the list is the
+machine-readable form of the prose.
 
 For a pin or extraction change, also run:
 

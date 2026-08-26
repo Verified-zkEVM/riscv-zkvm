@@ -18,6 +18,10 @@
 - Release archive now carries all four libraries, so downstream consumers pinned
   to this tag rebuild none of them. The release job asserts no platform-specific
   output is packed.
+- Added four CI gates ported from evm-asm, now that the model they guard lives
+  here: a forbidden-tactic scan (`native_decide` / `bv_decide`, covering the
+  generated tree as well), a kernel-truth axiom sweep over all 1946 hand-owned
+  declarations, a no-warnings guard, and an unimported-file check.
 - Documented four known gaps in `docs/validation.md`, each pinned by a test: the
   `riscv-tests` corpus cannot run against this model (memory map and unmodeled
   CSR access), the RV64 word-op family is missing from `Instr`, `decode` is not

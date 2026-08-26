@@ -110,7 +110,7 @@ private def regsOf (m : MachineState) : Array Word :=
     `pc`. `RiscvZkvm.Interpreter.Run` classifies which. -/
 def stepExec (e : ExecState) : Option ExecState :=
   let m := e.toMachineState
-  match h : step m with
+  match step m with
   | none => none
   | some m' =>
     let touched := writtenAddrs m

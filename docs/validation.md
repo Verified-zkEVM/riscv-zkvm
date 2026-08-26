@@ -137,3 +137,27 @@ closing it has to be a deliberate edit.
 Gaps 3 and 4 mean interpreter results are evidence about the executable path.
 They are not, on their own, evidence about the model the `SailEquiv` theorems
 talk about.
+
+## The trusted axiom base, and what enforces it
+
+Every declaration under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` rests on
+exactly seven axioms:
+
+| Axiom | Source |
+|---|---|
+| `propext`, `Classical.choice`, `Quot.sound` | Lean's three classical axioms |
+| `load_reservation`, `match_reservation`, `plat_term_write`, `sys_enable_experimental_extensions` | Sail platform axioms from the generated extraction |
+
+Two CI gates keep it that way:
+
+* `scripts/check-forbidden-tactics.sh` — a source scan rejecting `native_decide`
+  and `bv_decide`, which would seal results behind a native-compiler trust axiom
+  instead of a kernel-checked proof term. It covers the **generated**
+  `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
+  `bv_decide` fails the build rather than silently widening the base.
+* `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
+  environment (1946 declarations today) and fails on any axiom outside the table
+  above, including `sorryAx`.
+
+The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the
+machine-readable form of this table; change the two together.

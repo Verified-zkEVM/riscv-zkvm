@@ -54,7 +54,7 @@ def parseArgs (args : List String) : Except String Options := do
       | a :: _ => throw s!"unrecognised argument '{a}'\n\n{usage}"
     return o
 
-private def hex (w : Word) : String := s!"0x{(Nat.toDigits 16 w.toNat).asString}"
+private def hex (w : Word) : String := s!"0x{String.ofList (Nat.toDigits 16 w.toNat)}"
 
 private def describe (s : Stop) : String :=
   match s with
@@ -62,7 +62,7 @@ private def describe (s : Stop) : String :=
   | .trap .misalignedAccess => "trap: misaligned memory access"
   | .trap .other => "trap"
   | .undecodable w =>
-      s!"undecodable instruction 0x{(Nat.toDigits 16 w.toNat).asString} \
+      s!"undecodable instruction 0x{String.ofList (Nat.toDigits 16 w.toNat)} \
         (not modeled by RiscvZkvm.Rv64.Instr)"
   | .noInstruction => "no instruction at pc (ran off the end of the image)"
   | .outOfFuel => "out of fuel"

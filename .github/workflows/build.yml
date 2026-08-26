@@ -23,22 +23,16 @@ jobs:
           use-github-cache: true
           use-mathlib-cache: false
 
+      # --- source-level gates (no build required) ---------------------------
+
       - name: Verify generated-source pins
         run: scripts/check-model-pin.sh
 
-      # The four published libraries. `riscv-zkvm-run` is built separately below:
-      # it must never be present when the release job packs the archive.
-      - name: Build proof model
-        run: lake build RiscvZkvm.Sail
+      - name: Forbidden-tactic guard (no native_decide / bv_decide)
+        run: scripts/check-forbidden-tactics.sh
 
-      - name: Build machine model and Sail equivalence
-        run: lake build RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv
-
-      - name: Build interpreter
-        run: lake build RiscvZkvm.Interpreter
-
-      - name: Check decoder against known encodings
-        run: lake build RiscvZkvm.Interpreter.DecodeTests
+      - name: Unimported-file check (hand-owned Lean reachable from a root)
+        run: scripts/check-unimported.py
 
       - name: Confirm the package stays Mathlib-free
         run: |
@@ -53,6 +47,29 @@ jobs:
               print(f"::error::expected exactly one dependency (Sail), got {names}")
               sys.exit(1)
           EOF
+
+      # --- builds -----------------------------------------------------------
+      #
+      # The four published libraries. `riscv-zkvm-run` and `axiomsweep` are built
+      # further down: they are platform-specific output and must never be present
+      # when the release job packs the archive.
+
+      - name: Build proof model
+        run: lake build RiscvZkvm.Sail
+
+      - name: Build machine model, Sail equivalence, and interpreter
+        run: |
+          lake build RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Interpreter \
+            RiscvZkvm.Interpreter.DecodeTests 2>&1 | tee build.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: No-warnings guard (hand-owned Lean sources)
+        run: scripts/check-no-warnings.sh build.log
+
+      # --- post-build gates -------------------------------------------------
+
+      - name: Axiom sweep (kernel truth; fails on any undocumented axiom)
+        run: scripts/check-axioms.sh
 
       - name: Run the interpreter end to end
         run: |

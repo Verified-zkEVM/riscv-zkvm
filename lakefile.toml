@@ -50,6 +50,15 @@ platformIndependent = true
 name = "riscv-zkvm-run"
 root = "MainRun"
 
+# Kernel-truth axiom gate over the hand-owned libraries. Runtime-imports the
+# built oleans, so run it after `lake build`. Like the runner, it is
+# platform-specific output and must not be built in the release job.
+[[lean_exe]]
+name = "axiomsweep"
+srcDir = "scripts"
+root = "AxiomSweep"
+supportInterpreter = true
+
 # lean-sail v4 (79b4d08) + a 2-line fix for the Lean >= v4.32 do-elaborator
 # (readRegRef/writeRegRef dependent match), pinned on the dhsorens fork's
 # v4-lean4.33 branch. Upstream main (v5) restructured past what the vendored
