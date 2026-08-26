@@ -26,5 +26,35 @@ jobs:
       - name: Verify generated-source pins
         run: scripts/check-model-pin.sh
 
+      # The four published libraries. `riscv-zkvm-run` is built separately below:
+      # it must never be present when the release job packs the archive.
       - name: Build proof model
         run: lake build RiscvZkvm.Sail
+
+      - name: Build machine model and Sail equivalence
+        run: lake build RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv
+
+      - name: Build interpreter
+        run: lake build RiscvZkvm.Interpreter
+
+      - name: Check decoder against known encodings
+        run: lake build RiscvZkvm.Interpreter.DecodeTests
+
+      - name: Confirm the package stays Mathlib-free
+        run: |
+          if grep -rn '^ *\(public \)\?import Mathlib' RiscvZkvm/; then
+            echo "::error::RiscvZkvm must not depend on Mathlib"
+            exit 1
+          fi
+          python3 - <<'EOF'
+          import json, sys
+          names = [p["name"] for p in json.load(open("lake-manifest.json"))["packages"]]
+          if names != ["Sail"]:
+              print(f"::error::expected exactly one dependency (Sail), got {names}")
+              sys.exit(1)
+          EOF
+
+      - name: Run the interpreter end to end
+        run: |
+          lake build riscv-zkvm-run
+          scripts/run-interpreter-tests.sh

@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.2.0 — the computable model, its Sail tie, and an interpreter
+
+- Relocated EvmAsm's computable RV64IM machine model here as `RiscvZkvm.Rv64`
+  (`Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`, ZisK accelerator CSR
+  semantics), and its Sail equivalence proofs as `RiscvZkvm.Rv64.SailEquiv`
+  (51 per-instruction `*_sail_equiv` theorems plus the step/run simulations).
+  Semantics are carried over verbatim; the trusted axiom base is unchanged.
+- Kept the package Mathlib-free: the relocated proofs needed four Mathlib names
+  (`set`, `by_contra`, `eq_or_ne`, `le_trans`) and two `ByteOps` lemmas, all of
+  which now have core-only stand-ins. `lean-sail` remains the only dependency,
+  and CI enforces it.
+- Added `RiscvZkvm.Interpreter` and the `riscv-zkvm-run` CLI: RV64IM instruction
+  decode, a self-contained ELF64 reader, an efficiently-updatable machine state,
+  and a fuel-limited driver. Instruction semantics are not redefined — execution
+  goes through `RiscvZkvm.Rv64.step`.
+- Release archive now carries all four libraries, so downstream consumers pinned
+  to this tag rebuild none of them. The release job asserts no platform-specific
+  output is packed.
+- Documented four known gaps in `docs/validation.md`, each pinned by a test: the
+  `riscv-tests` corpus cannot run against this model (memory map and unmodeled
+  CSR access), the RV64 word-op family is missing from `Instr`, `decode` is not
+  tied to Sail, and `stepExec` is not proved to simulate `step`.
+
 ## v0.1.1 — explicit generated module name
 
 - Renamed the generated library and namespace from the backend-default name to

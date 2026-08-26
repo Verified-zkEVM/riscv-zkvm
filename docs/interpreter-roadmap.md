@@ -1,34 +1,62 @@
 # Interpreter roadmap
 
-The repository should eventually expose a RISC-V interpreter, but not as part
-of the v0.1 proof-model boundary.
+The v0.1 plan was to build an interpreter later, on top of the *executable* Sail
+extraction. That is not what happened, and this page records why and what
+replaced it.
 
-The [upstream Sail RISC-V Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator)
-is already the right first
-validation tool: it executes an independently generated, computable Sail→Lean
-model over ELF files. `scripts/validate-lean-emulator.sh` makes that exact path
-available today without adding executable definitions, `ELFSage`, or CLI code
-to the cached theorem dependency consumed by EvmAsm.
+## What shipped in v0.2.0
 
-## Recommended next increment
+The computable RV64IM model EvmAsm had already built and proved against Sail was
+moved here instead:
 
-After the extraction/cache split is stable:
+| Library | Contents |
+|---|---|
+| `RiscvZkvm.Rv64` | `Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`, the ZisK accelerator CSR semantics |
+| `RiscvZkvm.Rv64.SailEquiv` | 51 per-instruction `*_sail_equiv` theorems, `sailStep_run_sim`, `sailStepN_run_sim` |
+| `RiscvZkvm.Interpreter` | instruction decode, ELF64 loading, executable state, fuel-limited driver |
+| `riscv-zkvm-run` | the CLI |
 
-1. Add a separate Lake library and executable, for example `RiscvZkvm.Interpreter`
-   and `riscv-zkvm-run`, backed by the executable extraction.
-2. Wrap upstream CLI state in a small API that accepts an ELF image, initial
-   memory/platform configuration, and a fuel or step limit, and returns a typed
-   halt/trap/timeout result plus an optional trace.
-3. Pin conformance fixtures and run the upstream Lean emulator's ELF suite in CI. Add RV64M,
-   misalignment, trap, and zkVM memory-layout cases missing from its current
-   RV64I-focused selection.
-4. Differentially compare instruction and memory traces with Sail's C++ emulator
-   for the same source/configuration.
-5. Only then decide whether any executable definitions should be related by
-   theorem to the proof-oriented `RiscvZkvm.Sail` model. Do not replace proof definitions
-   with computable variants merely to obtain an interpreter.
+This is better than building on the executable Sail extraction would have been:
+the model that runs is the same definition the equivalence theorems relate to
+the specification, rather than a third artifact needing its own tie.
 
-Keep the interpreter as a separate target and release asset. This preserves the
-small dependency surface and platform-independent `.olean` cache for EvmAsm,
-while allowing the interpreter to carry `ELFSage`, native executables, test
-ELFs, and platform code on its own cadence.
+The interpreter deliberately does not define instruction semantics. It supplies
+an efficient memory representation and an ELF loader, and calls
+`RiscvZkvm.Rv64.step`. See `RiscvZkvm/Interpreter/State.lean`.
+
+## What is still open
+
+In rough priority order. The first two are the load-bearing ones — until they
+are closed, interpreter results are evidence about the executable path only.
+
+1. **Prove `stepExec` simulates `step`.** `ExecState.toMachineState` states the
+   refinement. The missing lemma is that `writtenAddrs` covers every cell `step`
+   can change, from which the hash-map and function memories stay in step by
+   induction.
+2. **Tie `decode` to Sail.** `decode w = some i` should imply that Sail's
+   `encdec_backwards w` yields the corresponding `ast`, composed with
+   `SailEquiv.InstrMap`'s existing `toSailInstr?` / `fromSailInstr?` bridge.
+   This cannot be tested — `encdec_backwards` is `noncomputable` — so it has to
+   be a theorem.
+3. **Close the RV64 word-op gap.** Add `ADDW SUBW SLLW SRLW SRAW SLLIW SRLIW
+   SRAIW MULW DIVW DIVUW REMW REMUW` to `Instr`, their semantics, decoder arms,
+   and `*_sail_equiv` lemmas. Additive to `Instr`, so it does not disturb
+   existing proofs — but it does trip EvmAsm's
+   `scripts/check-roundtrip-coverage.sh` ratchet, which wants a round-trip guard
+   per constructor.
+4. **Model general CSR access**, or decide deliberately not to. Without it the
+   `riscv-tests` corpus cannot run here at all (see `docs/validation.md`), and
+   the model's only CSR form stays the ZisK accelerator call.
+5. **Differential traces against Sail's C++ emulator** for the same source and
+   configuration, as originally planned.
+
+## What deliberately did not happen
+
+- **No memory-map profile switch.** It would have let `riscv-tests` images load,
+  but only by admitting data accesses to `[0x80000000, 0xa0000000)` — an
+  exclusion `RiscvZkvm/Rv64/Word.lean` documents as load-bearing for soundness.
+  A conformance pass obtained by relaxing the thing under test is not evidence.
+- **No ELFSage dependency.** Its pinned revision targets Lean v4.28.0-rc1 and
+  its `main` branch has not moved since 2024. A ~250-line ELF64 reader keeps
+  `lean-sail` this package's only dependency.
+- **No re-implementation of instruction semantics.** See above.
