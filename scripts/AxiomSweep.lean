@@ -37,7 +37,8 @@ def scanPrefixes : List Name := [`RiscvZkvm.Rv64, `RiscvZkvm.Interpreter]
     the full `RiscvZkvm.Sail` root would drag in the very expensive `RvfiDii`
     module for no benefit here. -/
 def scanModules : Array Import :=
-  #[{ module := `RiscvZkvm.Rv64.SailEquiv }, { module := `RiscvZkvm.Interpreter }]
+  #[{ module := `RiscvZkvm.Rv64.SailEquiv }, { module := `RiscvZkvm.Rv64.Logic },
+    { module := `RiscvZkvm.Interpreter }]
 
 /-- The axioms this project accepts, and why.
 

@@ -95,17 +95,17 @@ jobs:
 
       # --- builds -----------------------------------------------------------
       #
-      # The four published libraries. `riscv-zkvm-run` and `axiomsweep` are built
+      # The five published libraries. `riscv-zkvm-run` and `axiomsweep` are built
       # further down: they are platform-specific output and must never be present
       # when the release job packs the archive.
 
       - name: Build proof model
         run: lake build RiscvZkvm.Sail
 
-      - name: Build machine model, Sail equivalence, and interpreter
+      - name: Build machine model, Sail equivalence, program logic, and interpreter
         run: |
-          lake build RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Interpreter \
-            RiscvZkvm.Interpreter.DecodeTests 2>&1 | tee build.log
+          lake build RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Rv64.Logic \
+            RiscvZkvm.Interpreter RiscvZkvm.Interpreter.DecodeTests 2>&1 | tee build.log
           test "${PIPESTATUS[0]}" -eq 0
 
       - name: No-warnings guard (hand-owned Lean sources)

@@ -20,7 +20,7 @@ SWEEP=".lake/build/bin/axiomsweep"
 
 # The sweep imports RiscvZkvm.Rv64.SailEquiv and RiscvZkvm.Interpreter, so those
 # have to be built first.
-lake build RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Interpreter axiomsweep >/dev/null
+lake build RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Rv64.Logic RiscvZkvm.Interpreter axiomsweep >/dev/null
 
 [[ -x "$SWEEP" ]] || {
   echo "check-axioms: $SWEEP not found after 'lake build axiomsweep'" >&2

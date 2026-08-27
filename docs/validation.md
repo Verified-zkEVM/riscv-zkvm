@@ -82,6 +82,14 @@ ties it to the generated extraction by 51 per-instruction `*_sail_equiv`
 theorems plus the consolidated `sailStep_run_sim` / `sailStepN_run_sim`. Both
 were relocated here from EvmAsm, where they lived under `EvmAsm.Rv64`.
 
+`RiscvZkvm.Rv64.Logic` is the program logic built on that model: separation
+logic over `MachineState`, the CPS specification layer, a weakest-precondition
+framework, and the tactics that drive them. It was relocated from the same
+place. Note what it is and is not: it is proof *automation plus a specification
+language*, so it proves nothing about RISC-V on its own — every theorem it
+states is discharged against `RiscvZkvm.Rv64.step`, and the axiom sweep below
+covers it. A bug there costs proof effort, not soundness.
+
 `RiscvZkvm.Interpreter` and the `riscv-zkvm-run` executable run that model over
 an ELF image. Execution goes through `RiscvZkvm.Rv64.step` itself — the
 interpreter supplies an efficient memory representation and an ELF loader, not a
@@ -156,7 +164,7 @@ Two CI gates keep it that way:
   `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
   `bv_decide` fails the build rather than silently widening the base.
 * `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
-  environment (1946 declarations today) and fails on any axiom outside the table
+  environment (3457 declarations today) and fails on any axiom outside the table
   above, including `sorryAx`.
 
 The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the
