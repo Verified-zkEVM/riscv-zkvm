@@ -1,12 +1,20 @@
-# Scoped RV64IM Lean model extracted from riscv/sail-riscv for zkVM use.
+# Scoped RV64IM Lean model extracted from riscv/sail-riscv for zkVM use, the
+# hand-written computable RV64IM model, and their equivalence proofs.
 name = "riscv-zkvm"
-version = "0.1.1"
-defaultTargets = ["RiscvZkvm.Sail"]
+version = "0.2.0"
+# Libraries only. `riscv-zkvm-run` is deliberately excluded: its native output is
+# platform-specific and must never enter the platform-independent release archive.
+defaultTargets = [
+  "RiscvZkvm.Sail",
+  "RiscvZkvm.Rv64",
+  "RiscvZkvm.Rv64.SailEquiv",
+  "RiscvZkvm.Interpreter",
+]
 moreLeanArgs = ["--tstack=400000"]
 
 # Downstream users pinned to a release tag fetch the platform-independent
-# `RiscvZkvm.Sail` artifacts instead of rebuilding the generated model. Root
-# builds still compile from source. See docs/maintenance.md.
+# artifacts of every library below instead of rebuilding them. Root builds still
+# compile from source. See docs/maintenance.md.
 preferReleaseBuild = true
 releaseRepo = "https://github.com/Verified-zkEVM/riscv-zkvm"
 buildArchive = "riscv-zkvm-oleans.tar.gz"
@@ -17,6 +25,39 @@ name = "RiscvZkvm.Sail"
 platformIndependent = true
 leanOptions.weak.linter.style.nameCheck = false
 moreLeancArgs = ["-fbracket-depth=500"]
+
+# The computable RV64IM machine model: `Instr`, `MachineState`, `execInstrBr`,
+# `step`, `stepN`. Relocated from EvmAsm.Rv64; no Sail and no Mathlib dependency.
+[[lean_lib]]
+name = "RiscvZkvm.Rv64"
+platformIndependent = true
+
+# The tie between the two models: 51 per-instruction `*_sail_equiv` theorems and
+# the consolidated step/run simulation. Depends on both `RiscvZkvm.Rv64` and the
+# generated extraction (narrowly, via `RiscvZkvm.Sail.InstsEnd`).
+[[lean_lib]]
+name = "RiscvZkvm.Rv64.SailEquiv"
+platformIndependent = true
+
+# Executable interpreter: instruction decode, ELF64 loading, an efficient machine
+# state, and a fuel-limited driver.
+[[lean_lib]]
+name = "RiscvZkvm.Interpreter"
+platformIndependent = true
+
+# ELF runner CLI. Platform-specific output — never build this in the release job.
+[[lean_exe]]
+name = "riscv-zkvm-run"
+root = "MainRun"
+
+# Kernel-truth axiom gate over the hand-owned libraries. Runtime-imports the
+# built oleans, so run it after `lake build`. Like the runner, it is
+# platform-specific output and must not be built in the release job.
+[[lean_exe]]
+name = "axiomsweep"
+srcDir = "scripts"
+root = "AxiomSweep"
+supportInterpreter = true
 
 # lean-sail v4 (79b4d08) + a 2-line fix for the Lean >= v4.32 do-elaborator
 # (readRegRef/writeRegRef dependent match), pinned on the dhsorens fork's

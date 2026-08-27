@@ -56,10 +56,22 @@ jobs:
           use-github-cache: false
           use-mathlib-cache: false
 
-      - name: Build only the platform-independent library
+      # Only the platform-independent libraries, into a wiped build directory.
+      # `lake upload` packs `.lake/build` wholesale, so building `riscv-zkvm-run`
+      # here would put native, platform-specific output into an archive that
+      # every platform unpacks. Do not add it.
+      - name: Build only the platform-independent libraries
         run: |
           rm -rf .lake/build
-          lake build RiscvZkvm.Sail
+          lake build \
+            RiscvZkvm.Sail \
+            RiscvZkvm.Rv64 \
+            RiscvZkvm.Rv64.SailEquiv \
+            RiscvZkvm.Interpreter
+          if [ -e .lake/build/bin ]; then
+            echo "::error::.lake/build/bin exists; a platform-specific target was built"
+            exit 1
+          fi
 
       - name: Pack and attach archive
         env:
@@ -85,21 +97,33 @@ jobs:
           [[lean_lib]]
           name = "CacheSmoke"
           EOF
+          # Import everything a downstream consumer (evm-asm) actually uses, so
+          # the check covers the whole archive rather than just the Sail model.
           cat > "$consumer/CacheSmoke.lean" <<'EOF'
           import RiscvZkvm.Sail
+          import RiscvZkvm.Rv64
+          import RiscvZkvm.Rv64.SailEquiv
+          import RiscvZkvm.Interpreter
 
           #check RiscvZkvm.Sail.Functions.xlen
+          #check RiscvZkvm.Rv64.step
+          #check RiscvZkvm.Rv64.SailEquiv.sailStepN_run_sim
+          #check RiscvZkvm.Interpreter.decode
           EOF
           cd "$consumer"
           {
             lake update
             lake build CacheSmoke
           } 2>&1 | tee build.log
-          if grep -Eq 'Built RiscvZkvm\.Sail(\.| )' build.log; then
-            echo "::error::tagged consumer rebuilt the generated Sail model"
+          if grep -Eq 'Built RiscvZkvm\.(Sail|Rv64|Interpreter)(\.| )' build.log; then
+            echo "::error::tagged consumer rebuilt a library that should have come from the archive"
+            grep -E 'Built RiscvZkvm\.' build.log
             exit 1
           fi
-          test -f .lake/packages/riscv-zkvm/.lake/build/lib/lean/RiscvZkvm/Sail.olean
+          for m in Sail Rv64 Rv64/SailEquiv Interpreter; do
+            test -f ".lake/packages/riscv-zkvm/.lake/build/lib/lean/RiscvZkvm/$m.olean" \
+              || { echo "::error::missing $m.olean in the unpacked archive"; exit 1; }
+          done
 
       - name: Report archive
         run: |

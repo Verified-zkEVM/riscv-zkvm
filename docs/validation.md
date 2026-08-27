@@ -66,9 +66,98 @@ does not prove:
 - that the executable-only omitted-extension adapter matches the partial
   theorem-facing fallback in all contexts;
 - that untested instructions or platform hooks are correct;
-- that evm-asm's hand-written state projection is correct.
+- that the computable `RiscvZkvm.Rv64` model agrees with Sail — that is what
+  `RiscvZkvm.Rv64.SailEquiv` proves, per instruction, and it is a separate claim.
 
-The last obligation belongs in evm-asm's `SailEquiv` theorems. Future work can
-strengthen this repository by adding differential traces between Sail's C++ and
-Lean emulators and by importing a reusable interpreter API instead of only the
-upstream CLI.
+Future work can strengthen this by adding differential traces between Sail's C++
+and Lean emulators.
+
+---
+
+# The computable model and its interpreter
+
+`RiscvZkvm.Rv64` is a hand-written, computable RV64IM machine model
+(`Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`). `RiscvZkvm.Rv64.SailEquiv`
+ties it to the generated extraction by 51 per-instruction `*_sail_equiv`
+theorems plus the consolidated `sailStep_run_sim` / `sailStepN_run_sim`. Both
+were relocated here from EvmAsm, where they lived under `EvmAsm.Rv64`.
+
+`RiscvZkvm.Interpreter` and the `riscv-zkvm-run` executable run that model over
+an ELF image. Execution goes through `RiscvZkvm.Rv64.step` itself — the
+interpreter supplies an efficient memory representation and an ELF loader, not a
+second set of instruction semantics. See `RiscvZkvm/Interpreter/State.lean`.
+
+```bash
+lake build riscv-zkvm-run
+scripts/run-interpreter-tests.sh      # hand-assembled fixtures, 5 cases
+```
+
+## Known gaps
+
+These are real limitations, not paperwork. Each is pinned by a test so that
+closing it has to be a deliberate edit.
+
+1. **The `riscv-tests` conformance corpus does not run against this model.**
+   Two independent reasons, both verified against the pinned
+   `sail-riscv-tests` 2026-06-10 images:
+   - their data — including `.tohost` at `0x80001000` — lies in
+     `[0x80000000, 0xa0000000)`, a window `isValidMemAddr` deliberately
+     excludes. `RiscvZkvm/Rv64/Word.lean` documents that exclusion as
+     load-bearing for soundness (code must be unreachable by stores), so it is
+     not something to relax for the sake of a test suite;
+   - the second instruction of every image is `csrr t5, mcause`
+     (`0x34202f73`). `Instr`'s only CSR form is `CSRS`, the ZisK accelerator
+     call `csrrs x0, csr, rs1`; general M-mode CSR access, `mtvec` setup and
+     `mret` are not modeled at all.
+
+   ISA-conformance evidence therefore continues to come from
+   `scripts/validate-lean-emulator.sh`, which runs those same ELFs against the
+   **Sail** model (50/50 as of 2026-08-25). The interpreter's own tests use
+   hand-assembled fixtures laid out for the zkVM memory map instead.
+
+2. **The RV64 word-op family is absent from `Instr`.** `ADDW SUBW SLLW SRLW SRAW
+   SLLIW SRLIW SRAIW MULW DIVW DIVUW REMW REMUW` — only `ADDIW` is modeled.
+   `decode` returns `none` for them rather than mapping them to something else,
+   and `riscv-zkvm-run` reports "undecodable instruction". This is the same gap
+   EvmAsm records in `docs/riscv-zkvm-compliance.md` §2.7.
+
+3. **`decode` is not tied to Sail.** No theorem relates
+   `RiscvZkvm.Interpreter.decode` to `RiscvZkvm.Sail.Functions.encdec_backwards`,
+   and it cannot be checked by testing either: the proof extraction is
+   `noncomputable`, so the Sail decoder does not evaluate. This has to become a
+   theorem. `RiscvZkvm/Interpreter/DecodeTests.lean` pins the decoder against
+   hand-computed encodings in the meantime, which is evidence, not a tie.
+
+4. **`stepExec` is not proved to simulate `step`.** `ExecState.toMachineState`
+   states the refinement; nothing proves the hash-map memory and the model's
+   function memory stay in step. The construction makes it very likely — the
+   semantics *is* `step`, and only the written-address set is hand-written — but
+   that is an argument, not a theorem.
+
+Gaps 3 and 4 mean interpreter results are evidence about the executable path.
+They are not, on their own, evidence about the model the `SailEquiv` theorems
+talk about.
+
+## The trusted axiom base, and what enforces it
+
+Every declaration under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` rests on
+exactly seven axioms:
+
+| Axiom | Source |
+|---|---|
+| `propext`, `Classical.choice`, `Quot.sound` | Lean's three classical axioms |
+| `load_reservation`, `match_reservation`, `plat_term_write`, `sys_enable_experimental_extensions` | Sail platform axioms from the generated extraction |
+
+Two CI gates keep it that way:
+
+* `scripts/check-forbidden-tactics.sh` — a source scan rejecting `native_decide`
+  and `bv_decide`, which would seal results behind a native-compiler trust axiom
+  instead of a kernel-checked proof term. It covers the **generated**
+  `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
+  `bv_decide` fails the build rather than silently widening the base.
+* `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
+  environment (1946 declarations today) and fails on any axiom outside the table
+  above, including `sorryAx`.
+
+The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the
+machine-readable form of this table; change the two together.
