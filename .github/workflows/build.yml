@@ -14,14 +14,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # `use-github-cache: false` is deliberate, and is NOT the same as "no
+      # caching" -- see the restore/save pair below.
+      #
+      # lean-action's own cache save (action.yml:305) runs immediately after
+      # lean-action's own build step (action.yml:296). We pass `build: false`
+      # because the gates below need the build split across several invocations,
+      # so that sequence is restore -> no build -> save. It faithfully stored an
+      # empty `.lake/build` on every run: five consecutive runs took 45-53
+      # minutes each, with no warm run faster than a cold one.
       - uses: leanprover/lean-action@v1
         with:
           auto-config: false
           build: false
           test: false
           lint: false
-          use-github-cache: true
+          use-github-cache: false
           use-mathlib-cache: false
+
+      # Restore `.lake` -- dependency sources and compiled oleans -- from a
+      # previous run, and save it *after* the builds below have actually run.
+      #
+      # `RiscvZkvm.Sail` is ~45 of this job's ~46 minutes and changes only when
+      # `regen-model.sh` is run, so nearly every push recompiles it for nothing.
+      #
+      # Safe against stale artifacts: Lake keys its traces on source content, not
+      # timestamps, so a restored `.lake` cannot mask a changed module. It also
+      # replays stored diagnostics for modules it skips --
+      #
+      #     [5/5] Replayed RiscvZkvm.Interpreter.DecodeTests
+      #     warning: RiscvZkvm/Interpreter/DecodeTests.lean:75:19: ...
+      #
+      # -- so `check-no-warnings.sh` still sees warnings from modules that were
+      # not recompiled. That was verified against this gate before enabling the
+      # cache; it is the one gate a warm build could otherwise have falsely
+      # greened. The source-level gates never build, and the axiom sweep and
+      # interpreter tests read compiled output rather than the log.
+      #
+      # The key ends in the commit SHA so every push saves, and `restore-keys`
+      # falls back to the newest cache sharing the toolchain and manifest. Cache
+      # scoping means a PR restores its base branch's entry; only pushes to
+      # `main` populate the one everyone else inherits.
+      - name: Restore Lake build cache
+        id: lake-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
 
       # --- source-level gates (no build required) ---------------------------
 
@@ -75,3 +116,16 @@ jobs:
         run: |
           lake build riscv-zkvm-run
           scripts/run-interpreter-tests.sh
+
+      # `always()`: a run that fails partway still saves the expensive
+      # `RiscvZkvm.Sail` build, so the next push iterating on the fix starts
+      # warm. Partial output is safe for the reason given above -- Lake's traces
+      # are content hashes, so it resumes rather than trusting stale artifacts.
+      # Skipped on an exact key hit (a re-run of the same commit), where the
+      # entry already exists and `actions/cache` would error.
+      - name: Save Lake build cache
+        if: always() && steps.lake-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .lake
+          key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
