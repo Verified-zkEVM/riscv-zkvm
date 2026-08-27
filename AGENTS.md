@@ -3,10 +3,25 @@
 This repository publishes three things: a generated Lean extraction of Sail
 RISC-V, a hand-written computable RV64IM model, and the proofs relating them.
 
-The non-negotiable boundary is simple: never hand-edit `RiscvZkvm/Sail.lean` or
-`RiscvZkvm/Sail/`.
+There are two non-negotiable boundaries.
+
+**1. Never hand-edit `RiscvZkvm/Sail.lean` or `RiscvZkvm/Sail/`.**
 Change the upstream pin, module scope, config, or regeneration tooling; run
 `scripts/regen-model.sh --write`; then review the generated diff.
+
+**2. This repository exists to serve `Verified-zkEVM/evm-asm`, and every change
+MUST preserve compatibility with it.** README.md ("Downstream compatibility") is
+the authoritative list of what counts as public API — module paths, `Instr`
+constructors, `MachineState` / `step` semantics, the `SailEquiv` theorem names,
+the axiom set, the narrow `RiscvZkvm.Sail.InstsEnd` import, `platformIndependent`
+and the toolchain pin. Read it before proposing a change to any of them; do not
+restate it here, so the two cannot drift apart.
+
+The trap to understand: evm-asm consumes prebuilt oleans **at a release tag**, so
+none of the gates in this repository can see downstream breakage. A green build
+here says nothing about whether ~2,500 evm-asm modules still compile. If a change
+touches the public surface, build evm-asm against the candidate revision before
+tagging.
 
 ## Required checks
 
@@ -37,6 +52,9 @@ fails on any axiom outside the seven `docs/validation.md` documents. If a Sail
 pin bump adds a platform axiom, update `scripts/AxiomSweep.lean`'s
 `allowedAxioms` and that document in the same change -- the list is the
 machine-readable form of the prose.
+
+None of the above can detect downstream breakage — see boundary 2. For a change
+to the public surface, additionally build evm-asm against the candidate revision.
 
 For a pin or extraction change, also run:
 

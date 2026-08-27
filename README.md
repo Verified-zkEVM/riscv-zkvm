@@ -60,6 +60,41 @@ instruction semantics. Guest images must use the zkVM memory map the model
 hard-codes; **the standard `riscv-tests` images do not run here**, for reasons
 recorded in [validation](docs/validation.md) along with three other known gaps.
 
+## Downstream compatibility — read before changing anything
+
+**This repository exists to serve
+[`Verified-zkEVM/evm-asm`](https://github.com/Verified-zkEVM/evm-asm), and every
+change here MUST preserve compatibility with it.**
+
+That is a stronger obligation than "don't break your consumers". `RiscvZkvm.Rv64`
+and `RiscvZkvm.Rv64.SailEquiv` were extracted *from* evm-asm, and evm-asm's
+entire RISC-V proof core is built on them — roughly 2,500 of its ~3,000 modules
+depend on this package transitively. A change that is locally reasonable here can
+invalidate thousands of proofs there, and evm-asm consumes prebuilt oleans at a
+release tag, so it will not notice until someone bumps the pin.
+
+Treat the following as public API. Changing any of it is a breaking change:
+
+| Surface | Why evm-asm depends on it |
+|---|---|
+| Module paths `RiscvZkvm.{Sail, Rv64, Rv64.SailEquiv, Interpreter}.*` | imported by name across the tree |
+| `Instr` constructors (`RiscvZkvm/Rv64/Basic.lean`) | the proof core is indexed on them; **adding** one also trips evm-asm's `check-roundtrip-coverage.sh` ratchet, which wants a round-trip guard per constructor |
+| `MachineState` fields, and `step` / `stepN` / `execInstrBr` semantics | every evm-asm theorem about a guest program |
+| `SailEquiv` theorem names — `*_sail_equiv`, `sailStep_run_sim`, `sailStepN_run_sim`, `step_eq_execInstrBr` | cited by name in evm-asm's `docs/riscv-zkvm-compliance.md` |
+| The axiom set: 3 classical + 4 Sail platform | it *is* evm-asm's trusted base; see [validation](docs/validation.md) |
+| `SailEquiv/StateRel.lean` importing `RiscvZkvm.Sail.InstsEnd`, not `RiscvZkvm.Sail` | keeps the ~14 GiB `RvfiDii` module out of evm-asm's build |
+| `platformIndependent` on every library, and one release archive covering all four | evm-asm's CI downloads them instead of recompiling; Linux-built oleans must validate on macOS |
+| `lean-toolchain` | must match evm-asm's, which is pinned to the same Mathlib tag |
+
+Before tagging a release that touches any of the above, **build evm-asm against
+the candidate revision** — the local gates here cannot see downstream breakage.
+Then follow the release ordering in [maintenance](docs/maintenance.md): tag and
+publish the archive here first, and only then bump evm-asm's pin.
+
+Additions are usually safe and removals or renames are not, with the one
+exception noted in the table: adding an `Instr` constructor is a downstream
+change too.
+
 ## Develop and validate
 
 ```bash

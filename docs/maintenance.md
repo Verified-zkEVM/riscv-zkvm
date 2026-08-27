@@ -123,6 +123,14 @@ When changing Lean:
 
 ## Releasing cached oleans
 
+Before starting: if the release touches anything README.md lists under
+**Downstream compatibility** — module paths, `Instr` constructors, `MachineState`
+or `step` semantics, the `SailEquiv` theorem names, the axiom set, the narrow
+`RiscvZkvm.Sail.InstsEnd` import, `platformIndependent`, the toolchain — build
+evm-asm against the candidate revision first. Tagging is the point of no return
+for a cached consumer: nothing in this repository's CI can tell you whether
+~2,500 evm-asm modules still compile.
+
 1. Merge a green extraction commit.
 2. Create and push an annotated semver tag such as `v0.1.1`.
 3. The `release-oleans.yml` workflow creates the GitHub release if needed,
