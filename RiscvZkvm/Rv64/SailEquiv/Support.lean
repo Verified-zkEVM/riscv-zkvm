@@ -10,9 +10,16 @@
   relocation diff look like a proof change, the two missing pieces are supplied
   here.
 
-  Nothing here can weaken a proof: `set` is a tactic, so the kernel still checks
-  the term it produces, and `eq_or_ne` is the ordinary classical excluded middle.
+  `set` used to live here too. It moved to `RiscvZkvm.Rv64.CoreTactics` when the
+  program-logic layer arrived needing it as well: a tactic is syntax, syntax is
+  global, and two libraries declaring it would make the parse ambiguous for any
+  consumer importing both.
+
+  Nothing here can weaken a proof: `eq_or_ne` is the ordinary classical excluded
+  middle, and `by_contra` is stated with it.
 -/
+
+import RiscvZkvm.Rv64.CoreTactics
 
 namespace RiscvZkvm.Rv64.SailEquiv
 
@@ -26,23 +33,5 @@ theorem le_trans {a b c : Nat} (h₁ : a ≤ b) (h₂ : b ≤ c) : a ≤ c := Na
     Classical, exactly as Mathlib's is. -/
 macro "by_contra " h:ident : tactic =>
   `(tactic| refine Classical.byContradiction fun $h:ident => ?_)
-
-/-- Core-only fragment of Mathlib's `set` tactic.
-
-    `set x := e with h` binds `x` definitionally to `e`, replaces occurrences of
-    `e` throughout the goal and context, and supplies `h : x = e`. The abstraction
-    step is `try simp only [...] at *` so that a `set` which happens to abstract
-    nothing is not an error. -/
-syntax (name := setLocal) "set " ident (" : " term)? " := " term " with " ident : tactic
-
-macro_rules
-  | `(tactic| set $x:ident : $t:term := $e:term with $h:ident) =>
-      `(tactic| (let $x : $t := $e
-                 try simp only [show $e = $x from rfl] at *
-                 have $h : $x = $e := rfl))
-  | `(tactic| set $x:ident := $e:term with $h:ident) =>
-      `(tactic| (let $x := $e
-                 try simp only [show $e = $x from rfl] at *
-                 have $h : $x = $e := rfl))
 
 end RiscvZkvm.Rv64.SailEquiv

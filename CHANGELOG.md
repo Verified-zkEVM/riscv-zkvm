@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.3.0 — the RISC-V program logic
+
+- Relocated EvmAsm's RISC-V program logic here as `RiscvZkvm.Rv64.Logic`: the
+  separation logic over `MachineState` (`SepLogic`, 3,201 lines), the CPS
+  specification layer (`CPSSpec`), memory-region and byte-level reasoning, the
+  weakest-precondition framework (`WP/**`), and the symbolic-execution and
+  frame-manipulation tactics (`Tactics/**`). 52 files, ~19,600 lines. This
+  repository now holds the RISC-V verification stack, not just a model.
+
+  Nothing in the moved layer mentions the EVM. `Rv64/RLP/**` and `Rv64/SAsm/**`
+  stayed in evm-asm: their subject matter is Ethereum and the assembler DSL.
+- Declaration namespaces are unchanged (`RiscvZkvm.Rv64`, `.WP`, `.Tactics`)
+  while the files live under `RiscvZkvm/Rv64/Logic/`. That split keeps the
+  library owning its own modules — Lake resolves module-to-library by prefix —
+  without renaming ~2,000 declarations or the 211 hard-coded `Name` literals the
+  tactic layer matches on.
+- Cut the one import edge that made the layer non-relocatable: `MemSat` imported
+  *upwards* into `Rv64.SAsm.PhaseSplit` for a single symbol. `anyBytes` and its
+  two lemmas now live in `MemRegion`, where `bytesRegion` already was.
+- Kept the package Mathlib-free. The moved proofs used `interval_cases`,
+  `fin_cases`, `norm_num`, `conv_lhs` and `List.length_pos_of_ne_nil`; all now
+  have core-only equivalents. `set` moved to a new shared
+  `RiscvZkvm.Rv64.CoreTactics` so two libraries do not declare the same syntax.
+- `ByteOps` no longer redeclares the four byte lemmas that `RiscvZkvm.Rv64.Bytes`
+  carries for `SailEquiv`; it imports them instead. Declaring both would have
+  put two copies in one namespace and broken any consumer importing both
+  libraries.
+- The axiom sweep now covers the new library: 3457 declarations, still resting on
+  exactly the seven documented axioms.
+- Release archive now carries all five libraries.
+- Added `scripts/check-relocation-logic.sh`: 34 of the 52 files are byte-identical
+  to their evm-asm originals under the two mechanical passes, and the remaining
+  18 carry 207 individually enumerated lines.
+
 ## v0.2.0 — the computable model, its Sail tie, and an interpreter
 
 - Relocated EvmAsm's computable RV64IM machine model here as `RiscvZkvm.Rv64`

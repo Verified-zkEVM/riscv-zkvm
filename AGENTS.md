@@ -1,7 +1,8 @@
 # Agent guide
 
-This repository publishes three things: a generated Lean extraction of Sail
-RISC-V, a hand-written computable RV64IM model, and the proofs relating them.
+This repository publishes four things: a generated Lean extraction of Sail
+RISC-V, a hand-written computable RV64IM model, the proofs relating them, and a
+separation-logic/WP program logic with its symbolic-execution tactics.
 
 There are two non-negotiable boundaries.
 
@@ -32,7 +33,8 @@ set, in this order.
 scripts/check-model-pin.sh            # generated tree matches PROVENANCE.toml
 scripts/check-forbidden-tactics.sh    # no native_decide / bv_decide anywhere
 scripts/check-unimported.py           # hand-owned Lean reachable from a root
-lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Interpreter
+lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv \
+  RiscvZkvm.Rv64.Logic RiscvZkvm.Interpreter
 scripts/check-axioms.sh               # kernel truth: only documented axioms
 ```
 
@@ -47,7 +49,7 @@ scripts/check-no-warnings.sh          # builds and checks its own log
 Each gate takes `--report` to print its census and exit 0.
 
 `scripts/check-axioms.sh` is the load-bearing one: it walks every declaration
-under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` (1946 of them today) and
+under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` (3457 of them today) and
 fails on any axiom outside the seven `docs/validation.md` documents. If a Sail
 pin bump adds a platform axiom, update `scripts/AxiomSweep.lean`'s
 `allowedAxioms` and that document in the same change -- the list is the
@@ -74,10 +76,13 @@ Z3. If it cannot run, report that explicitly.
 - Hand-owned other: `lakefile.toml`, `lean-toolchain`, `sail-import/**`,
   `scripts/**`, `docs/**`, and workflows.
 
-`RiscvZkvm/Rv64/**` and `RiscvZkvm/Rv64/SailEquiv/**` were relocated from EvmAsm.
+`RiscvZkvm/Rv64/**`, `RiscvZkvm/Rv64/SailEquiv/**` and `RiscvZkvm/Rv64/Logic/**`
+were relocated from EvmAsm.
 Keep changes there reviewable as *relocations*: a behaviour change buried in a
-move is not. `scripts/check-relocation.sh` verifies that claim mechanically
-against the pinned evm-asm source commit -- run it with a sibling evm-asm
+move is not. `scripts/check-relocation.sh` (machine model, SailEquiv) and
+`scripts/check-relocation-logic.sh` (program logic) verify that claim
+mechanically against their pinned evm-asm source commits -- run them with a
+sibling evm-asm
 checkout. It is a reviewer tool, not a CI gate: CI has no evm-asm checkout, and
 pinning a foreign repo's commit in CI would couple two release cadences.
 Once these files start diverging from their originals on purpose, retire the
@@ -88,17 +93,27 @@ worth generalising only in a separate, clearly-labelled change.
 ## This package is Mathlib-free
 
 `lean-sail` is the only dependency, and `.github/workflows/build.yml` enforces
-both that and the absence of any `import Mathlib`. The relocated proofs needed
-four Mathlib names; core-only stand-ins live in
-`RiscvZkvm/Rv64/SailEquiv/Support.lean` and `RiscvZkvm/Rv64/Bytes.lean`. Prefer
-extending those over taking the dependency.
+both that and the absence of any `import Mathlib`. Core-only stand-ins for the
+Mathlib tactics the relocated proofs used live in three places:
+
+- `RiscvZkvm/Rv64/CoreTactics.lean` — `set`, shared by every layer. It sits in
+  the base library rather than in either consumer's `Support` file because a
+  tactic is *syntax*, and syntax is global: two libraries declaring `set` would
+  make the parse ambiguous for any consumer importing both.
+- `RiscvZkvm/Rv64/SailEquiv/Support.lean` — `eq_or_ne`, `le_trans`, `by_contra`.
+- `RiscvZkvm/Rv64/Logic/Support.lean` — `nat_lt_cases`, the `interval_cases`
+  stand-in, plus `RiscvZkvm/Rv64/Bytes.lean` for the byte lemmas.
+
+Prefer extending those over taking the dependency. Note `conv_lhs` is also
+Mathlib's: core spells it `conv => lhs`.
 
 ## Releases
 
-Release oleans must be built with exactly the four library targets:
+Release oleans must be built with exactly the five library targets:
 
 ```bash
-lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Interpreter
+lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv \
+  RiscvZkvm.Rv64.Logic RiscvZkvm.Interpreter
 ```
 
 Never a broad build, and never `riscv-zkvm-run`. `lake pack`/`lake upload` pack

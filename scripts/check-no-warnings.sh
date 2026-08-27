@@ -51,8 +51,8 @@ if [[ -z "$log_file" ]]; then
   cleanup_log=1
   echo "check-no-warnings: running 'lake build' (capturing to $log_file)..." >&2
   set +e
-  lake build RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Interpreter \
-    RiscvZkvm.Interpreter.DecodeTests 2>&1 | tee "$log_file"
+  lake build RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Rv64.Logic \
+    RiscvZkvm.Interpreter RiscvZkvm.Interpreter.DecodeTests 2>&1 | tee "$log_file"
   build_status=${PIPESTATUS[0]}
   set -e
   if (( build_status != 0 )); then

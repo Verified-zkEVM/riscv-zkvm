@@ -1,16 +1,23 @@
 # riscv-zkvm
 
-`riscv-zkvm` is the RISC-V semantics used by the Verified-zkEVM projects. It
-publishes three things:
+`riscv-zkvm` is the RISC-V semantics and verification stack used by the
+Verified-zkEVM projects. It publishes four things:
 
 | Library | What it is |
 |---|---|
 | `RiscvZkvm.Sail` | Lean extraction of the official [`riscv/sail-riscv`](https://github.com/riscv/sail-riscv) specification — **generated**, not hand-maintained |
 | `RiscvZkvm.Rv64` | a hand-written, computable RV64IM machine model (`Instr`, `MachineState`, `step`) |
 | `RiscvZkvm.Rv64.SailEquiv` | the tie between them: 51 per-instruction `*_sail_equiv` theorems plus step/run simulation |
+| `RiscvZkvm.Rv64.Logic` | the program logic: separation logic over `MachineState`, the CPS specification layer, a weakest-precondition framework, and the symbolic-execution tactics that drive them |
 
 plus `RiscvZkvm.Interpreter` and the `riscv-zkvm-run` CLI, which execute the
 computable model over an ELF image.
+
+`RiscvZkvm.Rv64.Logic` is a separate library on purpose: importing
+`RiscvZkvm.Rv64` gives you the machine model without ~19k lines of proof
+automation. See [the tactic guide](docs/tactics.md) for the user-facing tactics
+and [the WP framework notes](docs/agents/wp-framework.md) for the specification
+style.
 
 Everything is scoped to the RV64IM surface needed by the
 [`eth-act/zkevm-standards`](https://github.com/eth-act/zkevm-standards) RISC-V
@@ -39,9 +46,10 @@ Then import what you need:
 import RiscvZkvm.Sail            -- the generated specification
 import RiscvZkvm.Rv64            -- the computable machine model
 import RiscvZkvm.Rv64.SailEquiv  -- the equivalence theorems
+import RiscvZkvm.Rv64.Logic      -- separation logic, WP, and the tactics
 ```
 
-Each release includes `riscv-zkvm-oleans.tar.gz` covering **all four**
+Each release includes `riscv-zkvm-oleans.tar.gz` covering **all five**
 libraries. Lake downloads that archive automatically when this package is
 consumed as a tagged dependency, so none of them is rebuilt downstream. A branch
 or untagged commit remains usable but builds from source; cold builds require
@@ -77,13 +85,14 @@ Treat the following as public API. Changing any of it is a breaking change:
 
 | Surface | Why evm-asm depends on it |
 |---|---|
-| Module paths `RiscvZkvm.{Sail, Rv64, Rv64.SailEquiv, Interpreter}.*` | imported by name across the tree |
+| Module paths `RiscvZkvm.{Sail, Rv64, Rv64.SailEquiv, Rv64.Logic, Interpreter}.*` | imported by name across the tree |
 | `Instr` constructors (`RiscvZkvm/Rv64/Basic.lean`) | the proof core is indexed on them; **adding** one also trips evm-asm's `check-roundtrip-coverage.sh` ratchet, which wants a round-trip guard per constructor |
 | `MachineState` fields, and `step` / `stepN` / `execInstrBr` semantics | every evm-asm theorem about a guest program |
 | `SailEquiv` theorem names — `*_sail_equiv`, `sailStep_run_sim`, `sailStepN_run_sim`, `step_eq_execInstrBr` | cited by name in evm-asm's `docs/riscv-zkvm-compliance.md` |
 | The axiom set: 3 classical + 4 Sail platform | it *is* evm-asm's trusted base; see [validation](docs/validation.md) |
 | `SailEquiv/StateRel.lean` importing `RiscvZkvm.Sail.InstsEnd`, not `RiscvZkvm.Sail` | keeps the ~14 GiB `RvfiDii` module out of evm-asm's build |
-| `platformIndependent` on every library, and one release archive covering all four | evm-asm's CI downloads them instead of recompiling; Linux-built oleans must validate on macOS |
+| `platformIndependent` on every library, and one release archive covering all five | evm-asm's CI downloads them instead of recompiling; Linux-built oleans must validate on macOS |
+| The `RiscvZkvm.Rv64.Logic` tactic surface — `xperm`, `xsimp`, `xcancel`, `seqFrame`, `runBlock`, `sym_step`, `wp_rv64*`, `signext`, `extract_pure`, and the `rv64_addr` / `reg_ops` / `byte_alg` / `rv64_wp` simp attributes | evm-asm's proofs invoke these by name; a renamed tactic or simp attribute breaks call sites that no type signature protects |
 | `lean-toolchain` | must match evm-asm's, which is pinned to the same Mathlib tag |
 
 Before tagging a release that touches any of the above, **build evm-asm against
@@ -99,7 +108,8 @@ change too.
 
 ```bash
 scripts/check-model-pin.sh
-lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv RiscvZkvm.Interpreter
+lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv \
+  RiscvZkvm.Rv64.Logic RiscvZkvm.Interpreter
 lake build riscv-zkvm-run && scripts/run-interpreter-tests.sh
 ```
 
