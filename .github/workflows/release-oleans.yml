@@ -47,6 +47,12 @@ jobs:
           gh release view "$tag" >/dev/null 2>&1 \
             || gh release create "$tag" --verify-tag --title "$tag" --generate-notes
 
+      # Keep this job uncached, unlike build.yml. A release archive is the one
+      # artifact that must be reproducible from source at the tag: restoring
+      # `.lake` here would let a previously built object reach consumers without
+      # ever being rebuilt from the tagged tree. The `rm -rf .lake/build` below
+      # depends on that too -- it can only guarantee a clean build directory if
+      # nothing repopulates it. Do not add a cache to this workflow.
       - uses: leanprover/lean-action@v1
         with:
           auto-config: false

@@ -99,6 +99,15 @@ runner with comfortable headroom and a two-hour timeout when cutting a cache.
 This cost belongs in release production; downstream tagged consumers should
 receive the archive instead.
 
+CI treats the two cases differently, deliberately. `build.yml` caches `.lake`
+across runs so that a push touching only hand-owned Lean does not recompile the
+generated model; Lake keys its traces on source content, so a restored build
+directory cannot hide a changed module, and it replays stored diagnostics for
+modules it skips, which keeps `check-no-warnings.sh` honest on a warm build.
+`release-oleans.yml` and `validate-model.yml` are never cached: one produces the
+artifact consumers trust and the other exists to reproduce the extraction from
+source, and both would be meaningless if a prior object could survive into them.
+
 Review generated changes by semantic area. In particular inspect instruction
 constructors, decoder clauses, extension gating, memory access, exception paths,
 and platform hooks. A small upstream version bump can legitimately rewrite many
