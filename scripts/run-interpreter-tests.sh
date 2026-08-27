@@ -20,6 +20,20 @@ command -v python3 >/dev/null || {
 
 python3 scripts/make-test-elf.py "$FIXDIR" >/dev/null
 
+# Canary. The register lines are separated by a literal TAB, and grep's regex
+# dialects disagree about `\t`: BSD grep (macOS) reads it as a tab, GNU grep
+# (Linux CI) reads it as a literal `t`. Patterns below therefore use
+# `[[:space:]]+`, which is POSIX and means the same thing everywhere.
+#
+# This check exists because the original `\t` version passed on macOS and failed
+# on CI -- a local false green. If the pattern language ever stops working, fail
+# here with a clear message rather than reporting every fixture as broken.
+if ! printf '  x10\t0x2a\n' | grep -Eq '^  x10[[:space:]]+0x2a$'; then
+  echo "run-interpreter-tests: this grep cannot match the register-line pattern;" >&2
+  echo "  the harness, not the interpreter, is broken." >&2
+  exit 2
+fi
+
 fail=0
 pass=0
 
@@ -49,22 +63,22 @@ check() {
 # Arithmetic plus a store/load round trip through the RAM zone.
 check arith \
   'stopped   halted' \
-  '^  x10\t0x2a$' \
-  '^  x11\t0x2a$' \
-  '^  x12\t0x54$'
+  '^  x10[[:space:]]+0x2a$' \
+  '^  x11[[:space:]]+0x2a$' \
+  '^  x12[[:space:]]+0x54$'
 
 # RV64M: 1000*7 = 7000, 1000/7 = 142, 1000%7 = 6.
 check mext \
   'stopped   halted' \
-  '^  x12\t0x1b58$' \
-  '^  x13\t0x8e$' \
-  '^  x14\t0x6$'
+  '^  x12[[:space:]]+0x1b58$' \
+  '^  x13[[:space:]]+0x8e$' \
+  '^  x14[[:space:]]+0x6$'
 
 # Backward branch: sum 1..10 = 55, in 45 retired instructions.
 check loop \
   'stopped   halted' \
   '^retired   45$' \
-  '^  x10\t0x37$'
+  '^  x10[[:space:]]+0x37$'
 
 # KNOWN GAP (memory map): a store into [0x80000000, 0xa0000000) is outside every
 # zone `isValidMemAddr` admits, so the model traps. This is deliberate -- see

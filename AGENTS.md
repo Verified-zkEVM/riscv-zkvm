@@ -58,7 +58,12 @@ Z3. If it cannot run, report that explicitly.
 
 `RiscvZkvm/Rv64/**` and `RiscvZkvm/Rv64/SailEquiv/**` were relocated from EvmAsm.
 Keep changes there reviewable as *relocations*: a behaviour change buried in a
-move is not. In particular the SP1/ZisK ECALL ABI in `Execution.step` and the
+move is not. `scripts/check-relocation.sh` verifies that claim mechanically
+against the pinned evm-asm source commit -- run it with a sibling evm-asm
+checkout. It is a reviewer tool, not a CI gate: CI has no evm-asm checkout, and
+pinning a foreign repo's commit in CI would couple two release cadences.
+Once these files start diverging from their originals on purpose, retire the
+script rather than loosening its expected deltas. In particular the SP1/ZisK ECALL ABI in `Execution.step` and the
 accelerator CSR semantics in `ZiskAccel.lean` are carried over verbatim and are
 worth generalising only in a separate, clearly-labelled change.
 
