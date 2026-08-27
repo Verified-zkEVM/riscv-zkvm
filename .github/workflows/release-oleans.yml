@@ -73,6 +73,7 @@ jobs:
             RiscvZkvm.Sail \
             RiscvZkvm.Rv64 \
             RiscvZkvm.Rv64.SailEquiv \
+            RiscvZkvm.Rv64.Logic \
             RiscvZkvm.Interpreter
           if [ -e .lake/build/bin ]; then
             echo "::error::.lake/build/bin exists; a platform-specific target was built"
@@ -109,11 +110,13 @@ jobs:
           import RiscvZkvm.Sail
           import RiscvZkvm.Rv64
           import RiscvZkvm.Rv64.SailEquiv
+          import RiscvZkvm.Rv64.Logic
           import RiscvZkvm.Interpreter
 
           #check RiscvZkvm.Sail.Functions.xlen
           #check RiscvZkvm.Rv64.step
           #check RiscvZkvm.Rv64.SailEquiv.sailStepN_run_sim
+          #check RiscvZkvm.Rv64.cpsTripleWithin
           #check RiscvZkvm.Interpreter.decode
           EOF
           cd "$consumer"
@@ -126,7 +129,7 @@ jobs:
             grep -E 'Built RiscvZkvm\.' build.log
             exit 1
           fi
-          for m in Sail Rv64 Rv64/SailEquiv Interpreter; do
+          for m in Sail Rv64 Rv64/SailEquiv Rv64/Logic Interpreter; do
             test -f ".lake/packages/riscv-zkvm/.lake/build/lib/lean/RiscvZkvm/$m.olean" \
               || { echo "::error::missing $m.olean in the unpacked archive"; exit 1; }
           done

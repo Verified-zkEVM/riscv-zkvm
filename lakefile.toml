@@ -1,13 +1,14 @@
 # Scoped RV64IM Lean model extracted from riscv/sail-riscv for zkVM use, the
 # hand-written computable RV64IM model, and their equivalence proofs.
 name = "riscv-zkvm"
-version = "0.2.0"
+version = "0.3.0"
 # Libraries only. `riscv-zkvm-run` is deliberately excluded: its native output is
 # platform-specific and must never enter the platform-independent release archive.
 defaultTargets = [
   "RiscvZkvm.Sail",
   "RiscvZkvm.Rv64",
   "RiscvZkvm.Rv64.SailEquiv",
+  "RiscvZkvm.Rv64.Logic",
   "RiscvZkvm.Interpreter",
 ]
 moreLeanArgs = ["--tstack=400000"]
@@ -37,6 +38,17 @@ platformIndependent = true
 # generated extraction (narrowly, via `RiscvZkvm.Sail.InstsEnd`).
 [[lean_lib]]
 name = "RiscvZkvm.Rv64.SailEquiv"
+platformIndependent = true
+
+# The RISC-V program logic: separation logic over `MachineState`, the CPS
+# specification layer, the WP framework, and the symbolic-execution tactics.
+# Declared AFTER `RiscvZkvm.Rv64` on purpose -- Lake resolves a module to a
+# library with `findSomeRev?`, so the LAST declaration whose root is a prefix of
+# the module name wins. Declared before its parent, every `RiscvZkvm.Rv64.Logic.*`
+# module would be attributed to `RiscvZkvm.Rv64` instead, and this library could
+# never carry options of its own.
+[[lean_lib]]
+name = "RiscvZkvm.Rv64.Logic"
 platformIndependent = true
 
 # Executable interpreter: instruction decode, ELF64 loading, an efficient machine

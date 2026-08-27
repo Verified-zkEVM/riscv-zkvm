@@ -10,9 +10,11 @@ The generated layer must change only through the regeneration script.
 
 Since v0.2.0 there is a third, hand-owned Lean layer — `RiscvZkvm/Rv64/**`
 (the computable model and its Sail equivalence proofs, relocated from EvmAsm)
-and `RiscvZkvm/Interpreter/**` (decode, ELF loading, the driver). It is edited
-normally, but see `AGENTS.md` on keeping the relocated files reviewable as
-relocations, and `docs/validation.md` for its known gaps.
+and `RiscvZkvm/Interpreter/**` (decode, ELF loading, the driver). v0.3.0 adds
+`RiscvZkvm/Rv64/Logic/**`, the program logic and its tactics, relocated from the
+same place. All are edited normally, but see `AGENTS.md` on keeping the
+relocated files reviewable as relocations, and `docs/validation.md` for known
+gaps.
 
 ## Pinned inputs
 
@@ -143,16 +145,17 @@ for a cached consumer: nothing in this repository's CI can tell you whether
 1. Merge a green extraction commit.
 2. Create and push an annotated semver tag such as `v0.1.1`.
 3. The `release-oleans.yml` workflow creates the GitHub release if needed,
-   checks out that exact tag, builds only the four libraries
+   checks out that exact tag, builds only the five libraries
    (`RiscvZkvm.Sail`, `RiscvZkvm.Rv64`, `RiscvZkvm.Rv64.SailEquiv`,
-   `RiscvZkvm.Interpreter`) into a wiped build directory, and uploads
+   `RiscvZkvm.Rv64.Logic`, `RiscvZkvm.Interpreter`) into a wiped build
+   directory, and uploads
    `riscv-zkvm-oleans.tar.gz`. It must not build `riscv-zkvm-run`: `lake upload`
    packs `.lake/build` wholesale, so the executable would ship a platform-
    specific binary in a platform-independent archive. The job asserts
    `.lake/build/bin` does not exist.
 4. In a clean consumer, pin the tag and run `lake build`. Confirm the log says
    the release archive was downloaded and that no `RiscvZkvm.*` module was
-   rebuilt — the workflow's cache smoke test does exactly this for all four
+   rebuilt — the workflow's cache smoke test does exactly this for all five
    libraries, which is what keeps EvmAsm's build from compiling them.
 5. Only after that update evm-asm's dependency pin.
 
