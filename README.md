@@ -37,7 +37,7 @@ Pin a release tag so Lake can download the prebuilt oleans:
 [[require]]
 name = "riscv-zkvm"
 git = "https://github.com/Verified-zkEVM/riscv-zkvm"
-rev = "v0.2.0"
+rev = "v0.3.0"
 ```
 
 Then import what you need:

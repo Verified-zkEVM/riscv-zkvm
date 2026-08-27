@@ -11,6 +11,10 @@
 
   Nothing in the moved layer mentions the EVM. `Rv64/RLP/**` and `Rv64/SAsm/**`
   stayed in evm-asm: their subject matter is Ethereum and the assembler DSL.
+- Published it as its own library rather than folding it into `RiscvZkvm.Rv64`.
+  Importing the machine model should not cost the program logic's 54 modules and
+  ~19,800 lines of proof automation; a consumer that only needs `Instr` and
+  `step` still imports one small library.
 - Declaration namespaces are unchanged (`RiscvZkvm.Rv64`, `.WP`, `.Tactics`)
   while the files live under `RiscvZkvm/Rv64/Logic/`. That split keeps the
   library owning its own modules — Lake resolves module-to-library by prefix —
@@ -27,12 +31,32 @@
   carries for `SailEquiv`; it imports them instead. Declaring both would have
   put two copies in one namespace and broken any consumer importing both
   libraries.
+- Widened the public-API contract in README's downstream-compatibility table:
+  the tactic surface is now part of it — `xperm`, `xsimp`, `xcancel`, `seqFrame`,
+  `runBlock`, `sym_step`, `wp_rv64*`, `signext`, `extract_pure`, and the
+  `rv64_addr` / `reg_ops` / `byte_alg` / `rv64_wp` simp attributes. evm-asm's
+  proofs invoke these by name, and unlike a definition or a theorem, a renamed
+  tactic or simp attribute breaks call sites that no type signature protects.
 - The axiom sweep now covers the new library: 3457 declarations, still resting on
   exactly the seven documented axioms.
+- Extended the existing CI gates over the new library rather than adding new
+  ones: `check-axioms.sh`, `check-no-warnings.sh`, `check-unimported.py`, and
+  `build.yml`'s build step all name `RiscvZkvm.Rv64.Logic` now. The release
+  job's cache smoke test additionally `#check`s `RiscvZkvm.Rv64.cpsTripleWithin`
+  and asserts `RiscvZkvm/Rv64/Logic.olean` is present in the unpacked archive,
+  so a release that silently dropped the library would fail rather than ship.
 - Release archive now carries all five libraries.
 - Added `scripts/check-relocation-logic.sh`: 34 of the 52 files are byte-identical
   to their evm-asm originals under the two mechanical passes, and the remaining
   18 carry 207 individually enumerated lines.
+- Documented the new layer: `docs/tactics.md` is the user-facing tactic guide,
+  `docs/agents/wp-framework.md` describes the specification style the WP
+  framework expects, and `docs/structural-cancel-design.md` with its
+  `-baseline.md` record why `xcancel` is structural and what it cost.
+  `docs/validation.md` states what the layer is and is not: proof automation
+  plus a specification language, proving nothing about RISC-V on its own, with
+  every theorem it states discharged against `RiscvZkvm.Rv64.step`. A bug there
+  costs proof effort, not soundness.
 
 ## v0.2.0 — the computable model, its Sail tie, and an interpreter
 
