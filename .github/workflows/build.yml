@@ -52,9 +52,13 @@ jobs:
       # interpreter tests read compiled output rather than the log.
       #
       # The key ends in the commit SHA so every push saves, and `restore-keys`
-      # falls back to the newest cache sharing the toolchain and manifest. Cache
-      # scoping means a PR restores its base branch's entry; only pushes to
-      # `main` populate the one everyone else inherits.
+      # falls back to the newest cache sharing the toolchain and manifest.
+      #
+      # Cache scoping is the part that surprises people: a run can restore only
+      # caches created on its own ref or on the default branch. So a topic branch
+      # does NOT inherit a sibling branch's entry -- only pushes to `main`
+      # populate the one every PR starts from, and a branch's first run is cold
+      # even when another branch just built the identical tree.
       - name: Restore Lake build cache
         id: lake-cache
         uses: actions/cache/restore@v4
