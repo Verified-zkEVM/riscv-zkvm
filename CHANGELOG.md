@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.3.1 — licensing of the relocated layer
+
+- Copied the MIT licence from the code's origin to
+  `RiscvZkvm/Rv64/LICENSE-MIT` and carved that tree out of the BSD two-clause
+  statement in `LICENSE`. `RiscvZkvm/Rv64/` came from
+  [evm-asm](https://github.com/Verified-zkEVM/evm-asm) in v0.2.0 and v0.3.0,
+  while `LICENSE` claimed BSD over every file outside the dependencies tree. No
+  code changes.
+
 ## v0.3.0 — the RISC-V program logic
 
 - Relocated EvmAsm's RISC-V program logic here as `RiscvZkvm.Rv64.Logic`: the
