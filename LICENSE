@@ -2,8 +2,26 @@ RISCV Sail Model
 
 This Sail RISC-V architecture model, comprising all files and
 directories except for the third party dependencies in the
-'dependencies' directory (which include copies of their licences), is
-subject to the BSD two-clause licence below.
+'dependencies' directory (which include copies of their licences) and
+except for the separately-licensed material listed under "Other
+licensed material" below, is subject to the BSD two-clause licence
+below.
+
+
+Other licensed material
+=======================
+
+`RiscvZkvm/Rv64/` -- the RISC-V program-logic layer (`Word`, `Basic`,
+`Instructions`, `Execution`, `Program`, `ZiskAccel`, and the `Logic/`
+subtree) -- originated in the evm-asm project
+(https://github.com/Verified-zkEVM/evm-asm) and was relocated here in
+releases v0.2.0 and v0.3.0.  That material is
+
+    Copyright (c) 2026 ZkSecurity
+
+and is distributed under the MIT licence, a copy of which is in
+LICENSE-MIT.  It is NOT covered by the BSD two-clause licence below.
+
 
 Copyright (c) 2017-2025
    ahadali5000
