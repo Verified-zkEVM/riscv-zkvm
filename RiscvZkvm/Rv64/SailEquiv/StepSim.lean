@@ -68,18 +68,23 @@ def Instr.simulableUncond : Instr → Bool
   | .JAL .. | .JALR .. => false
   | _ => true
 
-/-- Instructions covered by the full `execute` simulation theorem below.
+/-- Instructions covered by the full `executeSupported` simulation theorem below.
 
     This includes the register-only tier, AUIPC/branches/jumps, and all memory
     loads/stores. It excludes pseudo/unmapped constructors and the system
-    instructions whose Sail behavior intentionally diverges from the toy model. -/
+    instructions whose Sail behavior intentionally diverges from the toy model.
+    In particular, generated `CSRReg`/`CSRImm` constructors are outside this
+    theorem-facing subset: the hand-written decoder maps production CSRRS
+    accelerator words to `Instr.CSRS`, for which `toSailInstr?` returns `none`.
+    `executeSupported` is the explicit boundary that keeps the generated Zkr
+    seed source out of the equivalence's axioms. -/
 def Instr.simulable : Instr → Bool
   | .ECALL | .EBREAK | .FENCE | .MV .. | .LI .. | .NOP | .CSRS .. => false
   | _ => true
 
 namespace SailEquiv
 
-/-- Per-instruction side conditions for the full `execute` simulation theorem.
+/-- Per-instruction side conditions for the full `executeSupported` simulation theorem.
 
     Register-only instructions need no extra facts. Control-flow instructions need
     the PC/CSR/alignment facts already exposed by their per-instruction lemmas.
@@ -216,14 +221,15 @@ def instrSideCond (i : Instr) (sRv : MachineState) (sSail : SailState) : Prop :=
           = .ok false sSail
   | _ => True
 
--- `sim_step`: reduce `execute si` for an unconditional `i` and close via its
--- per-instruction lemma. `simp only [execute]` turns `execute (instruction.FOO …)`
+-- `sim_step`: reduce `executeSupported si` for an unconditional `i` and close via its
+-- per-instruction lemma. `simp only [executeSupported]` turns
+-- `executeSupported (instruction.FOO …)`
 -- into the exact `execute_FOO …` the lemma is stated over (the match is definitional).
 set_option hygiene false in
 local macro "sim_step" lem:term : tactic =>
   `(tactic| (simp only [toSailInstr?, Option.some.injEq] at h
              subst h
-             simp only [execute]
+             simp only [executeSupported]
              apply $lem <;> first | exact hrel | exact h_nextpc))
 
 -- `no_sim`: discharge an excluded (non-`simulableUncond`) case — `simulableUncond i`
@@ -247,7 +253,7 @@ theorem step_execute_sail_sim_uncond
     (h : toSailInstr? i = some si)
     (huncond : i.simulableUncond = true) :
     ∃ sSail',
-      runSail (execute si) sSail = some (RETIRE_SUCCESS, sSail') ∧
+      runSail (executeSupported si) sSail = some (RETIRE_SUCCESS, sSail') ∧
       StateRel (execInstrBr sRv i) sSail' ∧
       sSail'.regs.get? Register.nextPC = some (sRv.pc + 4) ∧
       PlatformFrame sSail sSail' := by
@@ -316,7 +322,7 @@ theorem step_execute_sail_sim_of_uncond
     (h : toSailInstr? i = some si)
     (huncond : i.simulableUncond = true) :
     ∃ sSail',
-      runSail (execute si) sSail = some (RETIRE_SUCCESS, sSail') ∧
+      runSail (executeSupported si) sSail = some (RETIRE_SUCCESS, sSail') ∧
       StateRel (execInstrBr sRv i) sSail' ∧
       sSail'.regs.get? Register.nextPC = some (execInstrBr sRv i).pc ∧
       PlatformFrame sSail sSail' := by
@@ -327,7 +333,7 @@ theorem step_execute_sail_sim_of_uncond
     exact ⟨sSail', hpair.left, hpair.right.left, by simpa [h_pc] using hpair.right.right.left,
       hpair.right.right.right⟩)
 
-/-- **Consolidated `execute` simulation theorem.**
+/-- **Consolidated `executeSupported` simulation theorem.**
 
     Covers every non-system instruction mapped by `toSailInstr?`: the unconditional
     register-only tier, AUIPC/branches/jumps, and all loads/stores. The postcondition
@@ -343,7 +349,7 @@ theorem step_execute_sail_sim
     (hsim : i.simulable = true)
     (hside : instrSideCond i sRv sSail) :
     ∃ sSail',
-      runSail (execute si) sSail = some (RETIRE_SUCCESS, sSail') ∧
+      runSail (executeSupported si) sSail = some (RETIRE_SUCCESS, sSail') ∧
       StateRel (execInstrBr sRv i) sSail' ∧
       sSail'.regs.get? Register.nextPC = some (execInstrBr sRv i).pc ∧
       PlatformFrame sSail sSail' := by
@@ -380,7 +386,7 @@ theorem step_execute_sail_sim
   | AUIPC rd imm =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       exact Exists.elim
         (auipc_sail_equiv sRv sSail hrelpc.toStateRel h_nextpc hrelpc.pc_agree rd imm) (by
         intro sSail' hpair
@@ -389,62 +395,62 @@ theorem step_execute_sail_sim
   | BEQ rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨h_misa, h_align⟩
       exact beq_sail_equiv sRv sSail hrelpc.toStateRel hrelpc.pc_agree h_nextpc
         h_misa rs1 rs2 offset h_align
   | BNE rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨h_misa, h_align⟩
       exact bne_sail_equiv sRv sSail hrelpc.toStateRel hrelpc.pc_agree h_nextpc
         h_misa rs1 rs2 offset h_align
   | BLT rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨h_misa, h_align⟩
       exact blt_sail_equiv sRv sSail hrelpc.toStateRel hrelpc.pc_agree h_nextpc
         h_misa rs1 rs2 offset h_align
   | BGE rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨h_misa, h_align⟩
       exact bge_sail_equiv sRv sSail hrelpc.toStateRel hrelpc.pc_agree h_nextpc
         h_misa rs1 rs2 offset h_align
   | BLTU rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨h_misa, h_align⟩
       exact bltu_sail_equiv sRv sSail hrelpc.toStateRel hrelpc.pc_agree h_nextpc
         h_misa rs1 rs2 offset h_align
   | BGEU rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨h_misa, h_align⟩
       exact bgeu_sail_equiv sRv sSail hrelpc.toStateRel hrelpc.pc_agree h_nextpc
         h_misa rs1 rs2 offset h_align
   | JAL rd offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨h_misa, h_align⟩
       exact jal_sail_equiv sRv sSail hrelpc.toStateRel hrelpc.pc_agree h_nextpc
         h_misa rd offset h_align
   | JALR rd rs1 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨h_elp, h_align⟩
       exact jalr_sail_equiv sRv sSail rd rs1 offset h_elp h_align
   | LD rd rs1 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with
         ⟨bm, region, h_valign, h_match, h_read, h_palign, hclint, hsig, hhtif, hpres⟩
       exact Exists.elim (ld_sail_equiv_of_present sRv sSail rd rs1 offset hrelpc.toStateRel
@@ -456,7 +462,7 @@ theorem step_execute_sail_sim
   | LW rd rs1 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with
         ⟨bm, region, h_valign, h_match, h_read, h_palign, hclint, hsig, hhtif, hpres⟩
       cases lw_sail_equiv_of_present sRv sSail rd rs1 offset hrelpc.toStateRel bm region
@@ -468,7 +474,7 @@ theorem step_execute_sail_sim
   | LWU rd rs1 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with
         ⟨bm, region, h_valign, h_match, h_read, h_palign, hclint, hsig, hhtif, hpres⟩
       cases lwu_sail_equiv_of_present sRv sSail rd rs1 offset hrelpc.toStateRel bm region
@@ -480,7 +486,7 @@ theorem step_execute_sail_sim
   | LH rd rs1 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with
         ⟨bm, region, h_valign, h_match, h_read, h_palign, hclint, hsig, hhtif, hpres⟩
       cases lh_sail_equiv_of_present sRv sSail rd rs1 offset hrelpc.toStateRel bm region
@@ -492,7 +498,7 @@ theorem step_execute_sail_sim
   | LHU rd rs1 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with
         ⟨bm, region, h_valign, h_match, h_read, h_palign, hclint, hsig, hhtif, hpres⟩
       cases lhu_sail_equiv_of_present sRv sSail rd rs1 offset hrelpc.toStateRel bm region
@@ -504,7 +510,7 @@ theorem step_execute_sail_sim
   | LB rd rs1 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with
         ⟨bm, region, h_valign, h_match, h_read, h_palign, hclint, hsig, hhtif, hpres⟩
       cases lb_sail_equiv_of_present sRv sSail rd rs1 offset hrelpc.toStateRel bm region
@@ -516,7 +522,7 @@ theorem step_execute_sail_sim
   | LBU rd rs1 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with
         ⟨bm, region, h_valign, h_match, h_read, h_palign, hclint, hsig, hhtif, hpres⟩
       cases lbu_sail_equiv_of_present sRv sSail rd rs1 offset hrelpc.toStateRel bm region
@@ -528,7 +534,7 @@ theorem step_execute_sail_sim
   | SD rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨bm, region, h_valign, h_match, h_write, h_palign, hclint, hsig, hhtif⟩
       cases sd_sail_equiv sRv sSail rs1 rs2 offset hrelpc.toStateRel bm region
           h_valign h_match h_write h_palign hclint hsig hhtif with
@@ -539,7 +545,7 @@ theorem step_execute_sail_sim
   | SW rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨bm, region, h_valign, h_match, h_write, h_palign, hclint, hsig, hhtif⟩
       cases sw_sail_equiv sRv sSail rs1 rs2 offset hrelpc.toStateRel bm region
           h_valign h_match h_write h_palign hclint hsig hhtif with
@@ -550,7 +556,7 @@ theorem step_execute_sail_sim
   | SH rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨bm, region, h_valign, h_match, h_write, h_palign, hclint, hsig, hhtif⟩
       cases sh_sail_equiv sRv sSail rs1 rs2 offset hrelpc.toStateRel bm region
           h_valign h_match h_write h_palign hclint hsig hhtif with
@@ -561,7 +567,7 @@ theorem step_execute_sail_sim
   | SB rs1 rs2 offset =>
       simp only [toSailInstr?, Option.some.injEq] at h
       subst h
-      simp only [execute]
+      simp only [executeSupported]
       rcases hside with ⟨bm, region, h_valign, h_match, h_write, h_palign, hclint, hsig, hhtif⟩
       cases sb_sail_equiv sRv sSail rs1 rs2 offset hrelpc.toStateRel bm region
           h_valign h_match h_write h_palign hclint hsig hhtif with
