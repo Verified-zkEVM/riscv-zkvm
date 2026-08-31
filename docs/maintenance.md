@@ -36,23 +36,27 @@ must be recorded in the provenance file.
 The current module scope is:
 
 ```text
-main I_insts M_insts Zicsr_insts
+main I_insts M_insts Zicsr_insts K_core Zkr Zicboz Zicbom_insts
 ```
 
 `Zicsr_insts` is included even though zkVM guest code does not use general CSR
 instructions: Sail's `currentlyEnabled` definition is assembled from scattered
 module clauses, and omitting this module changed unrelated execution through the
-fallback arm. Scope changes therefore require semantic review, not just a file
-count comparison.
+fallback arm. `K_core`, `Zkr`, `Zicboz`, and `Zicbom_insts` are included for the
+same reason: the `sail_model_init` legalizers query the corresponding extension
+clauses. In particular, `K_core` is not sufficient for `Zkr`; the latter has its
+own `zkr_control.sail` clause. The scope therefore lists both modules explicitly.
+Scope changes require semantic review, not just a file count comparison.
 
-Even with `Zicsr_insts`, the scoped model intentionally has no
-`currentlyEnabled` clauses for excluded extensions such as A, H, or V. That is
-harmless for theorem-facing instruction definitions that never query them, but
-upstream emulator initialization probes every extension. The validation script
-therefore rewrites only the executable artifact's generated fallback to return
-`false`, meaning “omitted is disabled.” Review this adapter whenever upstream
-changes the scattered function or its initialization sequence. Do not apply it
-to `RiscvZkvm.Sail`: a proof-model scope change must instead be regenerated and reviewed.
+The scoped model still intentionally omits extensions such as A, H, V, Zicntr,
+and Zfhmin. They are not queried by the `sail_model_init` chain covered here;
+`Zicntr` and `Zfhmin` are totality-only definitions for this extraction. The
+validation script rewrites only the executable artifact's generated fallback to
+return `false`, meaning “omitted is disabled,” for any other extension queried by
+the upstream emulator. Review this adapter whenever upstream changes the
+scattered function or its initialization sequence. Do not apply it to
+`RiscvZkvm.Sail`: a proof-model scope change must instead be regenerated and
+reviewed.
 
 ## Regenerate
 

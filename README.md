@@ -21,7 +21,8 @@ style.
 
 Everything is scoped to the RV64IM surface needed by the
 [`eth-act/zkevm-standards`](https://github.com/eth-act/zkevm-standards) RISC-V
-target, with the Zicsr definitions required by Sail's extension gating.
+target, with the Zicsr, K, Zkr, Zicboz, and Zicbom definitions required by
+Sail's extension gating and model initialization.
 
 The `RiscvZkvm.Sail` library's source, compiler, runtime, configuration, module
 scope, and content digest are pinned in

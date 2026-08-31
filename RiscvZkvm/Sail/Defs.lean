@@ -330,6 +330,8 @@ inductive instruction where
   | REMW (_ : (regidx × regidx × regidx × Bool))
   | CSRReg (_ : (csreg × regidx × regidx × csrop))
   | CSRImm (_ : (csreg × (BitVec 5) × regidx × csrop))
+  | ZICBOM (_ : (cbop_zicbom × regidx))
+  | ZICBOZ (_ : regidx)
   deriving Inhabited, Repr
   open instruction
 
@@ -1155,6 +1157,18 @@ inductive ExecutionResult where
   | Ext_XRET_Priv_Failure (_ : Unit)
   deriving Inhabited, Repr
   open ExecutionResult
+
+inductive seed_opst where | BIST | ES16 | WAIT | DEAD
+  deriving BEq, Inhabited, Repr
+  open seed_opst
+
+inductive cbie where | CBIE_ILLEGAL | CBIE_EXEC_FLUSH | CBIE_EXEC_INVAL
+  deriving BEq, Inhabited, Repr
+  open cbie
+
+inductive checked_cbop where | CBOP_ILLEGAL | CBOP_ILLEGAL_VIRTUAL | CBOP_INVAL_FLUSH | CBOP_INVAL_INVAL
+  deriving BEq, Inhabited, Repr
+  open checked_cbop
 
 inductive HartState where
   | HART_ACTIVE (_ : Unit)

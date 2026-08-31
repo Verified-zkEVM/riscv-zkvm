@@ -62,6 +62,7 @@ open uop
 open stateen_bit
 open sopw
 open sop
+open seed_opst
 open rounding_mode
 open ropw
 open rop
@@ -141,9 +142,11 @@ open extension
 open exception
 open csrop
 open cregidx
+open checked_cbop
 open cfregidx
 open cbop_zicbop
 open cbop_zicbom
+open cbie
 open cacheop
 open breakpoint_cause
 open bop
@@ -361,7 +364,7 @@ def clint_load (access : (MemoryAccessType mem_payload)) (paddr : physaddr) (wid
                                 else ()
                               (pure (Err (paddr, (← (accessFaultFromAccessType access))))))))))))
 
-/-- Type quantifiers: k_ex480882_ : Bool -/
+/-- Type quantifiers: k_ex487514_ : Bool -/
 def clint_dispatch (mip_was_written : Bool) : SailM Unit := do
   let old_mip ← do readReg mip
   writeReg mip (Sail.BitVec.updateSubrange (← readReg mip) 7 7
