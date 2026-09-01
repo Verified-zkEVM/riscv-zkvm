@@ -57,6 +57,7 @@ open uop
 open stateen_bit
 open sopw
 open sop
+open seed_opst
 open rounding_mode
 open ropw
 open rop
@@ -136,9 +137,11 @@ open extension
 open exception
 open csrop
 open cregidx
+open checked_cbop
 open cfregidx
 open cbop_zicbop
 open cbop_zicbom
+open cbie
 open cacheop
 open breakpoint_cause
 open bop
@@ -223,8 +226,8 @@ def num_of_float_class (arg_ : float_class) : Int :=
   | .float_class_snan => 8
   | .float_class_qnan => 9
 
-/-- Type quantifiers: k_ex476419_ : Nat, k_ex476419_ ∈ {16, 32, 64, 128} -/
-def float_classify (f : (BitVec k_ex476419_)) : SailM float_class := do
+/-- Type quantifiers: k_ex482241_ : Nat, k_ex482241_ ∈ {16, 32, 64, 128} -/
+def float_classify (f : (BitVec k_ex482241_)) : SailM float_class := do
   if ((float_is_snan f) : Bool)
   then (pure float_class_snan)
   else

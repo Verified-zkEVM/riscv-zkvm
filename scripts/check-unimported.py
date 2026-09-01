@@ -44,6 +44,9 @@ ALLOWED_ORPHANS = {
     # Compile-time decoder guards. Kept out of the published library on purpose
     # so they never enter the release archive; CI builds this module by name.
     "RiscvZkvm.Interpreter.DecodeTests",
+    # Scoped Sail-initializer regression checks. Kept out of the published
+    # library; CI builds this module by name alongside the decoder guards.
+    "RiscvZkvm.Interpreter.SailInitTests",
 }
 
 SCAN_DIRS = ["RiscvZkvm/Rv64", "RiscvZkvm/Interpreter"]

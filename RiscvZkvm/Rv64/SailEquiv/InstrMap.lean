@@ -44,6 +44,60 @@ namespace RiscvZkvm.Rv64.SailEquiv
 /-- Local alias for the SAIL-generated RISC-V instruction AST. -/
 abbrev SailInstr := instruction
 
+/-- The instruction dispatcher used by the theorem-facing equivalence.
+
+    The generated `execute` dispatcher also contains the Zkr seed-CSR arms.
+    Those arms call Sail's nondeterministic `get_16_random_bits` platform
+    axiom.  The theorem-facing bridge does not map generated `CSRReg`/`CSRImm`
+    constructors: the hand-written decoder represents the production CSRRS
+    accelerator form as `Instr.CSRS`, and `toSailInstr?` deliberately returns
+    `none` for that form.  Keep the generated Zkr module in scope for its
+    `currentlyEnabled` clauses (which `sail_model_init` needs), but dispatch
+    the equivalence only over the supported instruction subset below.  The
+    unsupported generated CSR constructors, including seed, take a
+    deterministic illegal-instruction fallback outside that subset; this is a
+    scope boundary, not an axiom stub.  A production-image scan found 56
+    custom CSRRS words (CSRs 0x800--0x819) and no seed CSR 0x015, corroborating
+    that the excluded production form is `Instr.CSRS`, not these constructors.
+
+    This mirrors the generated dispatcher for every non-CSR constructor, so
+    the per-instruction proofs continue to reduce with the same concrete
+    `execute_*` definitions. -/
+noncomputable def executeSupported (si : SailInstr) : SailM ExecutionResult :=
+  match si with
+  | .LPAD lpl => execute_LPAD lpl
+  | .UTYPE (imm, rd, op) => execute_UTYPE imm rd op
+  | .JAL (imm, rd) => execute_JAL imm rd
+  | .BTYPE (imm, rs2, rs1, op) => execute_BTYPE imm rs2 rs1 op
+  | .ITYPE (imm, rs1, rd, op) => execute_ITYPE imm rs1 rd op
+  | .SHIFTIOP (shamt, rs1, rd, op) => execute_SHIFTIOP shamt rs1 rd op
+  | .RTYPE (rs2, rs1, rd, op) => execute_RTYPE rs2 rs1 rd op
+  | .LOAD (imm, rs1, rd, is_unsigned, width) => execute_LOAD imm rs1 rd is_unsigned width
+  | .STORE (imm, rs2, rs1, width) => execute_STORE imm rs2 rs1 width
+  | .ADDIW (imm, rs1, rd) => execute_ADDIW imm rs1 rd
+  | .RTYPEW (rs2, rs1, rd, op) => execute_RTYPEW rs2 rs1 rd op
+  | .SHIFTIWOP (shamt, rs1, rd, op) => execute_SHIFTIWOP shamt rs1 rd op
+  | .FENCE_TSO arg0 => execute_FENCE_TSO arg0
+  | .FENCE (fm, pred, succ, rs, rd) => execute_FENCE fm pred succ rs rd
+  | .ECALL arg0 => execute_ECALL arg0
+  | .MRET arg0 => execute_MRET arg0
+  | .SRET arg0 => execute_SRET arg0
+  | .EBREAK arg0 => execute_EBREAK arg0
+  | .WFI arg0 => execute_WFI arg0
+  | .SFENCE_VMA (rs1, rs2) => execute_SFENCE_VMA rs1 rs2
+  | .JALR (imm, rs1, rd) => execute_JALR imm rs1 rd
+  | .MUL (rs2, rs1, rd, mul_op) => execute_MUL rs2 rs1 rd mul_op
+  | .DIV (rs2, rs1, rd, is_unsigned) => execute_DIV rs2 rs1 rd is_unsigned
+  | .REM (rs2, rs1, rd, is_unsigned) => execute_REM rs2 rs1 rd is_unsigned
+  | .MULW (rs2, rs1, rd) => execute_MULW rs2 rs1 rd
+  | .DIVW (rs2, rs1, rd, is_unsigned) => execute_DIVW rs2 rs1 rd is_unsigned
+  | .REMW (rs2, rs1, rd, is_unsigned) => execute_REMW rs2 rs1 rd is_unsigned
+  | .ZICBOM (arg0, rs1) => execute_ZICBOM arg0 rs1
+  | .ZICBOZ rs1 => execute_ZICBOZ rs1
+  | .ILLEGAL s => pure (execute_ILLEGAL s)
+  | .C_ILLEGAL s => pure (execute_C_ILLEGAL s)
+  | .CSRReg _ | .CSRImm _ => pure (execute_ILLEGAL (0 : BitVec 32))
+
 /-- SAIL encoding of RV64M `mul`. -/
 def sailMulOp : mul_op :=
   { result_part := VectorHalf.Low

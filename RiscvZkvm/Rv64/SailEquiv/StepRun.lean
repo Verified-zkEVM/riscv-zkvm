@@ -77,15 +77,15 @@ theorem step_eq_execInstrBr {s s' : MachineState} {i : Instr}
 noncomputable def sailStep (si : SailInstr) : SailM Unit := do
   let pc ← readReg Register.PC
   set_next_pc (pc + 4)
-  let _ ← execute si
+  let _ ← executeSupported si
   tick_pc ()
 
 /-- `sailStep` reduces to "install the `pc + 4` default, then run
-    `execute ; tick_pc`". -/
+    `executeSupported ; tick_pc`". -/
 theorem runSail_sailStep_eq {si : SailInstr} {sSail : SailState} {pc : BitVec 64}
     (h_pc : sSail.regs.get? Register.PC = some pc) :
     runSail (sailStep si) sSail
-      = runSail (execute si >>= fun _ => tick_pc ())
+      = runSail (executeSupported si >>= fun _ => tick_pc ())
           { sSail with regs := sSail.regs.insert Register.nextPC (pc + 4) } := by
   simp only [sailStep, runSail_bind, runSail_readReg_PC h_pc, runSail_set_next_pc]
 

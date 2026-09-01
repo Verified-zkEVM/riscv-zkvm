@@ -18,12 +18,12 @@ lean_toolchain = "leanprover/lean4:v4.33.0"
 
 [extraction]
 root_module = "RiscvZkvm.Sail"
-sail_modules = ["main", "I_insts", "M_insts", "Zicsr_insts"]
+sail_modules = ["main", "I_insts", "M_insts", "Zicsr_insts", "K_core", "Zkr", "Zicboz", "Zicbom_insts"]
 config_file = "sail-import/rv64d_v256_e64.json"
 config_sha256 = "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674"
 # Rewritten after the 0.13.1 refresh by `scripts/check-model-pin.sh --write`.
-model_sha256 = "b16eec69d139a36fa3803750d7a0f4b9248f11e3d7244e71b9b8bbae231932c2"
-expected_lean_files = 116
+model_sha256 = "97744e1767e81047ebf5c36e0eab9969f933f2bcf7a4fc8139cd75da80c13c2e"
+expected_lean_files = 119
 
 [validation]
 lean_emulator_source = "https://github.com/riscv/sail-riscv/tree/main/lean_emulator"

@@ -53,6 +53,7 @@ open uop
 open stateen_bit
 open sopw
 open sop
+open seed_opst
 open rounding_mode
 open ropw
 open rop
@@ -132,9 +133,11 @@ open extension
 open exception
 open csrop
 open cregidx
+open checked_cbop
 open cfregidx
 open cbop_zicbop
 open cbop_zicbom
+open cbie
 open cacheop
 open breakpoint_cause
 open bop
@@ -188,11 +191,11 @@ open AtomicSupport
 open Architecture
 open AmocasOddRegisterReservedBehavior
 
-/-- Type quantifiers: k_ex476014_ : Nat, k_ex476014_ ∈ {16, 32, 64, 128} -/
-def float_is_positive (op : (BitVec k_ex476014_)) : Bool :=
+/-- Type quantifiers: k_ex481836_ : Nat, k_ex481836_ ∈ {16, 32, 64, 128} -/
+def float_is_positive (op : (BitVec k_ex481836_)) : Bool :=
   (is_highest_zero op)
 
-/-- Type quantifiers: k_ex476016_ : Nat, k_ex476016_ ∈ {16, 32, 64, 128} -/
-def float_is_negative (op : (BitVec k_ex476016_)) : Bool :=
+/-- Type quantifiers: k_ex481838_ : Nat, k_ex481838_ ∈ {16, 32, 64, 128} -/
+def float_is_negative (op : (BitVec k_ex481838_)) : Bool :=
   (is_highest_one op)
 

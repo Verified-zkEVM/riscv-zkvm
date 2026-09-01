@@ -71,6 +71,7 @@ open uop
 open stateen_bit
 open sopw
 open sop
+open seed_opst
 open rounding_mode
 open ropw
 open rop
@@ -150,9 +151,11 @@ open extension
 open exception
 open csrop
 open cregidx
+open checked_cbop
 open cfregidx
 open cbop_zicbop
 open cbop_zicbom
+open cbie
 open cacheop
 open breakpoint_cause
 open bop
@@ -287,39 +290,39 @@ def is_CSR_accessible (arg0 : (BitVec 12)) (arg1 : Privilege) (arg2 : CSRAccessT
   | (0x141, g__88, g__89) => (currentlyEnabled Ext_S)
   | (0x305, g__90, g__91) => (pure true)
   | (0x341, g__92, g__93) => (pure true)
-  | (v__382, g__94, g__95) =>
+  | (v__400, g__94, g__95) =>
     (do
-      if (((Sail.BitVec.extractLsb v__382 11 4) == (0x3A#8 : (BitVec 8))) : Bool)
+      if (((Sail.BitVec.extractLsb v__400 11 4) == (0x3A#8 : (BitVec 8))) : Bool)
       then
-        (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__382 3 0)
+        (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__400 3 0)
         (pure ((sys_pmp_count >b (4 *i (BitVec.toNatInt idx))) && (((BitVec.access idx 0) == 0#1) || (xlen == 32)))))
       else
         (do
-          if (((Sail.BitVec.extractLsb v__382 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
+          if (((Sail.BitVec.extractLsb v__400 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
           then
-            (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__382 3 0)
+            (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__400 3 0)
             (pure (sys_pmp_count >b (BitVec.toNatInt (0b00#2 +++ idx)))))
           else
             (do
-              if (((Sail.BitVec.extractLsb v__382 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
+              if (((Sail.BitVec.extractLsb v__400 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
               then
-                (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__382 3 0)
+                (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__400 3 0)
                 (pure (sys_pmp_count >b (BitVec.toNatInt (0b01#2 +++ idx)))))
               else
                 (do
-                  if (((Sail.BitVec.extractLsb v__382 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
+                  if (((Sail.BitVec.extractLsb v__400 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
                   then
-                    (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__382 3 0)
+                    (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__400 3 0)
                     (pure (sys_pmp_count >b (BitVec.toNatInt (0b10#2 +++ idx)))))
                   else
                     (do
-                      if (((Sail.BitVec.extractLsb v__382 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
+                      if (((Sail.BitVec.extractLsb v__400 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
                       then
-                        (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__382 3 0)
+                        (let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__400 3 0)
                         (pure (sys_pmp_count >b (BitVec.toNatInt (0b11#2 +++ idx)))))
                       else
                         (do
-                          match (v__382, g__94, g__95) with
+                          match (v__400, g__94, g__95) with
                           | (0x001, g__96, g__97) =>
                             (pure ((← (currentlyEnabled Ext_F)) || (← (currentlyEnabled
                                     Ext_Zfinx))))
@@ -371,6 +374,16 @@ def is_CSR_accessible (arg0 : (BitVec 12)) (arg1 : Privilege) (arg2 : CSRAccessT
                           | (0x10E, g__160, g__161) => (is_sstateen_accessible ())
                           | (0x10F, g__162, g__163) => (is_sstateen_accessible ())
                           | (0x180, g__94, g__164) => (satp_accessible g__94)
+                          | (0x015, g__94, g__95) =>
+                            (pure ((← (currentlyEnabled Ext_Zkr)) && ((bne g__95 CSRRead) && (← do
+                                    match g__94 with
+                                    | .Machine => (pure true)
+                                    | .User =>
+                                      (pure ((_get_Seccfg_USEED (← readReg mseccfg)) == 1#1))
+                                    | .Supervisor =>
+                                      (pure ((_get_Seccfg_SSEED (← readReg mseccfg)) == 1#1))
+                                    | .VirtualSupervisor => (pure false)
+                                    | .VirtualUser => (pure false)))))
                           | _ => (pure false)))))))
 
 def check_CSR (csr : (BitVec 12)) (p : Privilege) (access_type : CSRAccessType) : SailM Bool := do
@@ -474,7 +487,7 @@ def tval (excinfo : (Option (BitVec 64))) : (BitVec 64) :=
   | .some e => e
   | none => (zeros (n := 64))
 
-/-- Type quantifiers: k_ex480766_ : Bool -/
+/-- Type quantifiers: k_ex487398_ : Bool -/
 def track_trap (p : Privilege) (is_interrupt : Bool) (cause : (BitVec 6)) : SailM Unit := do
   (long_csr_write_callback "mstatus" "mstatush" (← readReg mstatus))
   match p with

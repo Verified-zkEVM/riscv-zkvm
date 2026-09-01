@@ -16,9 +16,13 @@ import RiscvZkvm.Rv64.Basic
 -- `RiscvZkvm/Sail/Prelude.lean`, every RVFI call site sits behind
 -- `if get_config_rvfi ()`, and our own proofs already discharge it that way
 -- (see `VmemReduction.lean`, `rw [show get_config_rvfi () = false from rfl]`).
--- `RiscvZkvm.Sail.InstsEnd` supplies `execute` and keeps the required generated
--- modules, including the four platform axioms behind this layer's 74
--- `axiom_baseline.json` entries.
+-- `RiscvZkvm.Sail.InstsEnd` supplies the concrete `execute_*` functions and
+-- keeps the required generated modules, including the four platform axioms
+-- behind this layer's 74 `axiom_baseline.json` entries. The theorem-facing
+-- dispatcher is `SailEquiv.executeSupported` (defined in `InstrMap`), whose
+-- generated `CSRReg`/`CSRImm` constructors are outside the bridge. Production
+-- CSRRS accelerator words decode to hand `Instr.CSRS`, which `toSailInstr?`
+-- excludes; this keeps the generated Zkr seed source out of the equivalence.
 --
 -- This couples us to the dependency's internal module names rather than its
 -- public root. That is deliberate and safe: if a regeneration restructures

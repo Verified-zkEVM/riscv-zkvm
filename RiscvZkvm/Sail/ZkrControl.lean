@@ -1,4 +1,4 @@
-import RiscvZkvm.Sail.Regs
+import RiscvZkvm.Sail.Prelude
 
 set_option maxHeartbeats 1_000_000_000
 set_option maxRecDepth 1_000_000
@@ -191,23 +191,60 @@ open AtomicSupport
 open Architecture
 open AmocasOddRegisterReservedBehavior
 
-def ext_fetch_check_pc (_start_pc : (BitVec 64)) (_pc : (BitVec 64)) : (Option Unit) :=
-  none
+def undefined_seed_opst (_ : Unit) : SailM seed_opst := do
+  (internal_pick [BIST, ES16, WAIT, DEAD])
 
-def ext_handle_fetch_check_error (_err : Unit) : Unit :=
-  ()
+/-- Type quantifiers: arg_ : Nat, 0 ≤ arg_ ∧ arg_ ≤ 3 -/
+def seed_opst_of_num (arg_ : Nat) : seed_opst :=
+  match arg_ with
+  | 0 => BIST
+  | 1 => ES16
+  | 2 => WAIT
+  | _ => DEAD
 
-def ext_control_check_pc (_pc : (BitVec 64)) : (Option Unit) :=
-  none
+def num_of_seed_opst (arg_ : seed_opst) : Int :=
+  match arg_ with
+  | .BIST => 0
+  | .ES16 => 1
+  | .WAIT => 2
+  | .DEAD => 3
 
-def ext_handle_control_check_error (_err : Unit) : Unit :=
-  ()
+def opst_code_forwards (arg_ : seed_opst) : (BitVec 2) :=
+  match arg_ with
+  | .BIST => 0b00#2
+  | .WAIT => 0b01#2
+  | .ES16 => 0b10#2
+  | .DEAD => 0b11#2
 
-/-- Type quantifiers: _width : Nat, 1 ≤ _width ∧ _width ≤ 4096 -/
-def ext_data_get_addr (base : regidx) (offset : (BitVec 64)) (_access : (MemoryAccessType mem_payload)) (_width : Nat) : SailM (Ext_DataAddr_Check Unit) := do
-  let addr ← do (pure (Virtaddr ((← (rX_bits base)) + offset)))
-  (pure (Ext_DataAddr_OK addr))
+def opst_code_backwards (arg_ : (BitVec 2)) : seed_opst :=
+  match arg_ with
+  | 0b00 => BIST
+  | 0b01 => WAIT
+  | 0b10 => ES16
+  | _ => DEAD
 
-def ext_handle_data_check_error (_err : Unit) : Unit :=
-  ()
+def opst_code_forwards_matches (arg_ : seed_opst) : Bool :=
+  match arg_ with
+  | .BIST => true
+  | .WAIT => true
+  | .ES16 => true
+  | .DEAD => true
+
+def opst_code_backwards_matches (arg_ : (BitVec 2)) : Bool :=
+  match arg_ with
+  | 0b00 => true
+  | 0b01 => true
+  | 0b10 => true
+  | 0b11 => true
+  | _ => false
+
+def read_seed_csr (_ : Unit) : SailM (BitVec 64) := do
+  let reserved_bits : (BitVec 6) := 0b000000#6
+  let custom_bits : (BitVec 8) := 0x00#8
+  let seed ← (( do (get_16_random_bits ()) ) : SailM (BitVec 16) )
+  (pure (zero_extend (m := 64)
+      ((opst_code_forwards ES16) +++ (reserved_bits +++ (custom_bits +++ seed)))))
+
+def write_seed_csr (_ : Unit) : (BitVec 64) :=
+  (zeros (n := 64))
 
