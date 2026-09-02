@@ -45,12 +45,23 @@ namespace RiscvZkvm.Rv64.Tactics
 /-- Run a tactic without leaking error diagnostics on failure.
     Saves the message log before running, restores it if the tactic throws.
     This prevents speculative tactic calls (e.g., bv_omega in try/catch blocks)
-    from polluting the error output when they fail as expected. -/
+    from polluting the error output when they fail as expected.
+
+    Every caller goes on to `instantiateMVars mvarId` and embeds the result in
+    a proof term, so a run that finishes *without* assigning the goal must
+    throw rather than return: an escaped metavariable is invisible here and
+    resurfaces at the end of elaboration as "don't know how to synthesize
+    placeholder" against unrelated syntax, leaving `sorryAx` in the
+    declaration (evm-asm#13207). Callers that treat the tactic as speculative
+    already wrap this in `try`/`catch`. -/
 meta def runTacticSilent (mvarId : MVarId) (stx : Syntax) : MetaM Unit := do
   let savedLog ← Lean.Core.getMessageLog
   Lean.Core.resetMessageLog
   try
-    let _ ← Lean.Elab.runTactic mvarId stx
+    let (remaining, _) ← Lean.Elab.runTactic mvarId stx
+    unless remaining.isEmpty do
+      throwError "tactic `{stx}` finished without closing the goal:\n  \
+        {← mvarId.getType}"
     let newLog ← Lean.Core.getMessageLog
     Lean.Core.setMessageLog (savedLog ++ newLog)
   catch e =>
@@ -990,16 +1001,10 @@ meta def assignOrPermuteWithin (goal : MVarId) (result : Expr) : MetaM Unit := d
       let hleType ← mkAppM ``LE.le #[rSteps, gSteps]
       let hle ← mkFreshExprMVar hleType
       let stx ← `(tactic| omega)
+      -- `runTacticSilent` throws if `omega` leaves the bound open, so the hole
+      -- below is never embedded unsolved (evm-asm#13207).
       runTacticSilent hle.mvarId! stx
-      -- Do not embed an unsolved hole in the proof term: an escaped metavariable
-      -- here is invisible at this point and resurfaces at the end of elaboration
-      -- as "don't know how to synthesize placeholder" against unrelated syntax,
-      -- with `sorryAx` in the resulting declaration.
-      let hle ← instantiateMVars hle
-      if hle.hasExprMVar then
-        throwError "seqFrame: could not discharge the step bound {rSteps} ≤ {gSteps} \
-          (`omega` left it open); refusing to build a proof term with an unsolved hole"
-      mkAppM ``RiscvZkvm.Rv64.cpsTripleWithin_mono_nSteps #[hle, result']
+      mkAppM ``RiscvZkvm.Rv64.cpsTripleWithin_mono_nSteps #[← instantiateMVars hle, result']
   let postPerm ← mkPermLambda resultPost goalPost
   let idPre ← mkIdLambda gPre
   goal.assign (mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_weaken)
