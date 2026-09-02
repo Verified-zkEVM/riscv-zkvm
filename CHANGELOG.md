@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+- **`xperm` no longer reports success on a permutation it did not find.**
+  Every prover in the `xperm` family matches atoms with `isDefEq`, which is
+  allowed to make its two arguments equal by *assigning* a metavariable. On the
+  goal `?A = ?B` the AC route reached its "≤ 1 atom" case, called
+  `isDefEq ?A ?B`, got `true` by assigning `?A := ?B`, and returned
+  `Eq.refl ?B` — closing the goal having identified the two sides rather than
+  permuted anything.
+
+  Nothing named `xperm` in the fallout. The merged, still-unassigned
+  metavariable resurfaced at the end of elaboration as "don't know how to
+  synthesize placeholder" against unrelated syntax, and the declaration was
+  admitted with `sorryAx` by ordinary error recovery, so `#print axioms` was
+  the only honest witness. `seqFrame` inherited a worse form through
+  `mkPermLambda`: the vacuous permutation let `assignOrPermuteWithin` succeed,
+  `replaceMainGoal []` emptied the goal list, and the next tactic reported "No
+  goals to be solved". Reported as
+  [evm-asm#13207](https://github.com/Verified-zkEVM/evm-asm/issues/13207).
+
+  An atom whose head is an unassigned metavariable is now rejected with an
+  error that names the tactic and prints both chains. The guard is narrow: an
+  `?A` occurring as an atom of *both* sides has an honest counterpart and is
+  still permuted, so only searches that were already meaningless are refused.
+- `seqFrame` refuses to embed an unsolved step-bound hole in its proof term,
+  rather than leaking a metavariable that resurfaces the same way.
+- Added `RiscvZkvm.Rv64.Logic.Tactics.XPermTests`, imported from the library
+  root so `lake build` runs it. It pins the guard, and — since the bug was
+  first read as a permutation-*distance* limit — a full reversal and a shuffle
+  of a 36-atom chain, both of which `xperm` proves. Distance is not a limit;
+  operand instantiation is the only real constraint.
+
 ## v0.3.1 — licensing of the relocated layer
 
 - Copied the MIT licence from the code's origin to

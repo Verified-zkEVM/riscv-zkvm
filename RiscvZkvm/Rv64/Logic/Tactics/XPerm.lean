@@ -13,6 +13,20 @@
   Also used internally by `xcancel`, `seqFrame`, and `runBlock` for
   building permutation proof terms in MetaM.
 
+  ## What it can and cannot do
+
+  **Permutation distance is not a limit.** Any reordering of a `**` chain is
+  proved; `RiscvZkvm/Rv64/Logic/Tactics/XPermTests.lean` pins a full reversal
+  and a shuffle of a 36-atom chain. If a permutation goal fails, the atoms
+  themselves differ — reordering the assertions to bring the two sides closer
+  together will not help.
+
+  **Both sides must be instantiated.** `xperm` matches atoms with `isDefEq`,
+  and a metavariable-headed atom would be "matched" by *assignment* rather
+  than found. Such operands are rejected (`checkPermOperands`); see the
+  operand-hygiene section below for why the alternative — succeeding — is the
+  worst thing this tactic could do.
+
   ## Key Design
 
   Inspired by SPlean/CFML's `xsimpl`: uses `isDefEq` for atom matching
@@ -311,6 +325,78 @@ meta def checkACEligible (lhs rhs : Expr) : MetaM Bool := do
     if lHashes[i]! != rHashes[i]! then return false
   return true
 
+/-! ### Operand hygiene: refuse metavariable "atoms"
+
+  Every prover below matches atoms with `isDefEq`, and `isDefEq` may make its
+  two arguments equal by **assigning** a metavariable. That is wanted *inside*
+  an atom (`regIs r ?v` against `regIs r 5` should instantiate `?v`), and it is
+  exactly what must not be allowed for an atom that *is* a metavariable, or for
+  a whole chain that is one.
+
+  Concretely, on the goal `?A = ?B` the AC route reaches its "≤ 1 atom" case,
+  calls `isDefEq ?A ?B`, gets `true` by assigning `?A := ?B`, and returns
+  `Eq.refl ?B`. `xperm` then closes its goal having proved nothing: it did not
+  find a permutation, it *identified the two sides*.
+
+  The consequences are hard to attribute, which is why this is a guard and not
+  a comment:
+
+  * no message names `xperm` — the tactic reports success;
+  * the merged, still-unassigned metavariable resurfaces at the end of
+    elaboration as *"don't know how to synthesize placeholder"*, reported
+    against unrelated positions (typically every `have` in the block) and
+    showing the main goal;
+  * the declaration is then admitted with `sorryAx` by ordinary elaboration
+    error recovery, so `#print axioms` is the only honest witness.
+
+  `seqFrame` inherits the same shape through `mkPermLambda`: the vacuous
+  permutation lets `assignOrPermuteWithin` "succeed", `replaceMainGoal []`
+  empties the goal list, and the next tactic reports "No goals to be solved"
+  instead of anything diagnostic.
+
+  The guard is deliberately narrow, so that it can only reject searches that
+  were already meaningless. A metavariable-headed atom is rejected **only when
+  the same metavariable is not also an atom of the other side**. An `?A` that
+  occurs on both sides cancels — `?A ** B = B ** ?A` is a real permutation and
+  `findAtomIdx`'s hash bucket matches `?A` to itself without assigning it — so
+  that case still goes through. An `?A` that occurs on one side only has
+  nothing it could honestly be matched against, so whatever the search returns
+  is an artefact of the traversal order. -/
+
+/-- Heads of the atoms of `e` that are unassigned metavariables. -/
+private meta def mvarAtomIds (e : Expr) : MetaM (Std.HashSet MVarId) := do
+  let mut ids : Std.HashSet MVarId := {}
+  for a in ← flattenSepConj e do
+    let a ← instantiateMVars a
+    if let .mvar id := a.getAppFn then
+      ids := ids.insert id
+  return ids
+
+/-- Reject `xperm` operands that cannot honestly be permuted: an atom (or a
+    whole chain, which flattens to a single atom) whose head is an unassigned
+    metavariable that does not also head an atom of the other side. See the
+    section comment above — this is the guard that keeps a failed permutation
+    search from being reported as success. -/
+private meta def checkPermOperands (lhs rhs : Expr) : MetaM Unit := do
+  let lhs ← instantiateMVars lhs
+  let rhs ← instantiateMVars rhs
+  let lIds ← mvarAtomIds lhs
+  let rIds ← mvarAtomIds rhs
+  if lIds.isEmpty && rIds.isEmpty then return
+  let complain (side : String) (e : Expr) : MetaM Unit :=
+    throwError "xperm: the {side} contains an atom that is an unassigned \
+      metavariable with no counterpart on the other side:\n  \
+      LHS: {lhs}\n  RHS: {rhs}\n\
+      There is no `**` structure to permute there, and matching it would only \
+      *assign* the metavariable — closing the goal with a vacuous `Eq.refl` \
+      (or an arbitrary pairing) that proves no permutation at all. Instantiate \
+      the assertion before calling `xperm`: state the intermediate chain \
+      explicitly instead of leaving a `_` for the unifier."
+  for id in lIds do
+    unless rIds.contains id do complain "LHS" lhs
+  for id in rIds do
+    unless lIds.contains id do complain "RHS" rhs
+
 /-- Report which atoms differ between LHS and RHS (for diagnostics). -/
 private def reportAtomMismatches (lhsAtoms rhsAtoms : List Expr) : MetaM MessageData := do
   let la := lhsAtoms.toArray
@@ -330,6 +416,8 @@ private def reportAtomMismatches (lhsAtoms rhsAtoms : List Expr) : MetaM Message
 /-- Fallback pick-based permutation prover (O(n^2) in atom count).
     Used when AC reflection is not safe (e.g., expressions with loose bvars). -/
 meta partial def buildPermProofFallback (lhs rhs : Expr) : MetaM Expr := do
+  -- Refuse undetermined operands: `isDefEq` would "match" them by assignment.
+  checkPermOperands lhs rhs
   -- First reassociate both sides to right-associated form
   let (lhsRA, lhsPf) ← reassocProof lhs
   let (rhsRA, rhsPf) ← reassocProof rhs
@@ -384,6 +472,9 @@ where
     inline code: missing AC instances, or hashes matched but normal forms
     differ). -/
 meta def tryBuildPermProofAC? (lhs rhs : Expr) : MetaM (Option Expr) := do
+  -- Refuse undetermined operands *before* the `≤ 1 atom` `isDefEq` below, which
+  -- would otherwise "succeed" by assigning them and return a vacuous `Eq.refl`.
+  checkPermOperands lhs rhs
   -- Try AC fast path with zetaReduce
   let lhsZ ← Lean.Meta.zetaReduce lhs
   let rhsZ ← Lean.Meta.zetaReduce rhs
@@ -493,6 +584,9 @@ meta def computeSigma (rhsAtoms lhsAtoms : Array Expr) : MetaM (Array Nat) := do
 meta partial def buildPermProofCertCore (lhs rhs : Expr) : MetaM Expr := do
   let lhs ← instantiateMVars lhs
   let rhs ← instantiateMVars rhs
+  -- Refuse undetermined operands: `computeSigma`'s `findAvailIdx` would "match"
+  -- a metavariable atom against an arbitrary one by assigning it.
+  checkPermOperands lhs rhs
   -- Reassociate to right-associated form so the `seps`-list bridge is `defeq`.
   let (lhsRA, lhsPf) ← reassocProof lhs
   let (rhsRA, rhsPf) ← reassocProof rhs
@@ -549,6 +643,11 @@ meta partial def buildPermProofCert (lhs rhs : Expr) : MetaM Expr :=
     --
     -- AC reflection is kept only as a safety net (for any shape the certificate
     -- can't handle but AC can), ahead of the O(n^2) pick-based fallback.
+    --
+    -- The operand guard runs here, outside the `try`, so an undetermined
+    -- operand is reported once and is never mistaken for "a shape the
+    -- certificate can't handle" and retried on the other two routes.
+    checkPermOperands lhs rhs
     try
       buildPermProofCertCore lhs rhs
     catch e =>

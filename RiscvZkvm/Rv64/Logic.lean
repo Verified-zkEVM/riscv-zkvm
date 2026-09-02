@@ -85,3 +85,6 @@ import RiscvZkvm.Rv64.Logic.Tactics.XPermCert
 import RiscvZkvm.Rv64.Logic.Tactics.XCancel
 import RiscvZkvm.Rv64.Logic.Tactics.XCancelStruct
 import RiscvZkvm.Rv64.Logic.Tactics.PerfTrace
+-- Regression tests for the `xperm` family. Imported here so `lake build` runs
+-- them: they throw on regression, so a regression is a build failure.
+import RiscvZkvm.Rv64.Logic.Tactics.XPermTests

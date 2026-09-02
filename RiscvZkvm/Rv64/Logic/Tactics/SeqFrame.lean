@@ -991,7 +991,15 @@ meta def assignOrPermuteWithin (goal : MVarId) (result : Expr) : MetaM Unit := d
       let hle ← mkFreshExprMVar hleType
       let stx ← `(tactic| omega)
       runTacticSilent hle.mvarId! stx
-      mkAppM ``RiscvZkvm.Rv64.cpsTripleWithin_mono_nSteps #[← instantiateMVars hle, result']
+      -- Do not embed an unsolved hole in the proof term: an escaped metavariable
+      -- here is invisible at this point and resurfaces at the end of elaboration
+      -- as "don't know how to synthesize placeholder" against unrelated syntax,
+      -- with `sorryAx` in the resulting declaration.
+      let hle ← instantiateMVars hle
+      if hle.hasExprMVar then
+        throwError "seqFrame: could not discharge the step bound {rSteps} ≤ {gSteps} \
+          (`omega` left it open); refusing to build a proof term with an unsolved hole"
+      mkAppM ``RiscvZkvm.Rv64.cpsTripleWithin_mono_nSteps #[hle, result']
   let postPerm ← mkPermLambda resultPost goalPost
   let idPre ← mkIdLambda gPre
   goal.assign (mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_weaken)
