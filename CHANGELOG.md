@@ -1,5 +1,78 @@
 # Changelog
 
+## Unreleased — an optional SP1 backend
+
+- **The precompile ABI is now selectable, and ZisK remains the default.**
+  `RiscvZkvm.Rv64.Backend` picks the zkVM ABI a stepper is read against;
+  `RiscvZkvm.Rv64.stepOn` is the backend-parametric stepper, with
+
+  ```lean
+  theorem stepOn_zisk (s : MachineState) : stepOn .zisk s = step s := rfl
+  ```
+
+  This is deliberately additive. `step`, `stepN` and `execInstrBr` keep their
+  exact definitions and signatures, so no existing proof — here or in evm-asm —
+  is affected, and all six relocation-pinned machine-model files still differ
+  from their evm-asm originals by exactly zero lines. No new `Instr`
+  constructor was added, so evm-asm's `check-roundtrip-coverage.sh` ratchet is
+  untouched too.
+
+- **`RiscvZkvm.Rv64.Sp1Accel`: SP1's `ecall`-based accelerators.** SP1 passes
+  operand pointers in `a0`/`a1` and writes results in place at the `a0` block,
+  where ZisK passes one pointer to an in-memory block of pointers — that is the
+  whole ABI difference. 13 precompiles are modelled: `KECCAK_PERMUTE`, add and
+  double on secp256k1 / BN254 / BLS12-381, and add/sub/mul in the BN254 and
+  BLS12-381 Fp2 towers. Each dispatches to the concrete `Accel.*` function
+  `ZiskAccel.lean` already defines and known-answer-tests, so the SP1 and ZisK
+  paths compute the same mathematics and no new cryptography, axiom or
+  `decide`-heavy proof enters the build. `execSp1Accel` is a single
+  `writeWords`, exactly as `execCsrs` is, so its seven state-projection lemmas
+  are one-liners independent of the dispatch's branch count.
+
+- **An unmodelled SP1 syscall traps rather than continuing.** `step`'s ECALL
+  chain ends by advancing the PC and changing nothing, which is right for ZisK
+  — a stray `ecall` really is inert there — but wrong for SP1, whose
+  precompiles share the `t0` space with the host syscalls. `stepSp1` delegates
+  to `step` only for the four *enumerated* host ids and traps on everything
+  else, so a precompile that never ran cannot look like a successful no-op.
+  `Sp1.isAccelId_host_false` is the kernel-checked guarantee that testing
+  accelerator ids first cannot shadow HALT, WRITE, `write_output` or
+  `read_input`.
+
+- **`riscv-zkvm-run --backend zisk|sp1`**, defaulting to `zisk`. `Stop` gains
+  `unsupportedOnBackend` and `unknownSyscall` so the two new rejection modes
+  are reported precisely rather than as an opaque trap. `Interpreter.decode` is
+  unchanged — its signature is in the release smoke test, and the behaviour is
+  identical either way since `stepSp1` rejects `.CSRS` regardless.
+
+- **SP1's ABI is pinned, not transcribed.** `sp1-import/PROVENANCE.toml` and
+  `sp1-import/syscall-ids.json` pin the ids and operand layouts to SP1 v6.6.0
+  (`f5a5bbf`), and `scripts/check-sp1-pin.sh` (new, in CI) diffs the Lean
+  constants against that table. This pin is stronger than `ZiskAccel.lean`'s
+  prose provenance on purpose: evm-asm's codegen emits the ZisK ids, so a wrong
+  one breaks a guest loudly, whereas nothing here emits SP1 syscalls and a wrong
+  id would break no test at all. SP1 v6's zkEVM target is
+  `riscv64im-succinct-zkvm-elf` against the same `eth-act/zkvm-standards` C ABI
+  this model's `read_input` follows, so 64-bit words are SP1's own — not a
+  reinterpretation of a 32-bit ABI.
+
+- **Tests.** `scripts/run-interpreter-tests.sh` grows from 5 cases to 11,
+  including the one that matters: `sp1keccak` (via `ecall`) and `ziskkeccak`
+  (via `csrs`) must leave the same first lane, `0xf1258f7940e1dde7`, so the id
+  table and operand layout are checked against real execution rather than
+  asserted. `sp1badcall` pins both halves of the trap-versus-continue
+  difference.
+
+- `scripts/AxiomSweep.lean` now also scans the `RiscvZkvm.Rv64` root. Nothing
+  imported it before, so declarations reachable only from there — including all
+  of the above — would have escaped the axiom gate. Census: 3,549 declarations,
+  0 offenders.
+
+- **Known limitation**, recorded as `docs/validation.md` gap 5: the memory map
+  is unchanged, so `--backend sp1` runs SP1-ABI guests laid out for *this*
+  model's map. It cannot run an ELF from the SP1 toolchain, which links code and
+  data above `0x78000000` where `isValidMemAddr` ends.
+
 ## v0.3.0 — the RISC-V program logic
 
 - Relocated EvmAsm's RISC-V program logic here as `RiscvZkvm.Rv64.Logic`: the

@@ -11,7 +11,7 @@ moved here instead:
 
 | Library | Contents |
 |---|---|
-| `RiscvZkvm.Rv64` | `Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`, the ZisK accelerator CSR semantics |
+| `RiscvZkvm.Rv64` | `Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`, the ZisK accelerator CSR semantics, and the optional `Backend` / `stepOn` / SP1 accelerator layer |
 | `RiscvZkvm.Rv64.SailEquiv` | 51 per-instruction `*_sail_equiv` theorems, `sailStep_run_sim`, `sailStepN_run_sim` |
 | `RiscvZkvm.Interpreter` | instruction decode, ELF64 loading, executable state, fuel-limited driver |
 | `riscv-zkvm-run` | the CLI |
@@ -46,7 +46,8 @@ are closed, interpreter results are evidence about the executable path only.
    per constructor.
 4. **Model general CSR access**, or decide deliberately not to. Without it the
    `riscv-tests` corpus cannot run here at all (see `docs/validation.md`), and
-   the model's only CSR form stays the ZisK accelerator call.
+   the model's only CSR form stays the ZisK accelerator call — which the `sp1`
+   backend rejects outright, since SP1 has no CSR instruction.
 5. **Differential traces against Sail's C++ emulator** for the same source and
    configuration, as originally planned.
 
@@ -56,6 +57,12 @@ are closed, interpreter results are evidence about the executable path only.
   but only by admitting data accesses to `[0x80000000, 0xa0000000)` — an
   exclusion `RiscvZkvm/Rv64/Word.lean` documents as load-bearing for soundness.
   A conformance pass obtained by relaxing the thing under test is not evidence.
+
+  Note this is narrower than "the memory map may never be backend-scoped". The
+  `sp1` backend deliberately keeps the existing zones, so it runs SP1-ABI images
+  laid out for *this* map, not images from SP1's own linker script — see
+  `docs/validation.md`. Giving SP1 its real layout is a separate question from
+  the one rejected here, and it is the one to argue if that gap ever matters.
 - **No ELFSage dependency.** Its pinned revision targets Lean v4.28.0-rc1 and
   its `main` branch has not moved since 2024. A ~250-line ELF64 reader keeps
   `lean-sail` this package's only dependency.

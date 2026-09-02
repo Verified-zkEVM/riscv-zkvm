@@ -84,6 +84,23 @@ BGE = lambda a, b, off: btype(0x63, 5, a, b, off)
 JAL = lambda rd, off: jtype(0x6F, rd, off)
 ECALL = 0x73
 ADDW_UNMODELED = rtype(0x3B, 0, 0x00, "a2", "a0", "a1")  # the RV64 word-op gap
+# `csrs 0x800, a0` == `csrrs x0, 0x800, a0`: the ZisK Keccakf accelerator call.
+# Rejected by the sp1 backend, which has no CSR instruction at all.
+CSRS_KECCAK_A0 = itype(0x73, 2, "zero", "a0", 0x800)
+
+
+def li32(rd, value):
+    """Materialise a positive 32-bit constant with lui+addi.
+
+    Only used for SP1 syscall ids, all of which have a zero low bit 11, so the
+    addi immediate never sign-extends into the upper bits."""
+    assert 0 <= value < 0x8000_0000 and (value & 0x800) == 0, hex(value)
+    return [LUI(rd, value >> 12), ADDI(rd, rd, value & 0xFFF)]
+
+
+# SP1 syscall ids, pinned in sp1-import/syscall-ids.json.
+SP1_KECCAK_PERMUTE = 0x0001_0109
+SP1_SHA_EXTEND = 0x0030_0105      # a real SP1 id this model deliberately omits
 
 # 0xa0000000 has bit 31 set, so `lui` alone would sign-extend it to
 # 0xffffffff_a0000000 on RV64. Materialise it as 0x50000000 << 1.
@@ -166,6 +183,59 @@ def _wordop():
         ADDI("a0", "zero", 1),
         ADDI("a1", "zero", 2),
         ADDW_UNMODELED,
+        *HALT,
+    ]
+
+
+@fixture("sp1keccak")
+def _sp1keccak():
+    """SP1 KECCAK_PERMUTE: ecall with the syscall id in t0, state pointer in a0.
+
+    Permutes the all-zero state in place and loads the first lane into a2. The
+    companion `ziskkeccak` fixture runs the same permutation over the same
+    memory through the ZisK csrs path; the two must agree in a2, which is what
+    makes `Accel.keccakF` reuse an equivalence rather than a claim."""
+    return [
+        *LOAD_DATA_BASE,               # t1 = 0xa0000000
+        ADDI("a0", "t1", 0),           # a0 = state pointer (25 zero lanes)
+        ADDI("a1", "zero", 0),         # a1 must be 0 for KECCAK_PERMUTE
+        *li32("t0", SP1_KECCAK_PERMUTE),
+        ECALL,
+        LD("a2", 0, "a0"),             # first lane of the permuted state
+        *HALT,
+    ]
+
+
+@fixture("ziskkeccak")
+def _ziskkeccak():
+    """The ZisK spelling of the same permutation: `csrs 0x800, a0`.
+
+    Succeeds under --backend zisk and is rejected under --backend sp1, which is
+    the observable half of "SP1 has no csrs accelerator call"."""
+    return [
+        *LOAD_DATA_BASE,
+        ADDI("a0", "t1", 0),
+        CSRS_KECCAK_A0,
+        LD("a2", 0, "a0"),
+        *HALT,
+    ]
+
+
+@fixture("sp1badcall")
+def _sp1badcall():
+    """An `ecall` carrying a real SP1 syscall id this model does not implement.
+
+    Under --backend sp1 this must TRAP: SP1's precompiles share the t0 space
+    with the host syscalls, so continuing would claim the guest ran a precompile
+    that never executed. Under --backend zisk the same id is an inert ecall and
+    execution continues, setting a3 = 7 -- so the fixture pins both halves of
+    the difference."""
+    return [
+        *li32("t0", SP1_SHA_EXTEND),
+        ADDI("a0", "zero", 0),
+        ADDI("a1", "zero", 0),
+        ECALL,
+        ADDI("a3", "zero", 7),         # only reached if the ecall was a no-op
         *HALT,
     ]
 

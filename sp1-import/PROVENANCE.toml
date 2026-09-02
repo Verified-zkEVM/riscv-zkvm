@@ -1,0 +1,70 @@
+# SP1 syscall-ABI pin for `RiscvZkvm.Rv64.Sp1Accel`.
+#
+# Nothing in this repository emits SP1 syscalls, so — unlike the ZisK
+# accelerator ids, which evm-asm's codegen actually emits and would therefore
+# break loudly if wrong — a transcription error here is undetectable by any
+# local test. This file plus `scripts/check-sp1-pin.sh` are the only defence.
+#
+# Update procedure: bump `sp1_rev`/`sp1_tag`, re-download each file listed
+# under [abi.sources], recompute its digest, reconcile `syscall-ids.json`, then
+# run `scripts/check-sp1-pin.sh`.
+
+[source]
+sp1_repo = "https://github.com/succinctlabs/sp1"
+sp1_tag  = "v6.6.0"
+sp1_rev  = "f5a5bbf6a1cf6007315b410d88678d96fb399fb5"
+
+[target]
+# SP1 v6's zkEVM target is RV64IM/LP64 against the eth-act zkvm-standards C
+# ABI -- the same standard this model's `read_input` (t0 = 0xF2) follows. So
+# modelling SP1 at 64-bit width is a pin, not an assumption. See zkevm/README.md
+# and zkevm/zkvm.ld at sp1_rev.
+triple      = "riscv64im-succinct-zkvm-elf"
+xlen        = 64
+# From zkevm/zkvm.ld. Recorded because it explains, precisely, which SP1 guests
+# this model can execute -- see docs/validation.md.
+stack_top    = 0x78000000    # sp init; also the image base (segments must be >= this)
+max_memory   = 0x2000000000  # 1 << 37
+input_region = 0x0400000000  # 1 << 34
+
+[abi]
+# Syscall id in t0 (x5); first pointer argument in a0 (x10), second in a1 (x11).
+# Every modelled precompile writes its result in place at the a0 block.
+id_register   = "x5"
+arg1_register = "x10"
+arg2_register = "x11"
+table_file    = "sp1-import/syscall-ids.json"
+
+# Files at sp1_rev that fix the ids and the operand layouts. The id enum alone
+# is not enough: it gives the numbers but not the memory effect (which block is
+# written, how many words, in place or not), which is why each precompile's
+# executor source is pinned too.
+[[abi.sources]]
+path   = "crates/core/executor/src/syscall_code.rs"
+sha256 = "2dd94ae5d24f17bfd90210ba1161d1765e7efe9cf74f7161328a80e13cbc8abd"
+fixes  = "syscall id values"
+
+[[abi.sources]]
+path   = "crates/core/executor/src/vm/syscall/precompiles/keccak256/permute.rs"
+sha256 = "27591be1e5fdee5fcc72af69b3d5c942e0f4cdd83f71afec1fc734325ffdf809"
+fixes  = "KECCAK_PERMUTE: state_ptr = arg1, 25 words, in place, arg2 must be 0"
+
+[[abi.sources]]
+path   = "crates/core/executor/src/vm/syscall/precompiles/weierstrass/add.rs"
+sha256 = "0991aea1a197b5ff1427b5845d56c7cae6af614ef162c9ce68bb9e2546d53025"
+fixes  = "*_ADD: p_ptr = arg1, q_ptr = arg2, WordsCurvePoint each, written at p_ptr"
+
+[[abi.sources]]
+path   = "crates/core/executor/src/vm/syscall/precompiles/weierstrass/double.rs"
+sha256 = "bd92550ec61e2b4621b1238fe8f7e234ee5d2e07936ad80846ca583a0fc2fa16"
+fixes  = "*_DOUBLE: p_ptr = arg1, WordsCurvePoint, in place"
+
+[[abi.sources]]
+path   = "crates/core/executor/src/vm/syscall/precompiles/fptower/fp2_addsub.rs"
+sha256 = "e1cafae4a6358812c25711e81b666312e30ea456517968aec66e0f882ee2fd76"
+fixes  = "*_FP2_ADD/SUB: x_ptr = arg1 (8-byte aligned), y_ptr = arg2, written at x_ptr"
+
+[[abi.sources]]
+path   = "crates/core/executor/src/vm/syscall/precompiles/fptower/fp2_mul.rs"
+sha256 = "e78c5ac2e8c720e7bcacb9b449edc86d74ff56d34785a1951ba4215c55ed9ae3"
+fixes  = "*_FP2_MUL: same shape as fp2_addsub"

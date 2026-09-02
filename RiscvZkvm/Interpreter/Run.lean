@@ -13,6 +13,22 @@
   hard-codes in `RiscvZkvm/Rv64/Word.lean`: data accesses must land in
   `[0x20, 0x78000000]`, `[0x40000000, 0x40002000]` or `[0xa0000000, 0xc0000000]`.
 
+  ## Backends
+
+  `--backend zisk` (the default) is `RiscvZkvm.Rv64.step` unchanged. `--backend
+  sp1` swaps the precompile ABI for SP1's: precompiles arrive as `ecall` with a
+  syscall id in `t0` (`RiscvZkvm.Rv64.Sp1Accel`) and the ZisK `csrs` accelerator
+  call traps. The four host syscalls are shared and behave identically.
+
+  KNOWN GAP: `--backend sp1` cannot run an ELF from the real SP1 toolchain, and
+  the memory map is not the reason. SP1 v6's `zkvm.ld` puts `.text`/`.data`/heap
+  *above* `__sp1_stack_top = 0x78000000` and its input region at `1 << 34`,
+  whereas `isValidMemAddr`'s largest zone *ends* at `0x78000000` -- so an SP1
+  image's stack would validate but its data would not. What this backend is for
+  is exercising the SP1 precompile ABI and its trap policy on images laid out
+  for this model's map; it is not evidence that a real SP1 program is correctly
+  modeled. See `docs/validation.md`.
+
   KNOWN GAP: the standard `riscv-tests` conformance images do NOT run here, and
   not because of anything this module does:
   * their data — including `.tohost` — sits in `[0x80000000, 0xa0000000)`, a
@@ -49,6 +65,14 @@ inductive Stop where
   | noInstruction
   /-- The fuel bound was reached. -/
   | outOfFuel
+  /-- The instruction at `pc` is modeled, but not by the selected backend --
+      today only the ZisK `csrs` accelerator call under `--backend sp1`.
+      Distinguished from `undecodable` because the encoding *is* decodable. -/
+  | unsupportedOnBackend (b : Backend) (i : Instr)
+  /-- `ECALL` with a `t0` the selected backend does not model. Under `sp1` an
+      unrecognised syscall id traps rather than continuing, so that an
+      unimplemented precompile cannot be mistaken for a no-op. -/
+  | unknownSyscall (t0 : Word)
   deriving Repr
 
 /-- An ELF image loaded into an executable state, plus what is needed to explain
@@ -115,16 +139,28 @@ def load (img : Elf64Image) (privateInput : List (BitVec 8) := []) : Loaded := I
       privateInput := privateInput }
   return { state, rawCode, tohost := img.tohost }
 
-/-- Explain why `stepExec` returned `none` at the current `pc`. -/
-def classifyStop (l : Loaded) (e : ExecState) : Stop :=
+/-- Explain why `stepExec` returned `none` at the current `pc`.
+
+    `stepResult` is the trap-kind classifier for `step`, i.e. for the `zisk`
+    backend. Using it under `sp1` is still sound: the only kind it distinguishes
+    is `misalignedAccess`, which it reads off the load/store instructions --
+    exactly the arms both backends share -- and its `.ok` case is absorbed by
+    the `.other` fallback. -/
+def classifyStop (b : Backend) (l : Loaded) (e : ExecState) : Stop :=
   let m := e.toMachineState
   match m.code m.pc with
   | none =>
     match l.rawCode[e.pc]? with
     | some w => .undecodable w
     | none => .noInstruction
+  | some (.CSRS csr rs1) =>
+    if b == .sp1 then .unsupportedOnBackend b (.CSRS csr rs1)
+    else .trap (match stepResult m with | .trap k => k | .ok _ => .other)
   | some .ECALL =>
-    if m.getReg .x5 == (0 : Word) then .halted (m.getReg .x10)
+    let t0 := m.getReg .x5
+    if t0 == (0 : Word) then .halted (m.getReg .x10)
+    else if b == .sp1 && !Sp1.isAccelId t0 && !Sp1.isHostId t0 then
+      .unknownSyscall t0
     else .trap (match stepResult m with | .trap k => k | .ok _ => .other)
   | some _ =>
     .trap (match stepResult m with | .trap k => k | .ok _ => .other)
@@ -136,14 +172,16 @@ structure Outcome where
   stop  : Stop
 
 /-- Run until the machine stops or `fuel` instructions have retired. -/
-def runFuel (l : Loaded) : Nat → Nat → ExecState → Outcome
+def runFuel (b : Backend) (l : Loaded) : Nat → Nat → ExecState → Outcome
   | 0, steps, e => { steps, final := e, stop := .outOfFuel }
   | n + 1, steps, e =>
-    match e.stepExec with
-    | some e' => runFuel l n (steps + 1) e'
-    | none => { steps, final := e, stop := classifyStop l e }
+    match e.stepExec b with
+    | some e' => runFuel b l n (steps + 1) e'
+    | none => { steps, final := e, stop := classifyStop b l e }
 
-/-- Run a loaded image from its entry point. -/
-def run (l : Loaded) (fuel : Nat) : Outcome := runFuel l fuel 0 l.state
+/-- Run a loaded image from its entry point. `zisk` is the default backend, and
+    for it this is the same execution it always was. -/
+def run (l : Loaded) (fuel : Nat) (b : Backend := .zisk) : Outcome :=
+  runFuel b l fuel 0 l.state
 
 end RiscvZkvm.Interpreter

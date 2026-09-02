@@ -30,7 +30,7 @@
 -/
 
 import Std.Data.HashMap
-import RiscvZkvm.Rv64.Execution
+import RiscvZkvm.Rv64.StepOn
 import RiscvZkvm.Interpreter.Decode
 
 namespace RiscvZkvm.Interpreter
@@ -77,20 +77,31 @@ def toMachineState (e : ExecState) : MachineState where
       the single containing doubleword, so a sub-word store touches one cell;
     * `execCsrs` is definitionally `writeWords base ws` (`ZiskAccel.lean`), which
       writes `ws.length` consecutive doublewords from `base`;
+    * under the `sp1` backend, `execSp1Accel` is the same single `writeWords`
+      (`Sp1Accel.lean`) -- but reached through `.ECALL`, not `.CSRS`, so the
+      accelerator arm below is duplicated into the `ECALL` case. Omitting it
+      would drop every SP1 precompile's writes;
     * the `read_input` syscall (`t0 = 0xF2`) writes the two out-pointers in
       `a0`/`a1`, which `step` has already required to be valid dword addresses.
 
     Every other instruction writes no memory. -/
-def writtenAddrs (m : MachineState) : List Word :=
+def writtenAddrs (b : Backend) (m : MachineState) : List Word :=
   match m.code m.pc with
   | some (.SD rs1 _ off) | some (.SW rs1 _ off)
   | some (.SH rs1 _ off) | some (.SB rs1 _ off) =>
       [alignToDword (m.getReg rs1 + signExtend12 off)]
   | some (.CSRS csr rs1) =>
+      -- Only the zisk backend executes this at all; `stepSp1` traps on it.
       let (base, ws) := m.csrsWrite csr rs1
       (List.range ws.length).map (fun i => base + BitVec.ofNat 64 (8 * i))
   | some .ECALL =>
-      if m.getReg .x5 == (0xF2 : Word) then [m.getReg .x10, m.getReg .x11] else []
+      let t0 := m.getReg .x5
+      if b == .sp1 && Sp1.isAccelId t0 then
+        -- Same shape as the `.CSRS` arm above, deliberately: both are one
+        -- `writeWords` of a contiguous dword block.
+        let (base, ws) := m.sp1AccelWrite t0
+        (List.range ws.length).map (fun i => base + BitVec.ofNat 64 (8 * i))
+      else if t0 == (0xF2 : Word) then [m.getReg .x10, m.getReg .x11] else []
   | _ => []
 
 /-- Read the 32 architectural registers out of a `MachineState`. -/
@@ -104,16 +115,18 @@ private def regsOf (m : MachineState) : Array Word :=
     m.getReg .x24, m.getReg .x25, m.getReg .x26, m.getReg .x27,
     m.getReg .x28, m.getReg .x29, m.getReg .x30, m.getReg .x31]
 
-/-- One step, using the proof model's `step` for the semantics.
+/-- One step, using the proof model's `stepOn` for the semantics.
 
-    `none` means `step` returned `none`: a halt, a trap, or no instruction at
-    `pc`. `RiscvZkvm.Interpreter.Run` classifies which. -/
-def stepExec (e : ExecState) : Option ExecState :=
+    `none` means `stepOn` returned `none`: a halt, a trap, or no instruction at
+    `pc`. `RiscvZkvm.Interpreter.Run` classifies which. The backend defaults to
+    `zisk`, for which `stepOn .zisk = step` holds by `rfl` -- so this is the
+    same definition it always was. -/
+def stepExec (e : ExecState) (b : Backend := .zisk) : Option ExecState :=
   let m := e.toMachineState
-  match step m with
+  match stepOn b m with
   | none => none
   | some m' =>
-    let touched := writtenAddrs m
+    let touched := writtenAddrs b m
     let mem' := touched.foldl (fun acc a => acc.insert a (m'.getMem a)) e.mem
     some { e with
       regs := regsOf m'

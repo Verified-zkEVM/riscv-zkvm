@@ -38,21 +38,27 @@ fail=0
 pass=0
 
 # Each case: name, then one `grep -E` pattern per expected line of output.
-check() {
-  local name="$1"; shift
+check() { check_args "$1" "" "${@:2}"; }
+
+# As `check`, but the second argument is extra flags for the runner (word-split
+# on purpose, so `--backend sp1` can be passed as one string).
+check_args() {
+  local name="$1"; local extra="$2"; shift 2
   local out
-  if ! out="$("$RUNNER" "$FIXDIR/$name.elf" --regs 2>&1)"; then
+  # shellcheck disable=SC2086
+  if ! out="$("$RUNNER" "$FIXDIR/$name.elf" --regs $extra 2>&1)"; then
     : # a non-zero exit is expected for the trap/undecodable cases
   fi
+  local label="$name${extra:+ [$extra]}"
   local ok=1
   for pat in "$@"; do
     if ! grep -Eq -- "$pat" <<<"$out"; then
-      echo "FAIL $name: expected /$pat/"
+      echo "FAIL $label: expected /$pat/"
       ok=0
     fi
   done
   if (( ok )); then
-    echo "ok   $name"
+    echo "ok   $label"
     pass=$((pass + 1))
   else
     printf '%s\n' "$out" | sed 's/^/     | /'
@@ -91,6 +97,49 @@ check trap \
 check wordop \
   'stopped   undecodable instruction' \
   '^retired   2$'
+
+# --- backends -------------------------------------------------------------
+#
+# The default backend is zisk, and `--backend zisk` must be indistinguishable
+# from passing nothing: `stepOn .zisk = step` by `rfl`, and these two cases are
+# the executable end of that claim.
+check_args arith "--backend zisk" \
+  'stopped   halted' \
+  '^  x12[[:space:]]+0x54$'
+
+# Cross-backend equivalence on the SAME mathematics. The SP1 fixture reaches
+# Keccak-f[1600] through `ecall` with t0 = KECCAK_PERMUTE and the ZisK fixture
+# through `csrs 0x800`; both dispatch to `Accel.keccakF`, so the first lane of
+# the permuted all-zero state must be identical. If these two ever disagree, the
+# SP1 id table or its operand layout is wrong.
+check_args sp1keccak "--backend sp1" \
+  'stopped   halted' \
+  '^  x12[[:space:]]+0xf1258f7940e1dde7$'
+check_args ziskkeccak "--backend zisk" \
+  'stopped   halted' \
+  '^  x12[[:space:]]+0xf1258f7940e1dde7$'
+
+# SP1 has no CSR instruction, so the ZisK accelerator call is rejected -- and
+# reported as unsupported rather than as an opaque trap, because the encoding
+# does decode.
+check_args ziskkeccak "--backend sp1" \
+  'stopped   .*CSRS.* is not modeled by the sp1 backend'
+
+# The soundness case. `t0 = 0x300105` is a real SP1 syscall id (SHA_EXTEND) that
+# this model deliberately does not implement. Under sp1 it MUST trap: SP1's
+# precompiles share the t0 space with the host syscalls, so continuing would
+# assert the guest ran a precompile that never executed -- the model being more
+# optimistic than the machine. a3 stays 0 because the instruction after the
+# ecall is never reached.
+check_args sp1badcall "--backend sp1" \
+  'stopped   ECALL with t0 = 0x300105: syscall not modeled' \
+  '^  x13[[:space:]]+0x0$'
+
+# The same id under zisk is an inert ecall, so execution continues and a3 = 7.
+# Both halves are pinned so neither can drift silently.
+check_args sp1badcall "--backend zisk" \
+  'stopped   halted' \
+  '^  x13[[:space:]]+0x7$'
 
 echo
 echo "run-interpreter-tests: $pass passed, $fail failed"

@@ -115,8 +115,9 @@ closing it has to be a deliberate edit.
      not something to relax for the sake of a test suite;
    - the second instruction of every image is `csrr t5, mcause`
      (`0x34202f73`). `Instr`'s only CSR form is `CSRS`, the ZisK accelerator
-     call `csrrs x0, csr, rs1`; general M-mode CSR access, `mtvec` setup and
-     `mret` are not modeled at all.
+     call `csrrs x0, csr, rs1` (which the `sp1` backend rejects, SP1 having no
+     CSR instruction); general M-mode CSR access, `mtvec` setup and `mret` are
+     not modeled at all.
 
    ISA-conformance evidence therefore continues to come from
    `scripts/validate-lean-emulator.sh`, which runs those same ELFs against the
@@ -139,8 +140,37 @@ closing it has to be a deliberate edit.
 4. **`stepExec` is not proved to simulate `step`.** `ExecState.toMachineState`
    states the refinement; nothing proves the hash-map memory and the model's
    function memory stay in step. The construction makes it very likely — the
-   semantics *is* `step`, and only the written-address set is hand-written — but
-   that is an argument, not a theorem.
+   semantics *is* `stepOn`, and only the written-address set is hand-written —
+   but that is an argument, not a theorem. Note `writtenAddrs` is now
+   backend-dependent: under `sp1` an accelerator arrives as `.ECALL`, so its
+   write set has to be computed there too. Omitting that would drop a
+   precompile's writes silently, which is why `sp1keccak` reads its result back
+   and compares it against the ZisK path.
+
+5. **The `sp1` backend models SP1's precompile ABI, not SP1.** What is modeled
+   is the syscall ids and operand layouts pinned in `sp1-import/`, dispatched to
+   the same `Accel.*` functions the ZisK accelerators use — 13 precompiles
+   (Keccak-f, the three curves' add/double, the two Fp2 towers). Three things
+   are deliberately *not* modeled, and each is a real limitation:
+
+   - **Not SP1's memory map.** `isValidMemAddr` keeps ziskemu's zones, whose
+     largest ends at `0x78000000`. SP1's own `zkvm.ld` puts `.text`/`.data`/heap
+     *above* `__sp1_stack_top = 0x78000000` and its input region at `1 << 34`,
+     so an SP1-linked image's stack would validate but its data would not. This
+     backend therefore runs SP1-ABI guests laid out for *this* model's map; it
+     cannot run an ELF from the SP1 toolchain, and a green run here is not SP1
+     compatibility evidence.
+   - **Not the whole syscall surface.** `sp1-import/syscall-ids.json` records
+     every id left out and why — SHA-256 because SP1 splits the message
+     schedule from the compression and `Accel.sha256Compress` does both at once;
+     `UINT256_MUL` because the pinned source does not fix its modulus-zero
+     behaviour; decompression and Edwards curves because `Accel` has no modular
+     square root. Every omitted id **traps**, so an unimplemented precompile
+     cannot be mistaken for a no-op.
+   - **Not related to Sail.** `Instr.simulable` already excludes `ECALL` and
+     `CSRS`, so no `*_sail_equiv` theorem says anything about either backend's
+     precompiles. The SP1 path has no ISA-conformance evidence behind it, only
+     the pin and the cross-backend fixture.
 
 Gaps 3 and 4 mean interpreter results are evidence about the executable path.
 They are not, on their own, evidence about the model the `SailEquiv` theorems
@@ -164,7 +194,7 @@ Two CI gates keep it that way:
   `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
   `bv_decide` fails the build rather than silently widening the base.
 * `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
-  environment (3457 declarations today) and fails on any axiom outside the table
+  environment (3549 declarations today) and fails on any axiom outside the table
   above, including `sorryAx`.
 
 The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the

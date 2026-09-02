@@ -9,5 +9,7 @@
 
 -- `Execution` transitively imports `Instructions`, `ZiskAccel`, `Basic`, and `Word`.
 import RiscvZkvm.Rv64.Execution
+-- `StepOn` transitively imports `Sp1Accel` and `Backend`: the optional SP1 ABI.
+import RiscvZkvm.Rv64.StepOn
 import RiscvZkvm.Rv64.Program
 import RiscvZkvm.Rv64.Bytes

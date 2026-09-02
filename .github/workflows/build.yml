@@ -78,6 +78,8 @@ jobs:
 
       - name: Unimported-file check (hand-owned Lean reachable from a root)
         run: scripts/check-unimported.py
+      - name: Check the SP1 syscall pin
+        run: scripts/check-sp1-pin.sh
 
       - name: Confirm the package stays Mathlib-free
         run: |

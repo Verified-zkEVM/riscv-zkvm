@@ -66,7 +66,34 @@ Execution goes through `RiscvZkvm.Rv64.step` itself — the interpreter supplies
 an ELF loader and an efficient memory representation, not a second set of
 instruction semantics. Guest images must use the zkVM memory map the model
 hard-codes; **the standard `riscv-tests` images do not run here**, for reasons
-recorded in [validation](docs/validation.md) along with three other known gaps.
+recorded in [validation](docs/validation.md) along with four other known gaps.
+
+### Backends
+
+The model's precompile ABI is a commitment to a particular zkVM, and it is
+selectable. ZisK is the default and is unchanged in every respect:
+
+```bash
+.lake/build/bin/riscv-zkvm-run guest.elf --backend sp1
+```
+
+`--backend sp1` reads precompiles as SP1 does — `ecall` with a syscall id in
+`t0` and operand pointers in `a0`/`a1` — instead of as ZisK's `csrs <id>, <reg>`
+accelerator calls, dispatching to the same concrete `Accel.*` functions so the
+two paths compute the same mathematics. The four host syscalls are shared. In
+Lean the selector is `RiscvZkvm.Rv64.Backend`, and
+
+```lean
+theorem stepOn_zisk (s : MachineState) : stepOn .zisk s = step s := rfl
+```
+
+is what makes this additive rather than a change: `step` keeps its exact
+definition, so every existing proof stands untouched. SP1's ids and operand
+layouts are pinned in [`sp1-import/`](sp1-import/PROVENANCE.toml) and gated by
+`scripts/check-sp1-pin.sh`. **`--backend sp1` cannot run an ELF from the real
+SP1 toolchain** — SP1 links its code and data above `0x78000000`, where this
+model's memory map ends. See [validation](docs/validation.md) gap 5 for what it
+is and is not evidence of.
 
 ## Downstream compatibility — read before changing anything
 
@@ -94,6 +121,13 @@ Treat the following as public API. Changing any of it is a breaking change:
 | `platformIndependent` on every library, and one release archive covering all five | evm-asm's CI downloads them instead of recompiling; Linux-built oleans must validate on macOS |
 | The `RiscvZkvm.Rv64.Logic` tactic surface — `xperm`, `xsimp`, `xcancel`, `seqFrame`, `runBlock`, `sym_step`, `wp_rv64*`, `signext`, `extract_pure`, and the `rv64_addr` / `reg_ops` / `byte_alg` / `rv64_wp` simp attributes | evm-asm's proofs invoke these by name; a renamed tactic or simp attribute breaks call sites that no type signature protects |
 | `lean-toolchain` | must match evm-asm's, which is pinned to the same Mathlib tag |
+
+The backend layer (`Backend`, `stepOn`, `stepNOn`, `stepSp1`, `Sp1Accel.*`, and
+the `--backend` flag) is **additive**: it adds names, changes none, and leaves
+all six machine-model files byte-identical to their evm-asm originals — which
+`scripts/check-relocation.sh` verifies. Adding a backend or an SP1 accelerator
+id is therefore not a downstream change; altering `step`, `stepN` or
+`execInstrBr` to accommodate one would be, and is the thing to avoid.
 
 Before tagging a release that touches any of the above, **build evm-asm against
 the candidate revision** — the local gates here cannot see downstream breakage.

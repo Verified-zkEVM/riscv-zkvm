@@ -17,6 +17,7 @@ structure Options where
   input   : Option String := none
   output  : Option String := none
   regs    : Bool := false
+  backend : Backend := .zisk
 
 def usage : String :=
 "usage: riscv-zkvm-run <elf> [options]
@@ -25,12 +26,19 @@ def usage : String :=
   --input FILE    file contents become the guest's private input stream
   --output FILE   write the guest's public output bytes to FILE
   --regs          print the final register file
+  --backend B     zkVM ABI to execute against: zisk (default) or sp1
   --help          show this message
 
-Executes a static RV64IM ELF under RiscvZkvm.Rv64.step -- the same definition the
+Executes a static RV64IM ELF under RiscvZkvm.Rv64.stepOn -- for the default
+zisk backend that is RiscvZkvm.Rv64.step itself, the same definition the
 SailEquiv theorems relate to the official Sail model. Guest images must use the
 zkVM memory map hard-coded in RiscvZkvm/Rv64/Word.lean; riscv-tests conformance
-images do not run here (see docs/validation.md)."
+images do not run here (see docs/validation.md).
+
+--backend sp1 swaps the precompile ABI for SP1's: precompiles arrive as ecall
+with a syscall id in t0, and the ZisK csrs accelerator call is rejected. It
+cannot run an ELF built by the real SP1 toolchain -- SP1 links its code and data
+above 0x78000000, where this model's memory map ends. See docs/validation.md."
 
 /-- Parse argv. Returns an error message rather than throwing. -/
 def parseArgs (args : List String) : Except String Options := do
@@ -50,6 +58,10 @@ def parseArgs (args : List String) : Except String Options := do
       | "--input" :: f :: t => o := { o with input := some f }; r := t
       | "--output" :: f :: t => o := { o with output := some f }; r := t
       | "--regs" :: t => o := { o with regs := true }; r := t
+      | "--backend" :: v :: t =>
+        match Backend.ofString? v with
+        | some b => o := { o with backend := b }; r := t
+        | none => throw s!"--backend expects zisk or sp1, got '{v}'"
       | "--help" :: _ | "-h" :: _ => throw usage
       | a :: _ => throw s!"unrecognised argument '{a}'\n\n{usage}"
     return o
@@ -66,6 +78,10 @@ private def describe (s : Stop) : String :=
         (not modeled by RiscvZkvm.Rv64.Instr)"
   | .noInstruction => "no instruction at pc (ran off the end of the image)"
   | .outOfFuel => "out of fuel"
+  | .unsupportedOnBackend b i =>
+      s!"{repr i} is not modeled by the {b} backend"
+  | .unknownSyscall t0 =>
+      s!"ECALL with t0 = {hex t0}: syscall not modeled by this backend"
 
 def main (args : List String) : IO UInt32 := do
   match parseArgs args with
@@ -85,7 +101,8 @@ def main (args : List String) : IO UInt32 := do
         IO.eprintln "riscv-zkvm-run: warning: this image has a .tohost section, so it is \
           probably a riscv-tests binary. Those do not run under this model -- see \
           docs/validation.md. Continuing anyway."
-      let out := run l o.fuel
+      let out := run l o.fuel o.backend
+      IO.println s!"backend   {o.backend}"
       IO.println s!"entry     {hex (BitVec.ofNat 64 img.entry)}"
       IO.println s!"retired   {out.steps}"
       IO.println s!"stopped   {describe out.stop}"
