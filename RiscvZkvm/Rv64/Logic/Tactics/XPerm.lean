@@ -383,7 +383,7 @@ private meta def checkPermOperands (lhs rhs : Expr) : MetaM Unit := do
   let lIds ← mvarAtomIds lhs
   let rIds ← mvarAtomIds rhs
   if lIds.isEmpty && rIds.isEmpty then return
-  let complain (side : String) (e : Expr) : MetaM Unit :=
+  let complain (side : String) : MetaM Unit :=
     throwError "xperm: the {side} contains an atom that is an unassigned \
       metavariable with no counterpart on the other side:\n  \
       LHS: {lhs}\n  RHS: {rhs}\n\
@@ -393,9 +393,9 @@ private meta def checkPermOperands (lhs rhs : Expr) : MetaM Unit := do
       the assertion before calling `xperm`: state the intermediate chain \
       explicitly instead of leaving a `_` for the unifier."
   for id in lIds do
-    unless rIds.contains id do complain "LHS" lhs
+    unless rIds.contains id do complain "LHS"
   for id in rIds do
-    unless lIds.contains id do complain "RHS" rhs
+    unless lIds.contains id do complain "RHS"
 
 /-- Report which atoms differ between LHS and RHS (for diagnostics). -/
 private def reportAtomMismatches (lhsAtoms rhsAtoms : List Expr) : MetaM MessageData := do
