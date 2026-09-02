@@ -24,8 +24,30 @@
   error that names the tactic and prints both chains. The guard is narrow: an
   `?A` occurring as an atom of *both* sides has an honest counterpart and is
   still permuted, so only searches that were already meaningless are refused.
-- `seqFrame` refuses to embed an unsolved step-bound hole in its proof term,
-  rather than leaking a metavariable that resurfaces the same way.
+- **`runTacticSilent` no longer returns after leaving its goal open.** Every
+  caller goes straight on to `instantiateMVars` and embeds the result in a
+  proof term, so a run that finished with goals remaining leaked a
+  metavariable — the same defect class, with the same misattributed symptom.
+  Most visibly, `solveObligation` reported `true` after a `bv_omega` that had
+  not closed anything. It now throws, naming the tactic and printing the goal;
+  callers that treat their tactic as speculative already wrap it in
+  `try`/`catch`.
+- **`runBlock` checks the code requirement before assigning.** Its assembly is
+  `cpsTripleWithin_weaken`, which rewrites pre and post but not the `CodeReq`,
+  so a goal whose `CodeReq.ofProg base prog` could not be reduced to the specs'
+  instruction chain (an `opaque` program, for instance) produced an ill-typed
+  term that only the kernel rejected — phrased in terms of
+  `cpsTripleWithin_weaken`, against the enclosing declaration, naming neither
+  `runBlock` nor the bridge that failed. It now reports which two `CodeReq`s
+  did not meet.
+
+  ⚠️ **Downstream:** this changes the message pinned by evm-asm's
+  `EvmAsm/Tests/RunBlockLayoutBridge.lean` `#guard_msgs` for the `opaque`
+  program case, from "don't know how to synthesize placeholder" to the new
+  `runBlock` error. That docstring must be updated in the same change that
+  bumps the pin.
+- `RiscvZkvm.Rv64.Logic.Tactics.RunBlockTests` pins both halves: the literal-
+  list programs that do bridge, and the `opaque` one that cannot.
 - Added `RiscvZkvm.Rv64.Logic.Tactics.XPermTests`, imported from the library
   root so `lake build` runs it. It pins the guard, and — since the bug was
   first read as a permutation-*distance* limit — a full reversal and a shuffle
