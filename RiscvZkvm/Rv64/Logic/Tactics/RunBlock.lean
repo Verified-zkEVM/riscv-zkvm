@@ -1431,8 +1431,21 @@ elab "runBlock" specs:ident* : tactic => withMainContext do
         runBlockWithinCore specExprs gPre (goalCr := some gCr)
     let finalResult ← normalizeWithinToGoal composed workingGoalType
     let resultType ← inferType finalResult
-    let some (rSteps, _, _, _, _, resultPost) ← parseCpsTripleWithin? resultType
+    let some (rSteps, _, _, rCr, _, resultPost) ← parseCpsTripleWithin? resultType
       | throwError "runBlock: internal error — composed result is not a cpsTripleWithin"
+    -- The assembly below is `cpsTripleWithin_weaken`, which rewrites pre and
+    -- post but NOT the `CodeReq`. If the composed proof's code requirement did
+    -- not reach the goal's, `workingGoal.assign` builds an ill-typed term that
+    -- only the kernel rejects, at the enclosing declaration and in terms of
+    -- `cpsTripleWithin_weaken` rather than of the bridge that failed. Say so
+    -- here instead.
+    unless ← isDefEq rCr gCr do
+      throwError "runBlock: the composed proof's code requirement does not match the goal's, \
+        and nothing on this path can bridge them:\n  \
+        goal:     {gCr}\n  composed: {rCr}\n\
+        Usually the goal's `CodeReq.ofProg <base> <prog>` could not be reduced to the \
+        instruction chain the specs are stated over — an `opaque` program cannot be, \
+        and needs an explicit bridge theorem."
     let finalResult ←
       if ← withoutModifyingState (isDefEq rSteps gSteps) then
         Pure.pure finalResult

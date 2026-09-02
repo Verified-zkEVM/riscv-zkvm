@@ -1,5 +1,59 @@
 # Changelog
 
+## Unreleased
+
+- **`xperm` no longer reports success on a permutation it did not find.**
+  Every prover in the `xperm` family matches atoms with `isDefEq`, which is
+  allowed to make its two arguments equal by *assigning* a metavariable. On the
+  goal `?A = ?B` the AC route reached its "≤ 1 atom" case, called
+  `isDefEq ?A ?B`, got `true` by assigning `?A := ?B`, and returned
+  `Eq.refl ?B` — closing the goal having identified the two sides rather than
+  permuted anything.
+
+  Nothing named `xperm` in the fallout. The merged, still-unassigned
+  metavariable resurfaced at the end of elaboration as "don't know how to
+  synthesize placeholder" against unrelated syntax, and the declaration was
+  admitted with `sorryAx` by ordinary error recovery, so `#print axioms` was
+  the only honest witness. `seqFrame` inherited a worse form through
+  `mkPermLambda`: the vacuous permutation let `assignOrPermuteWithin` succeed,
+  `replaceMainGoal []` emptied the goal list, and the next tactic reported "No
+  goals to be solved". Reported as
+  [evm-asm#13207](https://github.com/Verified-zkEVM/evm-asm/issues/13207).
+
+  An atom whose head is an unassigned metavariable is now rejected with an
+  error that names the tactic and prints both chains. The guard is narrow: an
+  `?A` occurring as an atom of *both* sides has an honest counterpart and is
+  still permuted, so only searches that were already meaningless are refused.
+- **`runTacticSilent` no longer returns after leaving its goal open.** Every
+  caller goes straight on to `instantiateMVars` and embeds the result in a
+  proof term, so a run that finished with goals remaining leaked a
+  metavariable — the same defect class, with the same misattributed symptom.
+  Most visibly, `solveObligation` reported `true` after a `bv_omega` that had
+  not closed anything. It now throws, naming the tactic and printing the goal;
+  callers that treat their tactic as speculative already wrap it in
+  `try`/`catch`.
+- **`runBlock` checks the code requirement before assigning.** Its assembly is
+  `cpsTripleWithin_weaken`, which rewrites pre and post but not the `CodeReq`,
+  so a goal whose `CodeReq.ofProg base prog` could not be reduced to the specs'
+  instruction chain (an `opaque` program, for instance) produced an ill-typed
+  term that only the kernel rejected — phrased in terms of
+  `cpsTripleWithin_weaken`, against the enclosing declaration, naming neither
+  `runBlock` nor the bridge that failed. It now reports which two `CodeReq`s
+  did not meet.
+
+  ⚠️ **Downstream:** this changes the message pinned by evm-asm's
+  `EvmAsm/Tests/RunBlockLayoutBridge.lean` `#guard_msgs` for the `opaque`
+  program case, from "don't know how to synthesize placeholder" to the new
+  `runBlock` error. That docstring must be updated in the same change that
+  bumps the pin.
+- `RiscvZkvm.Rv64.Logic.Tactics.RunBlockTests` pins both halves: the literal-
+  list programs that do bridge, and the `opaque` one that cannot.
+- Added `RiscvZkvm.Rv64.Logic.Tactics.XPermTests`, imported from the library
+  root so `lake build` runs it. It pins the guard, and — since the bug was
+  first read as a permutation-*distance* limit — a full reversal and a shuffle
+  of a 36-atom chain, both of which `xperm` proves. Distance is not a limit;
+  operand instantiation is the only real constraint.
+
 ## v0.3.1 — licensing of the relocated layer
 
 - Copied the MIT licence from the code's origin to
