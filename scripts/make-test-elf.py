@@ -98,11 +98,25 @@ def li32(rd, value):
     return [LUI(rd, value >> 12), ADDI(rd, rd, value & 0xFFF)]
 
 
+def li64(rd, value):
+    """Materialise an arbitrary 64-bit constant, one byte at a time.
+
+    `li32`'s lui+addi trick does not reach 64 bits, and the Pallas fixture needs
+    real field limbs. Eight shift-and-add steps of 8 bits cover the word exactly,
+    and every `addi` immediate stays under 0x100 so none sign-extends."""
+    assert 0 <= value < 1 << 64, hex(value)
+    ops = [ADDI(rd, "zero", 0)]
+    for shift in range(56, -8, -8):
+        ops += [SLLI(rd, rd, 8), ADDI(rd, rd, (value >> shift) & 0xFF)]
+    return ops
+
+
 # SP1 syscall ids, pinned in sp1-import/syscall-ids.json.
 SP1_KECCAK_PERMUTE = 0x0001_0109
 SP1_SHA_EXTEND = 0x0030_0105      # a real SP1 id this model deliberately omits
 SP1_COMMIT      = 0x00000010   # a0 = digest index, a1 = digest word
 SP1_UINT256_MUL = 0x0001_011D
+SP1_PALLAS_DOUBLE = 0x0000_0137   # vendor id: dmpierre/sp1, not upstream SP1
 SP1_HINT_LEN = 0x0000_00F0
 SP1_HINT_READ = 0x0000_00F1
 
@@ -493,6 +507,28 @@ def _sp1commit():
         ADDI("a3", "zero", 7),          # reached only if COMMIT advanced the pc
         *HALT,
     ]
+
+
+@fixture("sp1pallasdbl")
+def _sp1pallasdbl():
+    """SP1 PALLAS_DOUBLE: P := 2P on Pallas, a vendor id from dmpierre/sp1.
+
+    The point is the Pallas generator (-1, 2) on y^2 = x^3 + 5, stored as
+    8 LE u64 limbs at a0 -- x first, then y -- which is SP1's layout, identical
+    to SECP256K1_DOUBLE. The doubled x is checked against a value computed
+    independently from the group law, so the modulus, the limb order and the
+    a0-in-place convention are all pinned by one comparison. Getting any of the
+    three wrong would still produce *a* point."""
+    P = 0x40000000000000000000000000000000224698FC094CF91B992D30ED00000001
+    x1 = [0x992D30ED00000000, 0x224698FC094CF91B, 0x0, 0x4000000000000000]  # -1 mod p
+    ops = [*LOAD_DATA_BASE, ADDI("a0", "t1", 0)]
+    for i, limb in enumerate(x1):                       # x = -1
+        ops += [*li64("t2", limb), SD("t2", 8 * i, "t1")]
+    ops += [ADDI("t2", "zero", 2), SD("t2", 0x20, "t1")]  # y = 2
+    ops += [*li32("t0", SP1_PALLAS_DOUBLE), ECALL]
+    ops += [LD("a2", 0, "a0")]                          # low limb of (2G).x
+    ops += [*HALT]
+    return ops
 
 
 # --- ELF emission ---------------------------------------------------------

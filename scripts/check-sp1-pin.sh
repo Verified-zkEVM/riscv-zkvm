@@ -43,7 +43,10 @@ want = {e["name"]: int(e["id"], 16) for e in table["modelled"]}
 host = {e["name"]: int(e["id"], 16) for e in table["host"]}
 hint = {e["name"]: int(e["id"], 16) for e in table.get("hint", [])}
 commit = {e["name"]: int(e["id"], 16) for e in table.get("commit", [])}
-declared = {**want, **hint, **commit}   # ids with a named `def` in Sp1Accel.lean
+# Vendor ids are accelerators too -- they must be in `isAccelId` -- but they are
+# pinned apart because they are not in the SP1 revision PROVENANCE.toml names.
+vendor = {e["name"]: int(e["id"], 16) for e in table.get("vendor", [])}
+declared = {**want, **hint, **commit, **vendor}
 
 src = open(LEAN).read()
 got = {m.group(1): int(m.group(2), 16)
@@ -68,7 +71,7 @@ if not m:
     errs.append(f"could not locate `isAccelId` in {LEAN}")
 else:
     body = m.group(1)
-    for name in sorted(want):
+    for name in sorted({**want, **vendor}):
         if not re.search(rf"\b{name}\b", body):
             errs.append(f"{name} is defined but not listed in `isAccelId`")
     for name in sorted({**hint, **commit}):
@@ -82,7 +85,11 @@ for a, b, label in ((want, host, "accelerator/host"),
                     (want, commit, "accelerator/commit"),
                     (hint, host, "hint/host"),
                     (hint, commit, "hint/commit"),
-                    (commit, host, "commit/host")):
+                    (commit, host, "commit/host"),
+                    (vendor, want, "vendor/accelerator"),
+                    (vendor, host, "vendor/host"),
+                    (vendor, hint, "vendor/hint"),
+                    (vendor, commit, "vendor/commit")):
     overlap = set(a.values()) & set(b.values())
     if overlap:
         errs.append(f"{label} id spaces overlap: "
@@ -97,7 +104,11 @@ if errs:
     sys.exit(1)
 
 print(f"check-sp1-pin: {len(want)} accelerator + {len(hint)} hint + "
-      f"{len(commit)} commit syscall ids agree between {LEAN} and {TABLE}")
+      f"{len(commit)} commit + {len(vendor)} vendor syscall ids agree between "
+      f"{LEAN} and {TABLE}")
+if vendor:
+    print(f"  note: {len(vendor)} vendor id(s) are NOT in the pinned SP1 revision: "
+          + ", ".join(sorted(vendor)))
 if os.environ.get("REPORT") == "1":
     for name, id_ in sorted(want.items(), key=lambda kv: kv[1]):
         e = next(x for x in table["modelled"] if x["name"] == name)

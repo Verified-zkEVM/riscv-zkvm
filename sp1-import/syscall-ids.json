@@ -142,6 +142,24 @@
       "note": "a1 holds y then modulus contiguously; result written at a0. modulus 0 TRAPS, matching ZiskAccel's Arith256Mod stance -- the pinned executor source does not fix that case, and Accel.arith256Mod is documented as requiring callers to guard m != 0."
     }
   ],
+  "_vendor_comment": [
+    "NOT upstream SP1. These ids come from the dmpierre/sp1 fork, which adds a",
+    "Pallas precompile for Zcash Orchard work, and they do not exist in the",
+    "revision PROVENANCE.toml pins. They are pinned in their own class so that",
+    "check-sp1-pin.sh cannot be read as claiming otherwise.",
+    "",
+    "They need no new mathematics: Pallas is y^2 = x^3 + 5, so a = 0, and",
+    "Accel.curveAdd/curveDbl are parameterised by the prime and already assume",
+    "a = 0. Only the modulus is new. The operand layout is identical to",
+    "SECP256K1_ADD/DOUBLE -- 8 dwords at a0, 8 at a1, result in place at a0."
+  ],
+  "vendor": [
+    { "name": "PALLAS_ADD",    "id": "0x00010136", "arg1_words": 8, "arg2_words": 8,
+      "accel": "curveAddL", "field": "pallasP", "limbs": 4, "source": "dmpierre/sp1" },
+    { "name": "PALLAS_DOUBLE", "id": "0x00000137", "arg1_words": 8, "arg2": null,
+      "accel": "curveDblL", "field": "pallasP", "limbs": 4, "source": "dmpierre/sp1" }
+  ],
+
   "_commit_comment": [
     "SP1's COMMIT shares id 0x10 with the zkvm-standards write_output that",
     "Execution.step implements, but the two are unrelated: COMMIT takes",
@@ -154,7 +172,9 @@
   ],
   "commit": [
     { "name": "COMMIT", "id": "0x00000010", "handled_by": "StepOn.sp1Ecall",
-      "note": "a0 = digest index, a1 = digest word; appended to MachineState.committed" }
+      "note": "a0 = digest index, a1 = digest word; appended to MachineState.committed" },
+    { "name": "COMMIT_DEFERRED_PROOFS", "id": "0x0000001A", "handled_by": "StepOn.sp1Ecall",
+      "note": "no-op in the pinned executor; eight sites immediately before every guest's HALT. NOT folded in with VERIFY_SP1_PROOF (0x1B), which keeps trapping." }
   ],
 
   "host": [

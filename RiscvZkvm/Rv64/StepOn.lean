@@ -223,6 +223,10 @@ def sp1Ecall (s : MachineState) : Option MachineState :=
     -- log, so no new state is needed and no memory is touched -- which is why
     -- `Interpreter.writtenAddrs` needs no arm for this id.
     some ((s.sp1Commit).setPC (s.pc + 4))
+  else if t0 = Sp1.COMMIT_DEFERRED_PROOFS then
+    -- A no-op in the pinned executor, and eight of them sit immediately before
+    -- every guest's HALT. Advancing is the faithful model; see the constant.
+    some (s.setPC (s.pc + 4))
   else if Sp1.isHostId t0 then
     step s                    -- HALT / WRITE / read_input
   else
@@ -311,10 +315,12 @@ theorem stepSp1_ecall_unknown_trap {s : MachineState}
     (hid : Sp1.isAccelId (s.getReg .x5) = false)
     (hhint : Sp1.isHintId (s.getReg .x5) = false)
     (hcommit : s.getReg .x5 ≠ Sp1.COMMIT)
+    (hdefer : s.getReg .x5 ≠ Sp1.COMMIT_DEFERRED_PROOFS)
     (hhost : Sp1.isHostId (s.getReg .x5) = false) :
     stepSp1 s = none := by
   obtain ⟨hne1, hne2⟩ := Sp1.hint_ne_of_isHintId_false hhint
-  unfold stepSp1 sp1Ecall; rw [hfetch]; simp [hid, hhost, hne1, hne2, hcommit]
+  unfold stepSp1 sp1Ecall; rw [hfetch]
+  simp [hid, hhost, hne1, hne2, hcommit, hdefer]
 
 /-- The delegated host syscalls behave identically on both backends.
 
@@ -333,7 +339,10 @@ theorem stepSp1_ecall_host {s : MachineState}
       simp [hnh] at hhost
   obtain ⟨hne1, hne2⟩ := Sp1.hint_ne_of_isHostId hhost
   have hcommit := Sp1.commit_ne_of_isHostId hhost
-  unfold stepSp1 sp1Ecall; rw [hfetch]; simp [hid, hhost, hne1, hne2, hcommit]
+  have hdefer : s.getReg .x5 ≠ Sp1.COMMIT_DEFERRED_PROOFS := by
+    intro he; rw [he] at hhost; simp [Sp1.isHostId, Sp1.COMMIT_DEFERRED_PROOFS] at hhost
+  unfold stepSp1 sp1Ecall; rw [hfetch]
+  simp [hid, hhost, hne1, hne2, hcommit, hdefer]
 
 -- ============================================================================
 -- Multi-step

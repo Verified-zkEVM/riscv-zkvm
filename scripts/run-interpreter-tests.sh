@@ -260,6 +260,15 @@ check wroutbig \
 check wrfd13bad \
   'stopped   trap'
 
+# PALLAS_DOUBLE, a vendor id from dmpierre/sp1. Doubles the Pallas generator
+# (-1, 2) on y^2 = x^3 + 5 and checks the low limb of the result's x against a
+# value derived independently from the group law. One comparison pins the
+# modulus, the limb order and the write-in-place-at-a0 convention: get any of
+# the three wrong and you still get *a* point.
+check_args sp1pallasdbl "--backend sp1" \
+  'stopped   halted' \
+  '^  x12[[:space:]]+0x1303c567b0000003$'
+
 echo
 echo "run-interpreter-tests: $pass passed, $fail failed"
 (( fail == 0 ))

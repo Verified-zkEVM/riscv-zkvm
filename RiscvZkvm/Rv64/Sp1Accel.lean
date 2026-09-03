@@ -40,6 +40,8 @@
     0x00010109  KECCAK_PERMUTE     a0 -> 25 lanes, in place (a1 must be 0)
     0x0001010A  SECP256K1_ADD      a0 -> P, a1 -> Q; P := P + Q (chord)
     0x0000010B  SECP256K1_DOUBLE   a0 -> P; P := 2P (tangent)
+    0x00010136  PALLAS_ADD         a0 -> P, a1 -> Q; P := P + Q  (VENDOR, see below)
+    0x00000137  PALLAS_DOUBLE      a0 -> P; P := 2P              (VENDOR, see below)
     0x0001010E  BN254_ADD          the BN254 siblings of the two above
     0x0000010F  BN254_DOUBLE
     0x0001011E  BLS12381_ADD       the 6-limb BLS12-381 siblings
@@ -98,6 +100,31 @@ def KECCAK_PERMUTE    : Word := 0x00010109
 def SECP256K1_ADD     : Word := 0x0001010A
 /-- `SECP256K1_DOUBLE`: `a0 := 2 * a0` on secp256k1. -/
 def SECP256K1_DOUBLE  : Word := 0x0000010B
+/-- The Pallas base-field modulus, `2^254 + 45560315531419706090280762371685220353`.
+
+    Pallas is `y² = x³ + 5`, so `a = 0` and `Accel.curveAdd`/`curveDbl` -- which
+    are parameterised by the prime and assume `a = 0` for exactly this reason --
+    apply unchanged. Adding Pallas introduces no new mathematics, only a
+    modulus. -/
+def pallasP : Nat :=
+  0x40000000000000000000000000000000224698FC094CF91B992D30ED00000001
+
+/-- `COMMIT_DEFERRED_PROOFS` (`0x1A`): records a word of the deferred-proofs
+    digest. In the pinned executor it is a no-op returning `Ok(None)`, and every
+    guest emits eight of them immediately before HALT.
+
+    Modelled as an explicit no-op, NOT folded in with `VERIFY_SP1_PROOF`
+    (`0x1B`). The executor gives those two ids one arm, but they are separate
+    syscalls: ignoring a deferred-proofs digest word is sound, whereas ignoring
+    a proof verification would assert something the guest never checked.
+    `0x1B` keeps trapping. -/
+def COMMIT_DEFERRED_PROOFS : Word := 0x0000001A
+
+/-- `PALLAS_ADD`: `a0 := a0 + a1` on Pallas. **Vendor id** -- see the vendor
+    note above `isAccelId`. -/
+def PALLAS_ADD        : Word := 0x00010136
+/-- `PALLAS_DOUBLE`: `a0 := 2 * a0` on Pallas. **Vendor id.** -/
+def PALLAS_DOUBLE     : Word := 0x00000137
 /-- `BN254_ADD`: `a0 := a0 + a1` on BN254 G1. -/
 def BN254_ADD         : Word := 0x0001010E
 /-- `BN254_DOUBLE`: `a0 := 2 * a0` on BN254 G1. -/
@@ -137,6 +164,15 @@ def HINT_READ         : Word := 0x000000F1
 
 /-- The syscall ids this module gives accelerator semantics.
 
+    **Vendor ids.** `PALLAS_ADD` and `PALLAS_DOUBLE` are NOT in upstream SP1.
+    They come from the `dmpierre/sp1` fork, which adds a Pallas precompile for
+    Zcash Orchard work, and they are pinned separately in `syscall-ids.json`'s
+    `vendor` class so that `check-sp1-pin.sh` cannot be read as claiming they
+    exist in the revision `PROVENANCE.toml` names. They are here rather than in a
+    downstream fork because they need no new mathematics -- `curveAdd`/`curveDbl`
+    over `pallasP` -- and because a downstream cannot extend `stepSp1` without
+    forking the whole package.
+
     Written as an explicit disjunction rather than a list membership so that
     `isAccelId_host_false` below is `decide`-able. -/
 def isAccelId (id : Word) : Bool :=
@@ -145,7 +181,7 @@ def isAccelId (id : Word) : Bool :=
   id = BLS12381_ADD     || id = BLS12381_DOUBLE  ||
   id = BLS12381_FP2_ADD || id = BLS12381_FP2_SUB || id = BLS12381_FP2_MUL ||
   id = BN254_FP2_ADD    || id = BN254_FP2_SUB    || id = BN254_FP2_MUL    ||
-  id = UINT256_MUL
+  id = UINT256_MUL      || id = PALLAS_ADD       || id = PALLAS_DOUBLE
 
 /-- `COMMIT`: SP1 writes one word of the public-values digest, `a0` = index,
     `a1` = the word. It is NOT the zkvm-standards `write_output(ptr, size)`,
@@ -250,6 +286,10 @@ def sp1AccelWrite (s : MachineState) (id : Word) : Word × List Word :=
     (a0, Accel.curveAddL Accel.secpP 4 (s.readWords a0 8) (s.readWords a1 8))
   else if id = Sp1.SECP256K1_DOUBLE then
     (a0, Accel.curveDblL Accel.secpP 4 (s.readWords a0 8))
+  else if id = Sp1.PALLAS_ADD then
+    (a0, Accel.curveAddL Sp1.pallasP 4 (s.readWords a0 8) (s.readWords a1 8))
+  else if id = Sp1.PALLAS_DOUBLE then
+    (a0, Accel.curveDblL Sp1.pallasP 4 (s.readWords a0 8))
   else if id = Sp1.BN254_ADD then
     (a0, Accel.curveAddL Accel.bn254P 4 (s.readWords a0 8) (s.readWords a1 8))
   else if id = Sp1.BN254_DOUBLE then
@@ -320,6 +360,16 @@ def sp1AccelValid (s : MachineState) (id : Word) : Bool :=
   else if id = Sp1.SECP256K1_DOUBLE then
     validDwordRange a0 8 &&
     Accel.ptValid Accel.secpP 4 (s.readWords a0 8) &&
+    !(Accel.leLimbsToNat ((s.readWords a0 8).drop 4) == 0)
+  else if id = Sp1.PALLAS_ADD then
+    validDwordRange a0 8 && validDwordRange a1 8 &&
+    Accel.ptValid Sp1.pallasP 4 (s.readWords a0 8) &&
+    Accel.ptValid Sp1.pallasP 4 (s.readWords a1 8) &&
+    !(Accel.leLimbsToNat ((s.readWords a0 8).take 4)
+        == Accel.leLimbsToNat ((s.readWords a1 8).take 4))
+  else if id = Sp1.PALLAS_DOUBLE then
+    validDwordRange a0 8 &&
+    Accel.ptValid Sp1.pallasP 4 (s.readWords a0 8) &&
     !(Accel.leLimbsToNat ((s.readWords a0 8).drop 4) == 0)
   else if id = Sp1.BN254_ADD then
     validDwordRange a0 8 && validDwordRange a1 8 &&
