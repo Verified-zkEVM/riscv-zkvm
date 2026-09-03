@@ -16,6 +16,27 @@ same place. All are edited normally, but see `AGENTS.md` on keeping the
 relocated files reviewable as relocations, and `docs/validation.md` for known
 gaps.
 
+## Trying a branch downstream without building Sail
+
+`RiscvZkvm.Sail` is the ~45-minute target, and it is easy to assume any use of
+this package pays for it. It does not: **nothing under `RiscvZkvm/Sail*` imports
+`RiscvZkvm.Rv64`**, so the interpreter's import closure is 14 modules with zero
+Sail modules in it. Seeding `.lake/build` from the most recent release package
+and then building only what you need gets `riscv-zkvm-run` in a couple of
+seconds:
+
+```bash
+git clone --depth 1 --branch <branch> https://github.com/Verified-zkEVM/riscv-zkvm
+cd riscv-zkvm
+# seed .lake/build from the latest release archive, then:
+lake build riscv-zkvm-run
+```
+
+Sail is needed only for `RiscvZkvm.Sail` itself, `RiscvZkvm.Rv64.SailEquiv`, and
+the full five-import consumer smoke in `release-oleans.yml`. A machine-model or
+interpreter change can be exercised end to end without it. (Reported by a
+downstream consumer on PR #10.)
+
 ## Pinned inputs
 
 [`sail-import/PROVENANCE.toml`](../sail-import/PROVENANCE.toml) is the source of
@@ -28,6 +49,13 @@ truth for:
 - the selected Sail modules;
 - the compile-time JSON configuration;
 - hashes of the configuration and generated Lean tree.
+
+[`sp1-import/PROVENANCE.toml`](../sp1-import/PROVENANCE.toml) plays the same role
+for the SP1 syscall ABI that `RiscvZkvm.Rv64.Sp1Accel` models: the SP1 revision,
+the target triple and its memory parameters, and a digest per pinned source
+file. `sp1-import/syscall-ids.json` is the machine-readable id table, and
+`scripts/check-sp1-pin.sh` diffs the Lean constants against it in CI. Re-pin
+both files together from one SP1 revision; never hand-edit an id in the Lean.
 
 Prefer a stable Sail RISC-V release. A weekly prerelease is appropriate only
 when a required semantic fix has not reached a stable release, and the reason

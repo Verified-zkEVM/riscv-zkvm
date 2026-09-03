@@ -135,6 +135,21 @@ check_args sp1badcall "--backend sp1" \
   'stopped   ECALL with t0 = 0x300105: syscall not modeled' \
   '^  x13[[:space:]]+0x0$'
 
+# UINT256_MUL, with a hand-checkable answer: (7 * 6) mod 10 = 2. Pins SP1's
+# operand layout -- x at a0, y then modulus contiguous at a1 -- against real
+# execution, since getting a1's two blocks the wrong way round would still
+# produce *a* number.
+check_args sp1u256 "--backend sp1" \
+  'stopped   halted' \
+  '^  x12[[:space:]]+0x2$'
+
+# Modulus 0 traps. `Accel.arith256Mod` is `(a*b + c) % m` and `% 0` is identity
+# on Nat, so without the guard this would silently return the unreduced product
+# 42. a3 stays 0 because the instruction after the ecall is never reached.
+check_args sp1u256zero "--backend sp1" \
+  'stopped   trap' \
+  '^  x13[[:space:]]+0x0$'
+
 # The same id under zisk is an inert ecall, so execution continues and a3 = 7.
 # Both halves are pinned so neither can drift silently.
 check_args sp1badcall "--backend zisk" \

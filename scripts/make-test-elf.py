@@ -101,6 +101,7 @@ def li32(rd, value):
 # SP1 syscall ids, pinned in sp1-import/syscall-ids.json.
 SP1_KECCAK_PERMUTE = 0x0001_0109
 SP1_SHA_EXTEND = 0x0030_0105      # a real SP1 id this model deliberately omits
+SP1_UINT256_MUL = 0x0001_011D
 
 # 0xa0000000 has bit 31 set, so `lui` alone would sign-extend it to
 # 0xffffffff_a0000000 on RV64. Materialise it as 0x50000000 << 1.
@@ -217,6 +218,49 @@ def _ziskkeccak():
         ADDI("a0", "t1", 0),
         CSRS_KECCAK_A0,
         LD("a2", 0, "a0"),
+        *HALT,
+    ]
+
+
+@fixture("sp1u256")
+def _sp1u256():
+    """SP1 UINT256_MUL: x := (x * y) mod modulus, 256-bit.
+
+    x at a0 (overwritten by the result); y then modulus contiguous at a1, which
+    is SP1's layout. Uses small values so the answer is checkable by hand:
+    (7 * 6) mod 10 = 2. The high limbs are already zero (the data segment is
+    .bss-style), so only the low limb of each operand needs storing."""
+    return [
+        *LOAD_DATA_BASE,                 # t1 = 0xa0000000
+        ADDI("a0", "t1", 0),             # a0 = x (and result)
+        ADDI("a1", "t1", 0x40),          # a1 = y; modulus at a1 + 32
+        ADDI("t2", "zero", 7), SD("t2", 0x00, "t1"),    # x = 7
+        ADDI("t2", "zero", 6), SD("t2", 0x40, "t1"),    # y = 6
+        ADDI("t2", "zero", 10), SD("t2", 0x60, "t1"),   # modulus = 10
+        *li32("t0", SP1_UINT256_MUL),
+        ECALL,
+        LD("a2", 0, "a0"),               # (7*6) mod 10 = 2
+        *HALT,
+    ]
+
+
+@fixture("sp1u256zero")
+def _sp1u256zero():
+    """The same call with modulus = 0, which this model traps on.
+
+    `Accel.arith256Mod` is `(a*b + c) % m` and `% 0` is identity on `Nat`, so
+    without the guard this would silently return the unreduced product. ZisK's
+    Arith256Mod takes the same stance; see Sp1Accel.lean."""
+    return [
+        *LOAD_DATA_BASE,
+        ADDI("a0", "t1", 0),
+        ADDI("a1", "t1", 0x40),
+        ADDI("t2", "zero", 7), SD("t2", 0x00, "t1"),
+        ADDI("t2", "zero", 6), SD("t2", 0x40, "t1"),
+        # modulus left at 0
+        *li32("t0", SP1_UINT256_MUL),
+        ECALL,
+        ADDI("a3", "zero", 7),           # never reached
         *HALT,
     ]
 

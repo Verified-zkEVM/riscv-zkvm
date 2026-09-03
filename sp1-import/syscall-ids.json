@@ -12,35 +12,166 @@
     "new cryptography is introduced by the SP1 backend."
   ],
   "modelled": [
-    { "name": "KECCAK_PERMUTE",     "id": "0x00010109", "arg1_words": 25, "arg2": null,        "accel": "keccakF",      "field": null,     "limbs": null, "note": "arg2 must be 0" },
-
-    { "name": "SECP256K1_ADD",      "id": "0x0001010a", "arg1_words": 8,  "arg2_words": 8,     "accel": "curveAddL",    "field": "secpP",  "limbs": 4 },
-    { "name": "SECP256K1_DOUBLE",   "id": "0x0000010b", "arg1_words": 8,  "arg2": null,        "accel": "curveDblL",    "field": "secpP",  "limbs": 4 },
-    { "name": "BN254_ADD",          "id": "0x0001010e", "arg1_words": 8,  "arg2_words": 8,     "accel": "curveAddL",    "field": "bn254P", "limbs": 4 },
-    { "name": "BN254_DOUBLE",       "id": "0x0000010f", "arg1_words": 8,  "arg2": null,        "accel": "curveDblL",    "field": "bn254P", "limbs": 4 },
-    { "name": "BLS12381_ADD",       "id": "0x0001011e", "arg1_words": 12, "arg2_words": 12,    "accel": "curveAddL",    "field": "bls12P", "limbs": 6 },
-    { "name": "BLS12381_DOUBLE",    "id": "0x0000011f", "arg1_words": 12, "arg2": null,        "accel": "curveDblL",    "field": "bls12P", "limbs": 6 },
-
-    { "name": "BLS12381_FP2_ADD",   "id": "0x00010123", "arg1_words": 12, "arg2_words": 12,    "accel": "complexAddL",  "field": "bls12P", "limbs": 6 },
-    { "name": "BLS12381_FP2_SUB",   "id": "0x00010124", "arg1_words": 12, "arg2_words": 12,    "accel": "complexSubL",  "field": "bls12P", "limbs": 6 },
-    { "name": "BLS12381_FP2_MUL",   "id": "0x00010125", "arg1_words": 12, "arg2_words": 12,    "accel": "complexMulL",  "field": "bls12P", "limbs": 6 },
-    { "name": "BN254_FP2_ADD",      "id": "0x00010129", "arg1_words": 8,  "arg2_words": 8,     "accel": "complexAddL",  "field": "bn254P", "limbs": 4 },
-    { "name": "BN254_FP2_SUB",      "id": "0x0001012a", "arg1_words": 8,  "arg2_words": 8,     "accel": "complexSubL",  "field": "bn254P", "limbs": 4 },
-    { "name": "BN254_FP2_MUL",      "id": "0x0001012b", "arg1_words": 8,  "arg2_words": 8,     "accel": "complexMulL",  "field": "bn254P", "limbs": 4 }
+    {
+      "name": "KECCAK_PERMUTE",
+      "id": "0x00010109",
+      "arg1_words": 25,
+      "arg2": null,
+      "accel": "keccakF",
+      "field": null,
+      "limbs": null,
+      "note": "arg2 must be 0"
+    },
+    {
+      "name": "SECP256K1_ADD",
+      "id": "0x0001010a",
+      "arg1_words": 8,
+      "arg2_words": 8,
+      "accel": "curveAddL",
+      "field": "secpP",
+      "limbs": 4
+    },
+    {
+      "name": "SECP256K1_DOUBLE",
+      "id": "0x0000010b",
+      "arg1_words": 8,
+      "arg2": null,
+      "accel": "curveDblL",
+      "field": "secpP",
+      "limbs": 4
+    },
+    {
+      "name": "BN254_ADD",
+      "id": "0x0001010e",
+      "arg1_words": 8,
+      "arg2_words": 8,
+      "accel": "curveAddL",
+      "field": "bn254P",
+      "limbs": 4
+    },
+    {
+      "name": "BN254_DOUBLE",
+      "id": "0x0000010f",
+      "arg1_words": 8,
+      "arg2": null,
+      "accel": "curveDblL",
+      "field": "bn254P",
+      "limbs": 4
+    },
+    {
+      "name": "BLS12381_ADD",
+      "id": "0x0001011e",
+      "arg1_words": 12,
+      "arg2_words": 12,
+      "accel": "curveAddL",
+      "field": "bls12P",
+      "limbs": 6
+    },
+    {
+      "name": "BLS12381_DOUBLE",
+      "id": "0x0000011f",
+      "arg1_words": 12,
+      "arg2": null,
+      "accel": "curveDblL",
+      "field": "bls12P",
+      "limbs": 6
+    },
+    {
+      "name": "BLS12381_FP2_ADD",
+      "id": "0x00010123",
+      "arg1_words": 12,
+      "arg2_words": 12,
+      "accel": "complexAddL",
+      "field": "bls12P",
+      "limbs": 6
+    },
+    {
+      "name": "BLS12381_FP2_SUB",
+      "id": "0x00010124",
+      "arg1_words": 12,
+      "arg2_words": 12,
+      "accel": "complexSubL",
+      "field": "bls12P",
+      "limbs": 6
+    },
+    {
+      "name": "BLS12381_FP2_MUL",
+      "id": "0x00010125",
+      "arg1_words": 12,
+      "arg2_words": 12,
+      "accel": "complexMulL",
+      "field": "bls12P",
+      "limbs": 6
+    },
+    {
+      "name": "BN254_FP2_ADD",
+      "id": "0x00010129",
+      "arg1_words": 8,
+      "arg2_words": 8,
+      "accel": "complexAddL",
+      "field": "bn254P",
+      "limbs": 4
+    },
+    {
+      "name": "BN254_FP2_SUB",
+      "id": "0x0001012a",
+      "arg1_words": 8,
+      "arg2_words": 8,
+      "accel": "complexSubL",
+      "field": "bn254P",
+      "limbs": 4
+    },
+    {
+      "name": "BN254_FP2_MUL",
+      "id": "0x0001012b",
+      "arg1_words": 8,
+      "arg2_words": 8,
+      "accel": "complexMulL",
+      "field": "bn254P",
+      "limbs": 4
+    },
+    {
+      "name": "UINT256_MUL",
+      "id": "0x0001011d",
+      "arg1_words": 4,
+      "arg2_words": 8,
+      "accel": "arith256Mod",
+      "field": null,
+      "limbs": 4,
+      "note": "a1 holds y then modulus contiguously; result written at a0. modulus 0 TRAPS, matching ZiskAccel's Arith256Mod stance -- the pinned executor source does not fix that case, and Accel.arith256Mod is documented as requiring callers to guard m != 0."
+    }
   ],
   "host": [
-    { "name": "HALT",        "id": "0x00000000", "handled_by": "Execution.step" },
-    { "name": "WRITE",       "id": "0x00000002", "handled_by": "Execution.step" },
-    { "name": "write_output","id": "0x00000010", "handled_by": "Execution.step", "note": "SP1 calls 0x10 COMMIT; this model gives it the zkvm-standards write_output meaning" },
-    { "name": "read_input",  "id": "0x000000f2", "handled_by": "Execution.step", "note": "zkvm-standards C ABI; not an SP1 syscall id" }
+    {
+      "name": "HALT",
+      "id": "0x00000000",
+      "handled_by": "Execution.step"
+    },
+    {
+      "name": "WRITE",
+      "id": "0x00000002",
+      "handled_by": "Execution.step"
+    },
+    {
+      "name": "write_output",
+      "id": "0x00000010",
+      "handled_by": "Execution.step",
+      "note": "SP1 calls 0x10 COMMIT; this model gives it the zkvm-standards write_output meaning"
+    },
+    {
+      "name": "read_input",
+      "id": "0x000000f2",
+      "handled_by": "Execution.step",
+      "note": "zkvm-standards C ABI; not an SP1 syscall id"
+    }
   ],
   "_not_modelled": {
     "_comment": "Every id below TRAPS under the sp1 backend rather than no-opping, matching ZiskAccel.lean's stance on unmodelled CSR ids. Reasons are recorded so a future change knows what is missing versus what is deliberate.",
     "SHA_EXTEND / SHA_COMPRESS": "SP1 splits SHA-256 into message-schedule expansion and 64-round compression; Accel.sha256Compress does both as one function, so the decomposition does not line up. Accel.sha256W (ZiskAccel.lean:254) already computes the 64-word schedule and is the natural basis for SHA_EXTEND in a follow-up.",
-    "UINT256_MUL / U256XU2048_MUL / UINT256_*_CARRY": "Would map onto Accel.arith256Mod, but the pinned executor source does not fix the modulus == 0 semantics; not modelled rather than guessed.",
     "*_FP_ADD / FP_SUB / FP_MUL": "Base-field (non-Fp2) add and sub have no counterpart in the Accel namespace.",
     "ED_ADD / ED_DECOMPRESS / *_DECOMPRESS": "Edwards curves and point decompression need a modular square root, which Accel does not provide.",
     "SECP256R1_*": "The P-256 base field is not among Accel's pinned primes.",
-    "POSEIDON2 / MPROTECT / SIG_RETURN / ENTER_UNCONSTRAINED / EXIT_UNCONSTRAINED / VERIFY_SP1_PROOF / COMMIT_DEFERRED_PROOFS / HINT_* / DUMP_ELF / *_PROFILER_SYMBOLS": "Prover-infrastructure and host syscalls, not arithmetic precompiles; several return values in registers rather than writing memory, which the single-writeWords shape cannot express."
+    "POSEIDON2 / MPROTECT / SIG_RETURN / ENTER_UNCONSTRAINED / EXIT_UNCONSTRAINED / VERIFY_SP1_PROOF / COMMIT_DEFERRED_PROOFS / HINT_* / DUMP_ELF / *_PROFILER_SYMBOLS": "Prover-infrastructure and host syscalls, not arithmetic precompiles; several return values in registers rather than writing memory, which the single-writeWords shape cannot express.",
+    "U256XU2048_MUL / UINT256_ADD_CARRY / UINT256_MUL_CARRY": "Carry-propagating and 2048-bit variants have no Accel counterpart. Plain UINT256_MUL *is* modelled (see above); these are its wider siblings."
   }
 }

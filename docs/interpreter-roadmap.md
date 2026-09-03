@@ -44,6 +44,21 @@ are closed, interpreter results are evidence about the executable path only.
    existing proofs — but it does trip EvmAsm's
    `scripts/check-roundtrip-coverage.sh` ratchet, which wants a round-trip guard
    per constructor.
+
+   One measurement, from a real SP1 guest (41,783 instructions) reported on
+   PR #10: 739 unmodelled words, 1.8% of the image, spanning **only four** of
+   the thirteen encodings — `SRLIW` (715), `SUBW` (19, eight of them `negw`),
+   `SLLIW` (1), `SRLW` (1). No `ADDW`, `MULW`, `DIVW` or `REMW` at all. So a
+   staged change covering `SRLIW SUBW SLLIW SRLW` would unblock a real consumer
+   at four constructors rather than thirteen, if the ratchet cost ever makes
+   the full set unattractive. One data point, not a distribution.
+
+   Relatedly: `unimp` (`0xc0001073`) appears at panic landing pads, and because
+   `Program = List Instr` has no representation for a word the decoder rejects,
+   any function containing one is unemittable as a `Program` at all. A consumer
+   can map it to `.EBREAK` downstream — both trap, and the instruction count is
+   preserved so branch offsets survive — but an explicit `ILLEGAL` constructor
+   would say what is meant. Same ratchet cost as any other `Instr` addition.
 4. **Model general CSR access**, or decide deliberately not to. Without it the
    `riscv-tests` corpus cannot run here at all (see `docs/validation.md`), and
    the model's only CSR form stays the ZisK accelerator call — which the `sp1`
@@ -63,6 +78,16 @@ are closed, interpreter results are evidence about the executable path only.
   laid out for *this* map, not images from SP1's own linker script — see
   `docs/validation.md`. Giving SP1 its real layout is a separate question from
   the one rejected here, and it is the one to argue if that gap ever matters.
+
+  If that argument is ever made, one consequence is already known (PR #10). A
+  real SP1 rv64 image was measured at `.rodata 0x78000000`, `.text 0x78016938`,
+  `.data 0x78040618`, `.bss` ending `0x78048980` — a ~300 KiB window immediately
+  *above* `MEM_END`. SP1 links `.text` **inside** what would have to become a
+  data zone, so unlike the `riscv-tests` case, "code is unreachable by stores"
+  stops being structural: it could no longer be read off `isValidMemAddr`, and
+  image-level theorems would need an explicit no-store-into-text side condition
+  instead of getting it free. That is the real cost of an SP1 memory profile,
+  and it is a proof-obligation cost, not a constants change.
 - **No ELFSage dependency.** Its pinned revision targets Lean v4.28.0-rc1 and
   its `main` branch has not moved since 2024. A ~250-line ELF64 reader keeps
   `lean-sail` this package's only dependency.

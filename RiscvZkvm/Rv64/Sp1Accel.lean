@@ -50,11 +50,22 @@
     0x00010129  BN254_FP2_ADD      the 4-limb BN254 siblings
     0x0001012A  BN254_FP2_SUB
     0x0001012B  BN254_FP2_MUL
+    0x0001011D  UINT256_MUL        a0 -> x (result, 4 limbs), a1 -> y || modulus
+                                   (4 limbs each, contiguous); x := (x*y) mod
+                                   modulus. modulus = 0 traps -- see below
 
   Curve points are `x || y` and Fp2 elements are `x0 || x1`, each coordinate
   four little-endian doubleword limbs (six for BLS12-381) — byte-for-byte the
   layout `ZiskAccel.lean` uses, so the `Accel.*` reuse is exact rather than
   approximate.
+
+  `UINT256_MUL` needs one modelling decision the pinned executor source does not
+  settle: what a zero modulus means. This model **traps**, which is the same
+  choice `ZiskAccel.lean` already makes for `Arith256Mod` -- `Accel.arith256Mod`
+  is documented as "callers guard `m ≠ 0`", because `% 0` is identity on `Nat`
+  and would silently return the unreduced product. Trapping is the conservative
+  direction: it refuses to model a case rather than claiming a value SP1 might
+  not produce, so no proof can depend on a guess here.
 
   Any other syscall id **traps** (`stepSp1` returns `none`): an unmodeled
   accelerator halts the model rather than silently continuing. This matters more
@@ -107,6 +118,8 @@ def BN254_FP2_ADD     : Word := 0x00010129
 def BN254_FP2_SUB     : Word := 0x0001012A
 /-- `BN254_FP2_MUL`: `a0 := a0 * a1` in BN254's Fp2. -/
 def BN254_FP2_MUL     : Word := 0x0001012B
+/-- `UINT256_MUL`: `a0 := (a0 * a1) mod a1[4..8]` on 256-bit integers. -/
+def UINT256_MUL       : Word := 0x0001011D
 
 /-- The syscall ids this module gives accelerator semantics.
 
@@ -117,7 +130,8 @@ def isAccelId (id : Word) : Bool :=
   id = BN254_ADD        || id = BN254_DOUBLE     ||
   id = BLS12381_ADD     || id = BLS12381_DOUBLE  ||
   id = BLS12381_FP2_ADD || id = BLS12381_FP2_SUB || id = BLS12381_FP2_MUL ||
-  id = BN254_FP2_ADD    || id = BN254_FP2_SUB    || id = BN254_FP2_MUL
+  id = BN254_FP2_ADD    || id = BN254_FP2_SUB    || id = BN254_FP2_MUL    ||
+  id = UINT256_MUL
 
 /-- The four `t0` values `Execution.step` already handles: HALT, WRITE,
     `write_output`, and the zkvm-standards `read_input`. `stepSp1` delegates
@@ -186,6 +200,15 @@ def sp1AccelWrite (s : MachineState) (id : Word) : Word × List Word :=
     (a0, Accel.complexSubL Accel.bn254P 4 (s.readWords a0 8) (s.readWords a1 8))
   else if id = Sp1.BN254_FP2_MUL then
     (a0, Accel.complexMulL Accel.bn254P 4 (s.readWords a0 8) (s.readWords a1 8))
+  else if id = Sp1.UINT256_MUL then
+    -- x at a0 (overwritten by the result); y then modulus contiguous at a1.
+    -- `arith256Mod x y 0 m` is `(x*y) mod m`, the same function ZisK's
+    -- Arith256Mod computes with c = 0.
+    (a0, Accel.natToLeLimbs 4 (Accel.arith256Mod
+      (Accel.leLimbsToNat (s.readWords a0 4))
+      (Accel.leLimbsToNat (s.readWords a1 4))
+      0
+      (Accel.leLimbsToNat (s.readWords (a1 + 32) 4))))
   else
     (0, [])
 
@@ -248,6 +271,11 @@ def sp1AccelValid (s : MachineState) (id : Word) : Bool :=
     validDwordRange a0 8 && validDwordRange a1 8 &&
     Accel.ptValid Accel.bn254P 4 (s.readWords a0 8) &&
     Accel.ptValid Accel.bn254P 4 (s.readWords a1 8)
+  else if id = Sp1.UINT256_MUL then
+    -- a1 covers y and the modulus contiguously, matching SP1's single
+    -- read_slice_check(y_ptr, WORDS_FIELD_ELEMENT * 2).
+    validDwordRange a0 4 && validDwordRange a1 8 &&
+    !(Accel.leLimbsToNat (s.readWords (a1 + 32) 4) == 0)
   else
     false
 
@@ -283,7 +311,7 @@ theorem sp1AccelValid_eq_false_of_not_isAccelId {s : MachineState} {id : Word}
     (h : Sp1.isAccelId id = false) : s.sp1AccelValid id = false := by
   simp only [Sp1.isAccelId, Bool.or_eq_false_iff, decide_eq_false_iff_not] at h
   simp only [sp1AccelValid]
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩ := h
   simp_all
 
 end MachineState

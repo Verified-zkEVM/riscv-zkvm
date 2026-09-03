@@ -65,6 +65,11 @@ sha256 = "e1cafae4a6358812c25711e81b666312e30ea456517968aec66e0f882ee2fd76"
 fixes  = "*_FP2_ADD/SUB: x_ptr = arg1 (8-byte aligned), y_ptr = arg2, written at x_ptr"
 
 [[abi.sources]]
+path   = "crates/core/executor/src/vm/syscall/uint256.rs"
+sha256 = "a8942ee621b14a89e3793a66a3d177215d154350475e29f5327f1df433fed857"
+fixes  = "UINT256_MUL: x_ptr = arg1 (4 words, result), y_ptr = arg2 -> y || modulus (4 words each, contiguous)"
+
+[[abi.sources]]
 path   = "crates/core/executor/src/vm/syscall/precompiles/fptower/fp2_mul.rs"
 sha256 = "e78c5ac2e8c720e7bcacb9b449edc86d74ff56d34785a1951ba4215c55ed9ae3"
 fixes  = "*_FP2_MUL: same shape as fp2_addsub"

@@ -56,7 +56,7 @@
   this model's `read_input` follows, so 64-bit words are SP1's own — not a
   reinterpretation of a 32-bit ABI.
 
-- **Tests.** `scripts/run-interpreter-tests.sh` grows from 5 cases to 11,
+- **Tests.** `scripts/run-interpreter-tests.sh` grows from 5 cases to 13,
   including the one that matters: `sp1keccak` (via `ecall`) and `ziskkeccak`
   (via `csrs`) must leave the same first lane, `0xf1258f7940e1dde7`, so the id
   table and operand layout are checked against real execution rather than
@@ -67,6 +67,19 @@
   imported it before, so declarations reachable only from there — including all
   of the above — would have escaped the axiom gate. Census: 3,549 declarations,
   0 offenders.
+
+- `UINT256_MUL` (`0x0001011d`) is modelled, on a downstream request. A zero
+  modulus **traps**, which is the stance `ZiskAccel.lean` already takes for
+  `Arith256Mod`: `Accel.arith256Mod` is `(a*b + c) % m`, `% 0` is identity on
+  `Nat`, and its docstring already requires callers to guard `m ≠ 0`. So this
+  needed no new mathematics and no guess about SP1's undocumented behaviour —
+  only the conservative direction. Fixtures pin both the answer
+  ((7 × 6) mod 10 = 2, which also checks a1's two contiguous blocks are not
+  swapped) and the trap.
+
+- `docs/maintenance.md` records how to try a branch downstream without paying
+  for Sail: nothing under `RiscvZkvm/Sail*` imports `RiscvZkvm.Rv64`, so
+  `riscv-zkvm-run`'s import closure is 14 modules with no Sail in it.
 
 - **Known limitation**, recorded as `docs/validation.md` gap 5: the memory map
   is unchanged, so `--backend sp1` runs SP1-ABI guests laid out for *this*
