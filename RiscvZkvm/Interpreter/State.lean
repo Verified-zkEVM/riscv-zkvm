@@ -101,6 +101,11 @@ def writtenAddrs (b : Backend) (m : MachineState) : List Word :=
         -- `writeWords` of a contiguous dword block.
         let (base, ws) := m.sp1AccelWrite t0
         (List.range ws.length).map (fun i => base + BitVec.ofNat 64 (8 * i))
+      else if b == .sp1 && t0 == Sp1.HINT_READ then
+        -- SP1's input path also writes memory through `.ECALL`. Note the extent
+        -- is `len / 8 + 1` doublewords, not `⌈len/8⌉`: SP1 always writes a final
+        -- zero-padded word. `hintWrittenAddrs` is the single source of truth.
+        hintWrittenAddrs m
       else if t0 == (0xF2 : Word) then [m.getReg .x10, m.getReg .x11] else []
   | _ => []
 

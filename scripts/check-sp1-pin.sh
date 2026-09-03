@@ -37,7 +37,12 @@ LEAN = "RiscvZkvm/Rv64/Sp1Accel.lean"
 TABLE = "sp1-import/syscall-ids.json"
 
 table = json.load(open(TABLE))
+# Accelerator ids are what `isAccelId` must list; host and hint ids are also
+# `def`s in the Lean, so all three classes take part in the reconciliation.
 want = {e["name"]: int(e["id"], 16) for e in table["modelled"]}
+host = {e["name"]: int(e["id"], 16) for e in table["host"]}
+hint = {e["name"]: int(e["id"], 16) for e in table.get("hint", [])}
+declared = {**want, **hint}   # the ids that have a named `def` in Sp1Accel.lean
 
 src = open(LEAN).read()
 got = {m.group(1): int(m.group(2), 16)
@@ -46,12 +51,12 @@ got = {m.group(1): int(m.group(2), 16)
 
 errs = []
 
-for name, id_ in sorted(want.items()):
+for name, id_ in sorted(declared.items()):
     if name not in got:
         errs.append(f"{name} = {id_:#010x} is in {TABLE} but has no `def` in {LEAN}")
     elif got[name] != id_:
         errs.append(f"{name}: {LEAN} has {got[name]:#010x}, {TABLE} pins {id_:#010x}")
-for name in sorted(set(got) - set(want)):
+for name in sorted(set(got) - set(declared)):
     errs.append(f"{name} = {got[name]:#010x} is defined in {LEAN} "
                 f"but is not pinned in {TABLE}")
 
@@ -65,13 +70,19 @@ else:
     for name in sorted(want):
         if not re.search(rf"\b{name}\b", body):
             errs.append(f"{name} is defined but not listed in `isAccelId`")
+    for name in sorted(hint):
+        if re.search(rf"\b{name}\b", body):
+            errs.append(f"{name} is a hint syscall but is listed in `isAccelId`; "
+                        f"it would be dispatched as an accelerator")
 
 # The four host ids must NOT be dispatched as accelerators.
-host = {e["name"]: int(e["id"], 16) for e in table["host"]}
-overlap = set(want.values()) & set(host.values())
-if overlap:
-    errs.append("accelerator and host id spaces overlap: "
-                + ", ".join(f"{v:#010x}" for v in sorted(overlap)))
+for a, b, label in ((want, host, "accelerator/host"),
+                    (want, hint, "accelerator/hint"),
+                    (hint, host, "hint/host")):
+    overlap = set(a.values()) & set(b.values())
+    if overlap:
+        errs.append(f"{label} id spaces overlap: "
+                    + ", ".join(f"{v:#010x}" for v in sorted(overlap)))
 
 if errs:
     print("check-sp1-pin: FAIL", file=sys.stderr)
@@ -81,13 +92,15 @@ if errs:
           f"revision in sp1-import/PROVENANCE.toml.", file=sys.stderr)
     sys.exit(1)
 
-print(f"check-sp1-pin: {len(want)} modelled syscall ids agree between "
-      f"{LEAN} and {TABLE}")
+print(f"check-sp1-pin: {len(want)} accelerator + {len(hint)} hint syscall ids "
+      f"agree between {LEAN} and {TABLE}")
 if os.environ.get("REPORT") == "1":
     for name, id_ in sorted(want.items(), key=lambda kv: kv[1]):
         e = next(x for x in table["modelled"] if x["name"] == name)
         print(f"  {id_:#010x}  {name:<20} -> Accel.{e['accel']}"
               f"{'' if not e.get('field') else ' over ' + e['field']}")
+    for name, id_ in sorted(hint.items(), key=lambda kv: kv[1]):
+        print(f"  {id_:#010x}  {name:<20} -> StepOn (SP1 input path)")
     print(f"  ({len(table['host'])} host syscall ids delegate to Execution.step; "
           f"every other id traps)")
 PY

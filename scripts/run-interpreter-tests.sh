@@ -20,6 +20,14 @@ command -v python3 >/dev/null || {
 
 python3 scripts/make-test-elf.py "$FIXDIR" >/dev/null
 
+# Framed input for the sp1 hint fixture: one 8-byte hint, length-prefixed.
+HINTFILE="$FIXDIR/hint1.bin"
+python3 -c "
+import struct, sys
+payload = struct.pack('<Q', 0xCAFEBABEDEADBEEF)
+open(sys.argv[1], 'wb').write(struct.pack('<Q', len(payload)) + payload)
+" "$HINTFILE"
+
 # Canary. The register lines are separated by a literal TAB, and grep's regex
 # dialects disagree about `\t`: BSD grep (macOS) reads it as a tab, GNU grep
 # (Linux CI) reads it as a literal `t`. Patterns below therefore use
@@ -155,6 +163,62 @@ check_args sp1u256zero "--backend sp1" \
 check_args sp1badcall "--backend zisk" \
   'stopped   halted' \
   '^  x13[[:space:]]+0x7$'
+
+# --- the SP1 memory profile ------------------------------------------------
+#
+# 0x780014b0 is the address a real SP1 guest dies on (`ld sp, 0(sp)`), reported
+# downstream on PR #10. SP1's zkvm.ld puts .rodata/.text/.data/.bss/heap ABOVE
+# __sp1_stack_top = 0x78000000, whereas isValidMemAddr's largest zone ENDS
+# there. The pair below is the whole point of the sp1 memory profile.
+check_args sp1himem "--backend zisk" \
+  'stopped   trap'
+check_args sp1himem "--backend sp1" \
+  'stopped   halted'
+
+# The store half of Word.lean's invariant: "code is immutable AND unreachable by
+# stores". Under zisk the text window is excluded by construction; under sp1
+# there is no such window, so storeOkSp1 asks the `code` map directly. A store
+# onto this image's own .text must still trap.
+check_args sp1textstore "--backend sp1" \
+  'stopped   trap'
+
+# --- SP1's input path ------------------------------------------------------
+#
+# HINT_LEN reports the front hint's length in t0 without consuming; HINT_READ
+# pops it and writes it as LE doublewords; the second HINT_LEN returns the
+# u64::MAX sentinel the guest branches on. Without these an SP1-ABI guest cannot
+# read a single byte of input -- read_input (0xF2) is a zkvm-standards id no SP1
+# guest emits.
+check_args sp1hint "--backend sp1 --input $HINTFILE" \
+  'stopped   halted' \
+  '^  x12[[:space:]]+0x8$' \
+  '^  x13[[:space:]]+0xcafebabedeadbeef$' \
+  '^  x14[[:space:]]+0xffffffffffffffff$'
+
+# With no input, the first HINT_LEN already reports the sentinel and HINT_READ
+# then traps. Reported as hintFailed, not unknownSyscall: the syscall IS modeled,
+# it failed its preconditions.
+check_args sp1hint "--backend sp1" \
+  'stopped   ECALL with t0 = 0xf1: hint syscall failed' \
+  '^  x12[[:space:]]+0xffffffffffffffff$'
+
+# --- the four word-ops -----------------------------------------------------
+#
+# 739 words of the downstream guest (1.8%) are these four encodings. The inputs
+# are chosen so an arithmetic shift would give a different answer than a logical
+# one, which is what pins the decoder's funct7 discrimination as real.
+check_args wordops "--backend sp1" \
+  'stopped   halted' \
+  '^  x12[[:space:]]+0xfffffffffffffffc$' \
+  '^  x13[[:space:]]+0x8000000$' \
+  '^  x14[[:space:]]+0xffffffff80000000$' \
+  '^  x15[[:space:]]+0x8000000$'
+
+# sraiw differs from srliw only in funct7 and is still unmodeled. If the decoder
+# ignored funct7 this would silently execute as srliw -- a wrong answer instead
+# of a stop.
+check_args sraiw "--backend sp1" \
+  'stopped   undecodable instruction 0x4015551b'
 
 echo
 echo "run-interpreter-tests: $pass passed, $fail failed"

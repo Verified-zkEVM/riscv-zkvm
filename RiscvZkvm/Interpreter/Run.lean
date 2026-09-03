@@ -73,6 +73,11 @@ inductive Stop where
       unrecognised syscall id traps rather than continuing, so that an
       unimplemented precompile cannot be mistaken for a no-op. -/
   | unknownSyscall (t0 : Word)
+  /-- A hint syscall that is modeled but failed its preconditions. Distinguished
+      from `unknownSyscall` because the cause is actionable: the input stream is
+      exhausted, `a1` disagrees with the front hint's length, or `a0` is not
+      8-byte aligned. All three are `assert!`/`panic!` in SP1's executor. -/
+  | hintFailed (t0 : Word)
   deriving Repr
 
 /-- An ELF image loaded into an executable state, plus what is needed to explain
@@ -159,6 +164,8 @@ def classifyStop (b : Backend) (l : Loaded) (e : ExecState) : Stop :=
   | some .ECALL =>
     let t0 := m.getReg .x5
     if t0 == (0 : Word) then .halted (m.getReg .x10)
+    else if b == .sp1 && Sp1.isHintId t0 then
+      .hintFailed t0
     else if b == .sp1 && !Sp1.isAccelId t0 && !Sp1.isHostId t0 then
       .unknownSyscall t0
     else .trap (match stepResult m with | .trap k => k | .ok _ => .other)

@@ -24,6 +24,8 @@ def usage : String :=
 
   --fuel N        stop after N retired instructions (default 1000000)
   --input FILE    file contents become the guest's private input stream
+                  (under --backend sp1 this is FRAMED: each hint is an 8-byte
+                  little-endian length followed by that many payload bytes)
   --output FILE   write the guest's public output bytes to FILE
   --regs          print the final register file
   --backend B     zkVM ABI to execute against: zisk (default) or sp1
@@ -82,6 +84,9 @@ private def describe (s : Stop) : String :=
       s!"{repr i} is not modeled by the {b} backend"
   | .unknownSyscall t0 =>
       s!"ECALL with t0 = {hex t0}: syscall not modeled by this backend"
+  | .hintFailed t0 =>
+      s!"ECALL with t0 = {hex t0}: hint syscall failed -- input stream exhausted, \
+        a1 disagrees with the front hint's length, or a0 is not 8-byte aligned"
 
 def main (args : List String) : IO UInt32 := do
   match parseArgs args with

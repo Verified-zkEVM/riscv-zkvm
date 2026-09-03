@@ -153,13 +153,24 @@ closing it has to be a deliberate edit.
    (Keccak-f, the three curves' add/double, the two Fp2 towers). Three things
    are deliberately *not* modeled, and each is a real limitation:
 
-   - **Not SP1's memory map.** `isValidMemAddr` keeps ziskemu's zones, whose
-     largest ends at `0x78000000`. SP1's own `zkvm.ld` puts `.text`/`.data`/heap
-     *above* `__sp1_stack_top = 0x78000000` and its input region at `1 << 34`,
-     so an SP1-linked image's stack would validate but its data would not. This
-     backend therefore runs SP1-ABI guests laid out for *this* model's map; it
-     cannot run an ELF from the SP1 toolchain, and a green run here is not SP1
-     compatibility evidence.
+   - **The memory profile is coarser than SP1's.** `isValidMemAddrSp1`
+     (`Rv64/StepOn.lean`) admits any address below `SP1_MAX_MEMORY = 1 <<< 37`,
+     mirroring `zkvm.ld`'s single addressable space. SP1 v6 has real page
+     protection (`MPROTECT`, per-page protection records), so this admits stores
+     SP1 might fault on — the *permissive* direction, which is the unsound one.
+     Misaligned accesses still trap, which is this model's choice and not SP1's.
+     `isValidMemAddr` itself is unchanged and remains the ZisK profile.
+   - **Stores are gated against the `code` map, not an address window.** Under
+     ZisK, `Word.lean`'s excluded text window makes "code is unreachable by
+     stores" structural. Under SP1 no contiguous window carves code out — stack
+     below the image, heap above — so `storeOkSp1` instead asks whether any
+     4-aligned word the access covers holds code. That is a sharper question
+     than any window, and it needs no declared text extent. Loads are
+     deliberately *not* gated this way: reading `.rodata` is legitimate, and is
+     exactly what a real SP1 guest does four instructions in. The obligation
+     this leaves is that `code` actually covers the image's code — which every
+     existing theorem already assumes, and which `Run.load` establishes from the
+     ELF's executable segments.
    - **Not the whole syscall surface.** `sp1-import/syscall-ids.json` records
      every id left out and why — SHA-256 because SP1 splits the message
      schedule from the compression and `Accel.sha256Compress` does both at once;
