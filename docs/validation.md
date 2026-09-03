@@ -183,6 +183,26 @@ closing it has to be a deliberate edit.
      precompiles. The SP1 path has no ISA-conformance evidence behind it, only
      the pin and the cross-backend fixture.
 
+6. **The output syscalls are capped, not merely range checked.** WRITE
+   (`t0 = 0x02`, fd 13) and `write_output` (`t0 = 0x10`) read a
+   guest-controlled number of bytes, and until now were the only unchecked
+   memory accesses in `step`. They now require the whole byte extent to lie in
+   one valid zone **and** the count to be at most
+   `MAX_OUTPUT_BYTES = 16 MiB` (`Rv64/Execution.lean`).
+
+   The cap is a **deliberate pessimism**, not a fact about any zkVM: a real host
+   would copy more. It is there because the extent check cannot bound the size
+   on its own — the legacy zone alone spans ~2 GB, so an in-zone request can
+   still be large enough to exhaust the host evaluating the non-tail-recursive
+   `readBytes`. A guest that legitimately needs a larger output must split the
+   call; the model refuses rather than crashing. Both halves are pinned
+   separately by the `wroutbad` (invalid address) and `wroutbig` (in zone, 512
+   MiB) fixtures, and `wroutput` pins that a valid 8-byte call still succeeds.
+
+   This is the one place the model is knowingly *narrower* than the machine, so
+   it is worth revisiting if a real guest ever needs it: the honest fix is a
+   tail-recursive `readBytes`, which would let the cap rise to the zone size.
+
 Gaps 3 and 4 mean interpreter results are evidence about the executable path.
 They are not, on their own, evidence about the model the `SailEquiv` theorems
 talk about.

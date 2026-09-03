@@ -382,6 +382,76 @@ def _sraiw():
     ]
 
 
+@fixture("wroutput")
+def _wroutput():
+    """write_output(ptr, 8) over a valid RAM range: must SUCCEED.
+
+    The positive half of the range check. Without this, a guard that rejected
+    everything would pass every other test in this file -- there is no other
+    fixture that exercises write_output successfully."""
+    return [
+        *LOAD_DATA_BASE,                    # t1 = 0xa0000000, inside the RAM zone
+        ADDI("t2", "zero", 0x41),
+        SD("t2", 0, "t1"),                  # something to copy out
+        ADDI("a0", "t1", 0),                # a0 = ptr
+        ADDI("a1", "zero", 8),              # a1 = 8 bytes
+        ADDI("t0", "zero", 0x10),           # t0 = write_output
+        ECALL,
+        *HALT,
+    ]
+
+
+@fixture("wroutbad")
+def _wroutbad():
+    """write_output(0, 0x42c4b0e3): the exact call a real SP1 guest made.
+
+    Address 0 is below MEM_START, and the size is a digest word misread as a
+    byte count -- a 1.1 GB read. Before the range check this killed the host
+    process with `Stack overflow detected. Aborting.`: no output, no trap, no
+    diagnostic. It must trap."""
+    return [
+        ADDI("a0", "zero", 0),              # ptr = 0, not a valid address
+        *li32("a1", 0x42C4B0E3),            # size = 1.1 GB
+        ADDI("t0", "zero", 0x10),
+        ECALL,
+        *HALT,
+    ]
+
+
+@fixture("wroutbig")
+def _wroutbig():
+    """write_output(0xa0000000, 0x20000000): in zone, but 512 MiB.
+
+    Distinct from wroutbad: this range IS inside the RAM zone, so the extent
+    check alone would admit it and the host would still die evaluating
+    readBytes. It is MAX_OUTPUT_BYTES that rejects it, which is why that bound
+    exists as well as the range check."""
+    return [
+        *LOAD_DATA_BASE,
+        ADDI("a0", "t1", 0),
+        *li32("a1", 0x20000000),
+        ADDI("t0", "zero", 0x10),
+        ECALL,
+        *HALT,
+    ]
+
+
+@fixture("wrfd13bad")
+def _wrfd13bad():
+    """WRITE (t0=0x02) to fd 13 with a 1.1 GB byte count.
+
+    The same unbounded read one branch away from write_output: `nbytes` comes
+    from a2. Fixing only write_output would have left this."""
+    return [
+        ADDI("a0", "zero", 13),             # fd = 13 (public values)
+        ADDI("a1", "zero", 0),              # buf = 0, not a valid address
+        *li32("a2", 0x42C4B0E3),            # nbytes = 1.1 GB
+        ADDI("t0", "zero", 0x02),
+        ECALL,
+        *HALT,
+    ]
+
+
 @fixture("sp1badcall")
 def _sp1badcall():
     """An `ecall` carrying a real SP1 syscall id this model does not implement.

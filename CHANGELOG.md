@@ -1,5 +1,58 @@
 # Changelog
 
+## Unreleased (branch `feat/sp1-backend`) — range-check the output syscalls
+
+- **WRITE (`t0 = 0x02`, fd 13) and `write_output` (`t0 = 0x10`) are now range
+  checked.** They read a guest-controlled number of bytes and were the only
+  unchecked memory accesses left in `step`. Reported downstream on PR #10 from a
+  real SP1 guest: `write_output(0, 0x42c4b0e3)` — address 0, and a
+  public-values digest word misread as a byte count — attempted a 1.1 GB read
+  and killed the host process with `Stack overflow detected. Aborting.`, giving
+  no output, no trap and no diagnostic. It now traps.
+
+  The report named `write_output`; the identical unbounded read was one branch
+  away in WRITE, whose count comes from `a2`. Both are fixed, and both have
+  fixtures.
+
+  `isValidOutputRange` checks the **whole extent**, not just the start address
+  — for these two syscalls the extent is the guest-controlled part, so a
+  start-only check would have left the bug in place. Arithmetic is on `Nat` via
+  `toNat`, so a `ptr + n` that would wrap as a `BitVec` cannot alias back into a
+  zone.
+
+  It also imposes `MAX_OUTPUT_BYTES = 16 MiB`, which is a deliberate pessimism
+  rather than a fact about any zkVM. The extent check cannot bound the size on
+  its own: the legacy zone spans ~2 GB, so an in-zone request can still exhaust
+  the host evaluating the non-tail-recursive `readBytes`. Recorded as
+  `docs/validation.md` gap 6, together with the honest fix (a tail-recursive
+  `readBytes`, which would let the cap rise to the zone size).
+
+  Both predicates live in `Execution.lean` rather than beside the other access
+  predicates in `Word.lean`, so that the memory map stays byte-identical to its
+  evm-asm original — `check-relocation.sh` still reports **0** for `Word.lean`
+  and `ZiskAccel.lean`.
+
+- **This changes `step`, in the conservative direction** — it now traps where it
+  previously succeeded — so it is downstream-visible.
+  `step_ecall_write_output`, `step_ecall_write_public` and the deprecated
+  `step_ecall_commit` each gain an `isValidOutputRange` hypothesis, and
+  `step_ecall_write_output_trap` / `step_ecall_write_public_trap` state the new
+  trap. `SailEquiv` is unaffected: `Instr.simulable` already excludes `.ECALL`,
+  so no `*_sail_equiv` theorem covers either syscall.
+
+  The known downstream cost, checked rather than assumed:
+  `evm-asm/EvmAsm/Rv64/RLP/Phase6WriteOutput.lean:191` calls
+  `step_ecall_write_output`. Its surrounding theorem has `halign` and `hover`
+  (8-byte alignment, no 64-bit overflow), which are **not** sufficient — and
+  `bytesRegion` does not imply zone membership. So that theorem needs an
+  `isValidOutputRange` hypothesis threaded to its callers, or `bytesRegion`
+  strengthened to imply validity. Nothing downstream moves until someone bumps
+  the `v0.3.0` pin.
+
+- Tests: 21 → 25. `wroutput` is the important one and comes first: no other
+  fixture exercises `write_output` successfully, so a guard that rejected
+  everything would have passed every negative case and looked correct.
+
 ## Unreleased (branch `feat/sp1-guest-runs`) — make a real SP1 guest runnable
 
 Follows the downstream report on PR #10, where a real `cargo prove build` guest

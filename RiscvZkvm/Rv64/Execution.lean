@@ -338,6 +338,55 @@ theorem loadProgram_programAt {base : Word} {prog : List Instr}
 -- Step-based execution
 -- ============================================================================
 
+-- ============================================================================
+-- Output-syscall range validation
+--
+-- The two output syscalls -- WRITE (t0 = 0x02, fd 13) and write_output
+-- (t0 = 0x10) -- read a *guest-controlled* number of bytes out of memory. Every
+-- other memory access in `step` is range checked; these two were not, and that
+-- is a different order of problem from the extent gap `Word.lean` documents for
+-- the fixed-width accesses: there the unchecked extent is at most 8 bytes,
+-- whereas here it is whatever the guest puts in a register.
+--
+-- Observed on a real SP1 guest: `write_output(0, 0x42c4b0e3)` -- a 1.1 GB read
+-- from address 0, which is not even a valid address. `readBytes` is
+-- non-tail-recursive, so this exhausted the host stack and killed the process
+-- with no trap and no diagnostic, before any wrong answer could be reported.
+--
+-- These predicates live here rather than beside the other access predicates in
+-- `Word.lean` so that the memory map itself stays byte-identical to its
+-- evm-asm original; `scripts/check-relocation.sh` should keep reporting 0 for
+-- `Word.lean`.
+-- ============================================================================
+
+/-- Largest byte count either output syscall will transfer in one step.
+
+    This is a **modelling limitation, deliberately more pessimistic than the
+    machine**: a real host would happily copy more. It exists because the range
+    check below cannot bound the size on its own -- the legacy zone alone spans
+    ~2 GB, so an in-zone request can still be large enough to exhaust the host
+    evaluating `readBytes`. 16 MiB is comfortably above the ~8 MiB real host
+    inputs `Word.lean` cites. A guest that legitimately needs more must split
+    the call, and the model will refuse rather than crash. -/
+def MAX_OUTPUT_BYTES : Nat := 0x1000000
+
+/-- Every byte of `[ptr, ptr + n)` lies within a single valid memory zone, and
+    `n` is within `MAX_OUTPUT_BYTES`.
+
+    Note this checks the **whole extent**, not just the start address -- for
+    these two syscalls the extent is the attacker-controlled part, so checking
+    only the start would leave the bug in place. Arithmetic is on `Nat` via
+    `toNat`, so a `ptr + n` that would wrap as a `BitVec` cannot alias back into
+    a zone. `n = 0` is vacuously fine. -/
+def isValidOutputRange (ptr : Word) (n : Nat) : Bool :=
+  decide (n ≤ MAX_OUTPUT_BYTES) &&
+  (decide (n = 0) ||
+    (let lo := ptr.toNat
+     let hi := lo + n - 1
+     (decide (MEM_START ≤ lo) && decide (hi ≤ MEM_END)) ||
+     (decide (INPUT_MEM_START ≤ lo) && decide (hi ≤ INPUT_MEM_END)) ||
+     (decide (RAM_MEM_START ≤ lo) && decide (hi ≤ RAM_MEM_END))))
+
 /-- Single step: fetch instruction at PC, execute with branch-aware semantics.
     Returns none if no instruction at PC (stuck/halted), or if the instruction
     is ECALL with t0 = 0 (HALT syscall, following SP1 convention).
@@ -423,13 +472,19 @@ def step (s : MachineState) : Option MachineState :=
       let buf := s.getReg .x11
       let nbytes := s.getReg .x12
       if fd == (13 : Word) then
-        -- SP1: reads nbytes individual bytes from memory
-        let bytes := s.readBytes buf nbytes.toNat
-        some ((s.appendPublicValues bytes).setPC (s.pc + 4))
+        -- SP1: reads nbytes individual bytes from memory. Range checked: the
+        -- byte count comes from a guest register.
+        if isValidOutputRange buf nbytes.toNat then
+          let bytes := s.readBytes buf nbytes.toNat
+          some ((s.appendPublicValues bytes).setPC (s.pc + 4))
+        else none
       else
         some (s.setPC (s.pc + 4))  -- other fd: continue
     else if t0 == (0x10 : Word) then  -- write_output syscall
-      some ((s.writeOutput (s.getReg .x10) (s.getReg .x11)).setPC (s.pc + 4))
+      -- Range checked: the size comes from a guest register.
+      if isValidOutputRange (s.getReg .x10) (s.getReg .x11).toNat then
+        some ((s.writeOutput (s.getReg .x10) (s.getReg .x11)).setPC (s.pc + 4))
+      else none
     else if t0 == (0xF2 : Word) then  -- read_input syscall (zkvm-standards C ABI)
       -- Idempotent: writes (inputBufBase, privateInput.length) to the
       -- two out-pointers supplied in a0/a1. Does not mutate input state.
@@ -757,27 +812,49 @@ theorem step_ecall_continue {s : MachineState}
 /-- `write_output` syscall (t0 = 0x10) appends a1 bytes from memory at a0. -/
 theorem step_ecall_write_output {s : MachineState}
     (hfetch : s.code s.pc = some .ECALL)
-    (ht0 : s.getReg .x5 = BitVec.ofNat 64 0x10) :
+    (ht0 : s.getReg .x5 = BitVec.ofNat 64 0x10)
+    (hrange : isValidOutputRange (s.getReg .x10) (s.getReg .x11).toNat = true) :
     step s =
       some ((s.writeOutput (s.getReg .x10) (s.getReg .x11)).setPC (s.pc + 4)) := by
-  simp [step, hfetch, ht0]
+  simp [step, hfetch, ht0, hrange]
+
+/-- `write_output` traps when its byte range is not valid, instead of reading a
+    guest-controlled number of bytes from an unchecked address. -/
+theorem step_ecall_write_output_trap {s : MachineState}
+    (hfetch : s.code s.pc = some .ECALL)
+    (ht0 : s.getReg .x5 = BitVec.ofNat 64 0x10)
+    (hrange : isValidOutputRange (s.getReg .x10) (s.getReg .x11).toNat = false) :
+    step s = none := by
+  simp [step, hfetch, ht0, hrange]
 
 @[deprecated step_ecall_write_output (since := "2026-05-08")]
 theorem step_ecall_commit {s : MachineState}
     (hfetch : s.code s.pc = some .ECALL)
-    (ht0 : s.getReg .x5 = BitVec.ofNat 64 0x10) :
+    (ht0 : s.getReg .x5 = BitVec.ofNat 64 0x10)
+    (hrange : isValidOutputRange (s.getReg .x10) (s.getReg .x11).toNat = true) :
     step s =
       some ((s.writeOutput (s.getReg .x10) (s.getReg .x11)).setPC (s.pc + 4)) :=
-  step_ecall_write_output hfetch ht0
+  step_ecall_write_output hfetch ht0 hrange
 
 /-- WRITE syscall to FD_PUBLIC_VALUES (t0 = 0x02, fd = 13) appends bytes from memory. -/
 theorem step_ecall_write_public {s : MachineState}
     (hfetch : s.code s.pc = some .ECALL)
     (ht0 : s.getReg .x5 = BitVec.ofNat 64 0x02)
-    (hfd : s.getReg .x10 = 13) :
+    (hfd : s.getReg .x10 = 13)
+    (hrange : isValidOutputRange (s.getReg .x11) (s.getReg .x12).toNat = true) :
     step s =
       some ((s.appendPublicValues (s.readBytes (s.getReg .x11) (s.getReg .x12).toNat)).setPC (s.pc + 4)) := by
-  simp [step, hfetch, ht0, hfd]
+  simp [step, hfetch, ht0, hfd, hrange]
+
+/-- WRITE to fd 13 traps when its byte range is not valid. Same reasoning as
+    `step_ecall_write_output_trap`: the byte count is guest-controlled. -/
+theorem step_ecall_write_public_trap {s : MachineState}
+    (hfetch : s.code s.pc = some .ECALL)
+    (ht0 : s.getReg .x5 = BitVec.ofNat 64 0x02)
+    (hfd : s.getReg .x10 = 13)
+    (hrange : isValidOutputRange (s.getReg .x11) (s.getReg .x12).toNat = false) :
+    step s = none := by
+  simp [step, hfetch, ht0, hfd, hrange]
 
 /-- WRITE syscall to non-public-values fd (t0 = 0x02, fd ≠ 13) just advances PC. -/
 theorem step_ecall_write_other {s : MachineState}

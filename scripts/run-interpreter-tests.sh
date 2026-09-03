@@ -229,6 +229,37 @@ check_args sp1commit "--backend sp1" \
   'stopped   halted' \
   '^  x13[[:space:]]+0x7$'
 
+# --- the output syscalls are range checked --------------------------------
+#
+# WRITE (t0=0x02, fd 13) and write_output (t0=0x10) read a guest-controlled
+# number of bytes. Before the check in Execution.lean they were the only
+# unchecked memory accesses in the model, and a real SP1 guest hit it:
+# write_output(0, 0x42c4b0e3) killed the host process with
+# "Stack overflow detected. Aborting." -- no output, no trap, no diagnostic.
+#
+# The positive case comes FIRST and matters most: no other fixture exercises
+# write_output successfully, so a guard that rejected everything would pass all
+# the negative cases below and look fine.
+check wroutput \
+  'stopped   halted' \
+  '^output    8 bytes$'
+
+# The exact call the real guest made: address 0, size 0x42c4b0e3.
+check wroutbad \
+  'stopped   trap' \
+  '^output    0 bytes$'
+
+# In zone but 512 MiB. The extent check alone admits this -- the RAM zone is
+# that big -- so this is what MAX_OUTPUT_BYTES is for, and it is a separate
+# case from wroutbad on purpose.
+check wroutbig \
+  'stopped   trap'
+
+# The same unbounded read one branch away, via WRITE's a2. Fixing only
+# write_output would have left this one live.
+check wrfd13bad \
+  'stopped   trap'
+
 echo
 echo "run-interpreter-tests: $pass passed, $fail failed"
 (( fail == 0 ))
