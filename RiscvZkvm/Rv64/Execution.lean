@@ -169,6 +169,18 @@ def execInstrBr (s : MachineState) (i : Instr) : MachineState :=
   | .NOP =>
       s.setPC (s.pc + 4)
   -- RV64I *W instructions
+  | .SUBW rd rs1 rs2 =>
+      let d32 : BitVec 32 := ((s.getReg rs1).truncate 32) - ((s.getReg rs2).truncate 32)
+      (s.setReg rd (d32.signExtend 64)).setPC (s.pc + 4)
+  | .SRLW rd rs1 rs2 =>
+      let v32 : BitVec 32 := ((s.getReg rs1).truncate 32) >>> ((s.getReg rs2).toNat % 32)
+      (s.setReg rd (v32.signExtend 64)).setPC (s.pc + 4)
+  | .SLLIW rd rs1 shamt =>
+      let v32 : BitVec 32 := ((s.getReg rs1).truncate 32) <<< shamt.toNat
+      (s.setReg rd (v32.signExtend 64)).setPC (s.pc + 4)
+  | .SRLIW rd rs1 shamt =>
+      let v32 : BitVec 32 := ((s.getReg rs1).truncate 32) >>> shamt.toNat
+      (s.setReg rd (v32.signExtend 64)).setPC (s.pc + 4)
   | .ADDIW rd rs1 imm =>
       let sum32 : BitVec 32 := ((s.getReg rs1).truncate 32) + ((signExtend12 imm).truncate 32)
       (s.setReg rd (sum32.signExtend 64)).setPC (s.pc + 4)

@@ -9,7 +9,8 @@
     "modelled precompile writes its result in place at the arg1 block.",
     "'accel' names the RiscvZkvm.Rv64.Accel function the id maps onto -- these",
     "are the concrete functions ZiskAccel.lean already defines and tests, so no",
-    "new cryptography is introduced by the SP1 backend."
+    "new cryptography is introduced by the SP1 backend.",
+    "'hint' lists SP1's input-path syscalls. They are host syscalls rather than accelerators, but unlike the 'host' entries they are NOT handled by Execution.step -- step has no arm for either id, so delegating them would silently no-op the only way an SP1 guest can read input."
   ],
   "modelled": [
     {
@@ -171,7 +172,27 @@
     "*_FP_ADD / FP_SUB / FP_MUL": "Base-field (non-Fp2) add and sub have no counterpart in the Accel namespace.",
     "ED_ADD / ED_DECOMPRESS / *_DECOMPRESS": "Edwards curves and point decompression need a modular square root, which Accel does not provide.",
     "SECP256R1_*": "The P-256 base field is not among Accel's pinned primes.",
-    "POSEIDON2 / MPROTECT / SIG_RETURN / ENTER_UNCONSTRAINED / EXIT_UNCONSTRAINED / VERIFY_SP1_PROOF / COMMIT_DEFERRED_PROOFS / HINT_* / DUMP_ELF / *_PROFILER_SYMBOLS": "Prover-infrastructure and host syscalls, not arithmetic precompiles; several return values in registers rather than writing memory, which the single-writeWords shape cannot express.",
-    "U256XU2048_MUL / UINT256_ADD_CARRY / UINT256_MUL_CARRY": "Carry-propagating and 2048-bit variants have no Accel counterpart. Plain UINT256_MUL *is* modelled (see above); these are its wider siblings."
-  }
+    "U256XU2048_MUL / UINT256_ADD_CARRY / UINT256_MUL_CARRY": "Carry-propagating and 2048-bit variants have no Accel counterpart. Plain UINT256_MUL *is* modelled (see above); these are its wider siblings.",
+    "POSEIDON2 / MPROTECT / SIG_RETURN / ENTER_UNCONSTRAINED / EXIT_UNCONSTRAINED / VERIFY_SP1_PROOF / COMMIT_DEFERRED_PROOFS / DUMP_ELF / *_PROFILER_SYMBOLS": "Prover-infrastructure syscalls, not arithmetic precompiles. HINT_LEN/HINT_READ used to be lumped in here, which was wrong: they are SP1's input path, and they are now modelled -- see the \"hint\" section above."
+  },
+  "hint": [
+    {
+      "name": "HINT_LEN",
+      "id": "0x000000f0",
+      "arg1": null,
+      "arg2": null,
+      "returns": "t0",
+      "note": "Front hint vector's byte length in t0, or u64::MAX when the input stream is empty. Does not consume. The guest branches on the sentinel: li a0,-1; ecall; beq t0,a0,...",
+      "handled_by": "StepOn.hintLen"
+    },
+    {
+      "name": "HINT_READ",
+      "id": "0x000000f1",
+      "arg1": "dest pointer (8-byte aligned)",
+      "arg2": "length (must equal the front vector's length)",
+      "returns": null,
+      "note": "Pops the front vector and writes it at a0 as LE doublewords. Extent is len/8 + 1 doublewords: SP1 writes a final zero-padded word unconditionally, even when len is a multiple of 8. Traps on exhausted stream, length mismatch, or misaligned a0 -- all three are assert!/panic! in the executor.",
+      "handled_by": "StepOn.hintRead"
+    }
+  ]
 }

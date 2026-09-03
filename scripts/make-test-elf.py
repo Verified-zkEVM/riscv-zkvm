@@ -102,6 +102,20 @@ def li32(rd, value):
 SP1_KECCAK_PERMUTE = 0x0001_0109
 SP1_SHA_EXTEND = 0x0030_0105      # a real SP1 id this model deliberately omits
 SP1_UINT256_MUL = 0x0001_011D
+SP1_HINT_LEN = 0x0000_00F0
+SP1_HINT_READ = 0x0000_00F1
+
+# The four RV64 word-ops a real SP1 guest emits.
+SUBW  = lambda rd, a, b: rtype(0x3B, 0, 0x20, rd, a, b)
+SRLW  = lambda rd, a, b: rtype(0x3B, 5, 0x00, rd, a, b)
+SLLIW = lambda rd, rs1, sh: itype(0x1B, 1, rd, rs1, sh & 0x1F)
+SRLIW = lambda rd, rs1, sh: itype(0x1B, 5, rd, rs1, sh & 0x1F)
+SRAIW_UNMODELED = itype(0x1B, 5, "a0", "a0", 0x400 | 1)   # funct7 = 0x20
+
+# A high address inside SP1's image window: the exact address the downstream
+# guest dies on (`ld sp, 0(sp)` with sp = 0x780014b0). Above MEM_END = 0x78000000,
+# so the zisk profile rejects it and the sp1 profile accepts it.
+SP1_HI_ADDR = 0x780014B0
 
 # 0xa0000000 has bit 31 set, so `lui` alone would sign-extend it to
 # 0xffffffff_a0000000 on RV64. Materialise it as 0x50000000 << 1.
@@ -261,6 +275,108 @@ def _sp1u256zero():
         *li32("t0", SP1_UINT256_MUL),
         ECALL,
         ADDI("a3", "zero", 7),           # never reached
+        *HALT,
+    ]
+
+
+@fixture("sp1himem")
+def _sp1himem():
+    """A load from 0x780014b0 -- the address the real SP1 guest dies on.
+
+    SP1's zkvm.ld puts .rodata/.text/.data/.bss/heap ABOVE
+    __sp1_stack_top = 0x78000000, whereas isValidMemAddr's largest zone ENDS
+    there. So this traps under --backend zisk and succeeds under --backend sp1.
+    Nothing is stored first: unwritten memory reads as zero, and what is being
+    tested is the address predicate, not the value."""
+    return [
+        LUI("t1", SP1_HI_ADDR >> 12),
+        ADDI("t1", "t1", SP1_HI_ADDR & 0xFFF),
+        LD("a2", 0, "t1"),
+        *HALT,
+    ]
+
+
+@fixture("sp1textstore")
+def _sp1textstore():
+    """A store onto an address that holds code. Must trap even under sp1.
+
+    This is the store half of Word.lean's invariant -- "code is immutable AND
+    unreachable by stores". Under zisk the text window is excluded by
+    construction; under sp1 there is no such window, so `storeOkSp1` asks the
+    `code` map directly. TEXT is where this fixture's own instructions live."""
+    return [
+        ADDI("a0", "zero", 1),
+        LUI("t1", TEXT >> 12),          # t1 = 0x80000000, this image's own .text
+        SD("a0", 0, "t1"),
+        *HALT,
+    ]
+
+
+@fixture("sp1hint")
+def _sp1hint():
+    """SP1's input path: HINT_LEN then HINT_READ then HINT_LEN again.
+
+    --input must be length-prefix framed under --backend sp1: each hint is an
+    8-byte LE length followed by that many payload bytes. Reads one 8-byte hint
+    into the RAM zone, then checks the exhausted-stream sentinel.
+
+      a2 = first HINT_LEN            (expected 8)
+      a3 = the payload dword         (whatever --input carries)
+      a4 = HINT_LEN after consuming  (expected u64::MAX = -1)
+    """
+    return [
+        *LOAD_DATA_BASE,                    # t1 = 0xa0000000 (8-byte aligned)
+        *li32("t0", SP1_HINT_LEN),
+        ECALL,
+        ADDI("a2", "t0", 0),                # a2 = length reported in t0
+        ADDI("a0", "t1", 0),                # a0 = destination
+        ADDI("a1", "a2", 0),                # a1 = length (must match)
+        *li32("t0", SP1_HINT_READ),
+        ECALL,
+        LD("a3", 0, "t1"),                  # a3 = the payload
+        *li32("t0", SP1_HINT_LEN),
+        ECALL,
+        ADDI("a4", "t0", 0),                # a4 = sentinel
+        *HALT,
+    ]
+
+
+@fixture("wordops")
+def _wordops():
+    """The four word-ops the SP1 guest needs, with hand-checkable answers.
+
+      a2 = subw(5, 9)            = -4 sign-extended  = 0xfffffffffffffffc
+      a3 = srliw(0x8000_0000, 4) = 0x0800_0000
+      a4 = slliw(1, 31)          = 0x8000_0000 sext   = 0xffffffff80000000
+      a5 = srlw(0x8000_0000, 4)  = 0x0800_0000
+
+    srliw/srlw are the logical shifts: the point of the 0x8000_0000 input is
+    that an arithmetic shift would give a different answer, so these pin that
+    the funct7 discrimination in the decoder is real."""
+    return [
+        ADDI("a0", "zero", 5),
+        ADDI("a1", "zero", 9),
+        SUBW("a2", "a0", "a1"),             # 5 - 9 = -4, sext32
+        ADDI("t2", "zero", 1),
+        SLLIW("t2", "t2", 31),              # t2 = 0xffffffff80000000
+        SRLIW("a3", "t2", 4),               # logical: 0x0800_0000
+        ADDI("a4", "zero", 1),
+        SLLIW("a4", "a4", 31),              # 0xffffffff80000000
+        ADDI("a6", "zero", 4),
+        SRLW("a5", "t2", "a6"),             # logical: 0x0800_0000
+        *HALT,
+    ]
+
+
+@fixture("sraiw")
+def _sraiw():
+    """`sraiw` differs from `srliw` only in funct7, and is still unmodeled.
+
+    If the decoder ignored funct7 this would silently execute as srliw -- a
+    wrong answer rather than a stop. It must report undecodable."""
+    return [
+        ADDI("a0", "zero", 1),
+        SRAIW_UNMODELED,
         *HALT,
     ]
 

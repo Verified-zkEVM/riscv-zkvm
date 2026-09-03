@@ -61,6 +61,12 @@ namespace RiscvZkvm.Rv64
     need PC/CSR agreement and jump-target alignment). -/
 def Instr.simulableUncond : Instr → Bool
   | .ECALL | .EBREAK | .FENCE | .MV .. | .LI .. | .NOP | .CSRS .. => false
+  -- The four *W ops are modeled and decoded, but not mapped in `toSailInstr?`,
+  -- so they sit outside the Sail bridge exactly like MV/LI/NOP. Both of these
+  -- predicates are BLACKLISTS ending `| _ => true`: omitting a new constructor
+  -- here silently claims Sail coverage the bridge does not have, and makes
+  -- `toSailInstr?_isSome_of_simulable` (StepRun.lean) a false statement.
+  | .SUBW .. | .SRLW .. | .SLLIW .. | .SRLIW .. => false
   | .LD .. | .LW .. | .LWU .. | .LB .. | .LBU .. | .LH .. | .LHU .. => false
   | .SD .. | .SW .. | .SB .. | .SH .. => false
   | .AUIPC .. => false
@@ -75,6 +81,8 @@ def Instr.simulableUncond : Instr → Bool
     instructions whose Sail behavior intentionally diverges from the toy model. -/
 def Instr.simulable : Instr → Bool
   | .ECALL | .EBREAK | .FENCE | .MV .. | .LI .. | .NOP | .CSRS .. => false
+  -- See the blacklist note on `simulableUncond`.
+  | .SUBW .. | .SRLW .. | .SLLIW .. | .SRLIW .. => false
   | _ => true
 
 namespace SailEquiv
@@ -272,6 +280,10 @@ theorem step_execute_sail_sim_uncond
   | SRLI _ _ _   => sim_step srli_sail_equiv
   | SRAI _ _ _   => sim_step srai_sail_equiv
   | LUI _ _      => sim_step lui_sail_equiv
+  | SUBW _ _ _   => no_sim
+  | SRLW _ _ _   => no_sim
+  | SLLIW _ _ _  => no_sim
+  | SRLIW _ _ _  => no_sim
   | AUIPC _ _    => no_sim
   | LD _ _ _     => no_sim
   | SD _ _ _     => no_sim
@@ -569,6 +581,14 @@ theorem step_execute_sail_sim
           refine ⟨sSail', hpair.left, hpair.right.left, ?_, hpair.right.right.right⟩
           rw [hpair.right.right.left, h_nextpc]
           simp [execInstrBr, MachineState.setPC]
+  | SUBW _ _ _ =>
+      exact absurd hsim (by simp only [Instr.simulable]; decide)
+  | SRLW _ _ _ =>
+      exact absurd hsim (by simp only [Instr.simulable]; decide)
+  | SLLIW _ _ _ =>
+      exact absurd hsim (by simp only [Instr.simulable]; decide)
+  | SRLIW _ _ _ =>
+      exact absurd hsim (by simp only [Instr.simulable]; decide)
   | MV _ _ =>
       exact absurd hsim (by simp only [Instr.simulable]; decide)
   | LI _ _ =>

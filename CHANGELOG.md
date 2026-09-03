@@ -1,5 +1,87 @@
 # Changelog
 
+## Unreleased (branch `feat/sp1-guest-runs`) — make a real SP1 guest runnable
+
+Follows the downstream report on PR #10, where a real `cargo prove build` guest
+(Zcash Orchard / ZIP-2005, 41,783 instructions) still failed at instruction 4
+against `feat/sp1-backend`. That branch modelled SP1's *precompiles*; a real SP1
+guest turned out to be blocked by three other things.
+
+**This branch is not aimed at `main`.** It deliberately breaks the machine-model
+relocation gate — see the last item.
+
+- **An SP1 memory profile.** `isValidMemAddr` is untouched and remains the ZisK
+  profile; `Rv64/StepOn.lean` adds `isValidMemAddrSp1` (anything below
+  `SP1_MAX_MEMORY = 1 <<< 37`, mirroring `zkvm.ld`). `stepSp1` therefore stops
+  delegating the eleven load/store forms to `step` and gates them itself.
+
+  The interesting part is stores. Under ZisK, `Word.lean`'s excluded text window
+  makes "code is unreachable by stores" structural; under SP1 no contiguous
+  window carves code out, since the stack is below the image and the heap above
+  it. So `storeOkSp1` asks whether any 4-aligned word the access covers holds
+  code — a sharper question than any address window, and one that needs **no
+  declared text extent**, no new `Backend` payload, and no well-formedness
+  obligation. Loads are deliberately not gated this way: reading `.rodata` is
+  legitimate and is exactly what the guest does four instructions in.
+
+  `code_execInstrBr` / `code_step` / `code_stepN` needed no changes — they never
+  mention `isValidMemAddr` and hold structurally, because `setMem` does not touch
+  the `code` field.
+
+- **`HINT_LEN` / `HINT_READ`: SP1's input path.** Previously filed under
+  "prover infrastructure", which was wrong — they are the *only* way an SP1
+  guest reads input (`sp1_zkvm::io::read` bottoms out in `read_vec_raw`, which is
+  this pair), and `read_input` (`0xF2`) is a zkvm-standards id no SP1 guest
+  emits. Rather than extend `MachineState`, `privateInput` carries SP1's queue as
+  a length-prefixed stream. `HINT_READ` reuses the existing
+  `MachineState.writeBytesAsWords`.
+
+  One detail worth recording: `hint_read` writes `len / 8 + 1` doublewords, not
+  `⌈len/8⌉` — SP1 writes a final zero-padded word unconditionally, even when
+  `len` is a multiple of 8. `hintWrittenAddrs` is the single source of truth for
+  that extent, so the interpreter's write-back set cannot drift from it.
+
+- **Four RV64 word-ops: `SUBW`, `SRLW`, `SLLIW`, `SRLIW`.** 739 words of the
+  downstream guest (1.8%) are these four encodings and nothing else — no `ADDW`,
+  `MULW`, `DIVW` or `REMW`. The decoder checks `funct7` explicitly so `SRAIW`
+  and `SRAW`, which differ from their logical siblings only in that field, keep
+  returning `none` rather than being silently decoded as `SRLIW`/`SRLW`. Pinned
+  by both positive and negative `#guard`s.
+
+  **`Instr.simulable` and `Instr.simulableUncond` are blacklists ending
+  `| _ => true`**, so adding constructors without editing them would have made
+  the four `simulable = true` while `toSailInstr?` sends them to `none` — which
+  makes `toSailInstr?_isSome_of_simulable` a false statement that still compiles.
+  Both blacklists are updated and the four ops sit outside the Sail bridge, like
+  `MV`/`LI`/`NOP`. Mapping them in `toSailInstr?` and proving `*_sail_equiv` (the
+  Sail `RTYPEW`/`SHIFTIWOP` targets exist) is deliberately deferred.
+
+- `UINT256_MUL` is unchanged from PR #10. `unimp` gets no `Instr` constructor —
+  it correctly surfaces as `Stop.undecodable`, and only if reached.
+
+- `Stop.hintFailed` distinguishes a modelled hint syscall that failed its
+  preconditions (exhausted stream, length mismatch, misaligned `a0` — all three
+  `assert!`/`panic!` in SP1's executor) from an unknown syscall id.
+
+- **Tests: 13 → 20.** New: the SP1 profile on `0x780014b0`, the guest's actual
+  failing address, trapping under `zisk` and succeeding under `sp1`; a store onto
+  this image's own `.text` trapping under `sp1`; the full hint round trip
+  including the `u64::MAX` sentinel; the four word-ops with inputs chosen so an
+  arithmetic shift would give a different answer than a logical one; and `sraiw`
+  still undecodable. The five original fixtures are unchanged.
+
+- **The relocation gate now fails, by exactly 36 lines.** `Word.lean` and
+  `ZiskAccel.lean` are still at 0 — the memory profile and the precompiles are
+  both additive. The deltas are `Basic.lean` 8, `Instructions.lean` 12,
+  `Execution.lean` 12, `Program.lean` 4, and **every one of those lines is a
+  word-op**. Do not loosen `check-relocation.sh` to hide this; the number is the
+  audit.
+
+- Pin: `sp1-import/` gains `minimal/hint.rs` with its digest. The consumer runs
+  the `dmpierre/sp1` fork, but its copy of that file is byte-identical to
+  upstream v6.6.0's (same git blob `924e6417`), so the pin stays
+  single-revision upstream rather than mixing a fork in.
+
 ## Unreleased — an optional SP1 backend
 
 - **The precompile ABI is now selectable, and ZisK remains the default.**

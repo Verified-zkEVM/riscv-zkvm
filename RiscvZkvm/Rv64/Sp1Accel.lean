@@ -121,6 +121,20 @@ def BN254_FP2_MUL     : Word := 0x0001012B
 /-- `UINT256_MUL`: `a0 := (a0 * a1) mod a1[4..8]` on 256-bit integers. -/
 def UINT256_MUL       : Word := 0x0001011D
 
+/-! ### Host syscall ids
+
+  Not accelerators -- these write no accelerator block -- but SP1 syscalls all
+  the same, so they are pinned here beside the others. `HALT`/`WRITE`/`COMMIT`
+  are handled by `Execution.step`; the two hint ids are SP1's input path and are
+  implemented in `RiscvZkvm.Rv64.StepOn`. -/
+
+/-- `HINT_LEN`: returns the front hint vector's byte length in `t0`, or
+    `u64::MAX` when the input stream is empty. Does not consume. -/
+def HINT_LEN          : Word := 0x000000F0
+/-- `HINT_READ`: pops the front hint vector and writes it as LE doublewords at
+    `a0`; `a1` must equal its length. -/
+def HINT_READ         : Word := 0x000000F1
+
 /-- The syscall ids this module gives accelerator semantics.
 
     Written as an explicit disjunction rather than a list membership so that
@@ -135,9 +149,15 @@ def isAccelId (id : Word) : Bool :=
 
 /-- The four `t0` values `Execution.step` already handles: HALT, WRITE,
     `write_output`, and the zkvm-standards `read_input`. `stepSp1` delegates
-    exactly these back to `step` and traps on everything else. -/
+    exactly these back to `step`. -/
 def isHostId (id : Word) : Bool :=
   id = 0x00 || id = 0x02 || id = 0x10 || id = 0xF2
+
+/-- SP1's input path. Handled by `StepOn.sp1Ecall`, not by `step` -- `step` has
+    no arm for either id, so delegating them would silently no-op the only way
+    an SP1 guest can read input. -/
+def isHintId (id : Word) : Bool :=
+  id = HINT_LEN || id = HINT_READ
 
 /-- No accelerator id collides with a host syscall id.
 
@@ -148,6 +168,32 @@ theorem isAccelId_host_false :
     isAccelId 0x00 = false ∧ isAccelId 0x02 = false ∧
     isAccelId 0x10 = false ∧ isAccelId 0xF2 = false := by
   refine ⟨?_, ?_, ?_, ?_⟩ <;> decide
+
+/-- The hint ids are not accelerator ids either, so `sp1Ecall`'s accelerator
+    test cannot shadow the input path. -/
+theorem isAccelId_hint_false :
+    isAccelId HINT_LEN = false ∧ isAccelId HINT_READ = false := by
+  refine ⟨?_, ?_⟩ <;> decide
+
+/-- ...and the hint ids are not host-delegated ids, so the three classes
+    `sp1Ecall` dispatches on are pairwise disjoint. -/
+theorem isHostId_hint_false :
+    isHostId HINT_LEN = false ∧ isHostId HINT_READ = false := by
+  refine ⟨?_, ?_⟩ <;> decide
+
+/-- The two hint ids, extracted from `isHintId … = false` in the form
+    `sp1Ecall`'s two `if`s need. -/
+theorem hint_ne_of_isHintId_false {id : Word} (h : isHintId id = false) :
+    id ≠ HINT_LEN ∧ id ≠ HINT_READ := by
+  simp only [isHintId, Bool.or_eq_false_iff, decide_eq_false_iff_not] at h
+  exact h
+
+/-- A host-delegated id is neither hint id, so `sp1Ecall`'s hint tests cannot
+    intercept HALT, WRITE, `write_output` or `read_input`. -/
+theorem hint_ne_of_isHostId {id : Word} (h : isHostId id = true) :
+    id ≠ HINT_LEN ∧ id ≠ HINT_READ := by
+  obtain ⟨h0, h1⟩ := isHostId_hint_false
+  refine ⟨?_, ?_⟩ <;> intro he <;> subst he <;> simp_all
 
 /-- The two id classes are disjoint, in the form `stepSp1`'s case analysis
     wants. -/

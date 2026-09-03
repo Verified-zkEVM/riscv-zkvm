@@ -27,6 +27,11 @@ stack_top    = 0x78000000    # sp init; also the image base (segments must be >=
 max_memory   = 0x2000000000  # 1 << 37
 input_region = 0x0400000000  # 1 << 34
 
+# The downstream consumer runs the dmpierre/sp1 fork (rev f2328b4). Its copy of
+# minimal/hint.rs is byte-identical to upstream v6.6.0's -- same git blob
+# 924e64177f503165cda10089c3f2b8455e1a3359 -- so no fork revision is pinned here
+# and this file stays single-revision. Re-check that equality when bumping.
+
 [abi]
 # Syscall id in t0 (x5); first pointer argument in a0 (x10), second in a1 (x11).
 # Every modelled precompile writes its result in place at the a0 block.
@@ -63,6 +68,11 @@ fixes  = "*_DOUBLE: p_ptr = arg1, WordsCurvePoint, in place"
 path   = "crates/core/executor/src/vm/syscall/precompiles/fptower/fp2_addsub.rs"
 sha256 = "e1cafae4a6358812c25711e81b666312e30ea456517968aec66e0f882ee2fd76"
 fixes  = "*_FP2_ADD/SUB: x_ptr = arg1 (8-byte aligned), y_ptr = arg2, written at x_ptr"
+
+[[abi.sources]]
+path   = "crates/core/executor/src/minimal/hint.rs"
+sha256 = "03960395308b0cfab52b77ab97c6139f4326ee22d1fa1320fba3f37c3e014aca"
+fixes  = "HINT_LEN returns the front vector length in t0 (u64::MAX when empty, no consume); HINT_READ pops it and writes len/8 + 1 LE doublewords at a0 -- the final zero-padded word is written unconditionally"
 
 [[abi.sources]]
 path   = "crates/core/executor/src/vm/syscall/uint256.rs"
