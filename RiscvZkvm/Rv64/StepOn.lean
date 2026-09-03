@@ -217,8 +217,14 @@ def sp1Ecall (s : MachineState) : Option MachineState :=
     some (hintLen s)
   else if t0 = Sp1.HINT_READ then
     hintRead s
+  else if t0 = Sp1.COMMIT then
+    -- SP1's COMMIT, not zkvm-standards `write_output`: record `(index, word)`
+    -- and advance. `MachineState.committed` is exactly the SP1 word-pair commit
+    -- log, so no new state is needed and no memory is touched -- which is why
+    -- `Interpreter.writtenAddrs` needs no arm for this id.
+    some ((s.sp1Commit).setPC (s.pc + 4))
   else if Sp1.isHostId t0 then
-    step s                    -- HALT / WRITE / write_output / read_input
+    step s                    -- HALT / WRITE / read_input
   else
     none                      -- unmodeled syscall: trap, never a silent no-op
 
@@ -295,18 +301,26 @@ theorem stepSp1_accel_trap {s : MachineState}
     stepSp1 s = none := by
   unfold stepSp1 sp1Ecall; rw [hfetch]; simp [hid, hvalid]
 
-/-- A syscall id that is not an accelerator, not a hint, and not one of the four
-    host ids traps, rather than continuing as `step` would. -/
+/-- A syscall id that is not an accelerator, not a hint, not `COMMIT`, and not
+    one of the delegated host ids traps, rather than continuing as `step` would.
+
+    `COMMIT` has to be excluded explicitly: it is none of the other three
+    classes, so without this hypothesis the statement would be false. -/
 theorem stepSp1_ecall_unknown_trap {s : MachineState}
     (hfetch : s.code s.pc = some .ECALL)
     (hid : Sp1.isAccelId (s.getReg .x5) = false)
     (hhint : Sp1.isHintId (s.getReg .x5) = false)
+    (hcommit : s.getReg .x5 ≠ Sp1.COMMIT)
     (hhost : Sp1.isHostId (s.getReg .x5) = false) :
     stepSp1 s = none := by
   obtain ⟨hne1, hne2⟩ := Sp1.hint_ne_of_isHintId_false hhint
-  unfold stepSp1 sp1Ecall; rw [hfetch]; simp [hid, hhost, hne1, hne2]
+  unfold stepSp1 sp1Ecall; rw [hfetch]; simp [hid, hhost, hne1, hne2, hcommit]
 
-/-- The four host syscalls behave identically on both backends. -/
+/-- The delegated host syscalls behave identically on both backends.
+
+    Note this no longer covers `0x10`: under ZisK that id is the zkvm-standards
+    `write_output` inside `step`, under SP1 it is `COMMIT`. The two backends
+    genuinely differ there, which is the point of `sp1Commit`. -/
 theorem stepSp1_ecall_host {s : MachineState}
     (hfetch : s.code s.pc = some .ECALL)
     (hhost : Sp1.isHostId (s.getReg .x5) = true) :
@@ -318,7 +332,8 @@ theorem stepSp1_ecall_host {s : MachineState}
       have hnh := Sp1.not_isHostId_of_isAccelId hb
       simp [hnh] at hhost
   obtain ⟨hne1, hne2⟩ := Sp1.hint_ne_of_isHostId hhost
-  unfold stepSp1 sp1Ecall; rw [hfetch]; simp [hid, hhost, hne1, hne2]
+  have hcommit := Sp1.commit_ne_of_isHostId hhost
+  unfold stepSp1 sp1Ecall; rw [hfetch]; simp [hid, hhost, hne1, hne2, hcommit]
 
 -- ============================================================================
 -- Multi-step

@@ -42,7 +42,8 @@ table = json.load(open(TABLE))
 want = {e["name"]: int(e["id"], 16) for e in table["modelled"]}
 host = {e["name"]: int(e["id"], 16) for e in table["host"]}
 hint = {e["name"]: int(e["id"], 16) for e in table.get("hint", [])}
-declared = {**want, **hint}   # the ids that have a named `def` in Sp1Accel.lean
+commit = {e["name"]: int(e["id"], 16) for e in table.get("commit", [])}
+declared = {**want, **hint, **commit}   # ids with a named `def` in Sp1Accel.lean
 
 src = open(LEAN).read()
 got = {m.group(1): int(m.group(2), 16)
@@ -70,15 +71,18 @@ else:
     for name in sorted(want):
         if not re.search(rf"\b{name}\b", body):
             errs.append(f"{name} is defined but not listed in `isAccelId`")
-    for name in sorted(hint):
+    for name in sorted({**hint, **commit}):
         if re.search(rf"\b{name}\b", body):
-            errs.append(f"{name} is a hint syscall but is listed in `isAccelId`; "
-                        f"it would be dispatched as an accelerator")
+            errs.append(f"{name} is a hint or commit syscall but is listed in "
+                        f"`isAccelId`; it would be dispatched as an accelerator")
 
 # The four host ids must NOT be dispatched as accelerators.
 for a, b, label in ((want, host, "accelerator/host"),
                     (want, hint, "accelerator/hint"),
-                    (hint, host, "hint/host")):
+                    (want, commit, "accelerator/commit"),
+                    (hint, host, "hint/host"),
+                    (hint, commit, "hint/commit"),
+                    (commit, host, "commit/host")):
     overlap = set(a.values()) & set(b.values())
     if overlap:
         errs.append(f"{label} id spaces overlap: "
@@ -92,8 +96,8 @@ if errs:
           f"revision in sp1-import/PROVENANCE.toml.", file=sys.stderr)
     sys.exit(1)
 
-print(f"check-sp1-pin: {len(want)} accelerator + {len(hint)} hint syscall ids "
-      f"agree between {LEAN} and {TABLE}")
+print(f"check-sp1-pin: {len(want)} accelerator + {len(hint)} hint + "
+      f"{len(commit)} commit syscall ids agree between {LEAN} and {TABLE}")
 if os.environ.get("REPORT") == "1":
     for name, id_ in sorted(want.items(), key=lambda kv: kv[1]):
         e = next(x for x in table["modelled"] if x["name"] == name)
@@ -101,6 +105,8 @@ if os.environ.get("REPORT") == "1":
               f"{'' if not e.get('field') else ' over ' + e['field']}")
     for name, id_ in sorted(hint.items(), key=lambda kv: kv[1]):
         print(f"  {id_:#010x}  {name:<20} -> StepOn (SP1 input path)")
+    for name, id_ in sorted(commit.items(), key=lambda kv: kv[1]):
+        print(f"  {id_:#010x}  {name:<20} -> StepOn (SP1 public-values digest)")
     print(f"  ({len(table['host'])} host syscall ids delegate to Execution.step; "
           f"every other id traps)")
 PY

@@ -101,6 +101,7 @@ def li32(rd, value):
 # SP1 syscall ids, pinned in sp1-import/syscall-ids.json.
 SP1_KECCAK_PERMUTE = 0x0001_0109
 SP1_SHA_EXTEND = 0x0030_0105      # a real SP1 id this model deliberately omits
+SP1_COMMIT      = 0x00000010   # a0 = digest index, a1 = digest word
 SP1_UINT256_MUL = 0x0001_011D
 SP1_HINT_LEN = 0x0000_00F0
 SP1_HINT_READ = 0x0000_00F1
@@ -396,6 +397,30 @@ def _sp1badcall():
         ADDI("a1", "zero", 0),
         ECALL,
         ADDI("a3", "zero", 7),         # only reached if the ecall was a no-op
+        *HALT,
+    ]
+
+
+@fixture("sp1commit")
+def _sp1commit():
+    """SP1's COMMIT (0x10), which collides with zkvm-standards `write_output`.
+
+    A real SP1 guest ends with eight of these, one per public-values digest
+    word. Read as `write_output(ptr, size)` the arguments are nonsense: a1 is a
+    digest word, so it becomes a byte count. The value below is one actually
+    observed from a compiled guest -- 0x42c4b0e3, or 1.1 GB -- which the
+    write_output path tries to read from address 0, exhausting the host stack
+    before any trap can be reported.
+
+    So this fixture pins that COMMIT is handled as COMMIT: execution continues,
+    a3 = 7 is reached, and the run halts. Under --backend zisk the same id is
+    still `write_output`, so the run must NOT be expected to match."""
+    return [
+        *li32("t0", SP1_COMMIT),
+        ADDI("a0", "zero", 3),          # digest index
+        *li32("a1", 0x42C4B0E3),        # digest word, observed from a real guest
+        ECALL,
+        ADDI("a3", "zero", 7),          # reached only if COMMIT advanced the pc
         *HALT,
     ]
 

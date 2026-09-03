@@ -142,6 +142,21 @@
       "note": "a1 holds y then modulus contiguously; result written at a0. modulus 0 TRAPS, matching ZiskAccel's Arith256Mod stance -- the pinned executor source does not fix that case, and Accel.arith256Mod is documented as requiring callers to guard m != 0."
     }
   ],
+  "_commit_comment": [
+    "SP1's COMMIT shares id 0x10 with the zkvm-standards write_output that",
+    "Execution.step implements, but the two are unrelated: COMMIT takes",
+    "(index, word) in a0/a1 and writes a public-values digest word, while",
+    "write_output takes (ptr, size) and copies bytes out of memory. Under the",
+    "sp1 backend StepOn.sp1Ecall handles it before the host delegation is",
+    "reached; under zisk the id keeps its write_output meaning inside step.",
+    "Reading one as the other is not a near miss -- a real guest's digest word",
+    "arrives as a byte count."
+  ],
+  "commit": [
+    { "name": "COMMIT", "id": "0x00000010", "handled_by": "StepOn.sp1Ecall",
+      "note": "a0 = digest index, a1 = digest word; appended to MachineState.committed" }
+  ],
+
   "host": [
     {
       "name": "HALT",
@@ -152,12 +167,6 @@
       "name": "WRITE",
       "id": "0x00000002",
       "handled_by": "Execution.step"
-    },
-    {
-      "name": "write_output",
-      "id": "0x00000010",
-      "handled_by": "Execution.step",
-      "note": "SP1 calls 0x10 COMMIT; this model gives it the zkvm-standards write_output meaning"
     },
     {
       "name": "read_input",

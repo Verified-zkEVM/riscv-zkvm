@@ -147,11 +147,26 @@ def isAccelId (id : Word) : Bool :=
   id = BN254_FP2_ADD    || id = BN254_FP2_SUB    || id = BN254_FP2_MUL    ||
   id = UINT256_MUL
 
-/-- The four `t0` values `Execution.step` already handles: HALT, WRITE,
-    `write_output`, and the zkvm-standards `read_input`. `stepSp1` delegates
-    exactly these back to `step`. -/
+/-- `COMMIT`: SP1 writes one word of the public-values digest, `a0` = index,
+    `a1` = the word. It is NOT the zkvm-standards `write_output(ptr, size)`,
+    which shares the id.
+
+    The collision is not cosmetic. A real SP1 guest ends with eight `COMMIT`
+    calls at indices 0..7, and reading one of those as `write_output` takes `a1`
+    -- a digest word, i.e. effectively a random 32-bit value -- as a byte count
+    and `a0` -- the index, usually 0 -- as a source pointer. Observed on a real
+    guest: `a1 = 0x42c4b0e3`, so the model attempted to read 1.1 GB from address
+    0 and exhausted the host stack before any trap could be reported. -/
+def COMMIT : Word := 0x00000010
+
+/-- The `t0` values `Execution.step` already handles and `stepSp1` delegates
+    back to it unchanged: HALT, WRITE, and the zkvm-standards `read_input`.
+
+    `0x10` is deliberately NOT here. Under the ZisK ABI it keeps its
+    zkvm-standards `write_output` meaning inside `step`; under SP1 it is
+    `COMMIT`, handled in `StepOn.sp1Ecall` before this test is reached. -/
 def isHostId (id : Word) : Bool :=
-  id = 0x00 || id = 0x02 || id = 0x10 || id = 0xF2
+  id = 0x00 || id = 0x02 || id = 0xF2
 
 /-- SP1's input path. Handled by `StepOn.sp1Ecall`, not by `step` -- `step` has
     no arm for either id, so delegating them would silently no-op the only way
@@ -168,6 +183,10 @@ theorem isAccelId_host_false :
     isAccelId 0x00 = false ∧ isAccelId 0x02 = false ∧
     isAccelId 0x10 = false ∧ isAccelId 0xF2 = false := by
   refine ⟨?_, ?_, ?_, ?_⟩ <;> decide
+
+/-- `COMMIT` is not an accelerator id either, so `sp1Ecall`'s accelerator test
+    cannot shadow it. -/
+theorem isAccelId_commit_false : isAccelId COMMIT = false := by decide
 
 /-- The hint ids are not accelerator ids either, so `sp1Ecall`'s accelerator
     test cannot shadow the input path. -/
@@ -189,19 +208,24 @@ theorem hint_ne_of_isHintId_false {id : Word} (h : isHintId id = false) :
   exact h
 
 /-- A host-delegated id is neither hint id, so `sp1Ecall`'s hint tests cannot
-    intercept HALT, WRITE, `write_output` or `read_input`. -/
+    intercept HALT, WRITE or `read_input`. -/
 theorem hint_ne_of_isHostId {id : Word} (h : isHostId id = true) :
     id ≠ HINT_LEN ∧ id ≠ HINT_READ := by
   obtain ⟨h0, h1⟩ := isHostId_hint_false
   refine ⟨?_, ?_⟩ <;> intro he <;> subst he <;> simp_all
 
+/-- `COMMIT` is not one of the delegated host ids, so `sp1Ecall`'s COMMIT arm
+    cannot intercept HALT, WRITE or `read_input`. -/
+theorem commit_ne_of_isHostId {id : Word} (h : isHostId id = true) : id ≠ COMMIT := by
+  intro he; subst he; simp [isHostId, COMMIT] at h
+
 /-- The two id classes are disjoint, in the form `stepSp1`'s case analysis
     wants. -/
 theorem not_isHostId_of_isAccelId {id : Word} (h : isAccelId id = true) :
     isHostId id = false := by
-  obtain ⟨h0, h2, h10, hf2⟩ := isAccelId_host_false
+  obtain ⟨h0, h2, _h10, hf2⟩ := isAccelId_host_false
   simp only [isHostId, Bool.or_eq_false_iff, decide_eq_false_iff_not]
-  refine ⟨⟨⟨?_, ?_⟩, ?_⟩, ?_⟩ <;> intro he <;> subst he <;> simp_all
+  refine ⟨⟨?_, ?_⟩, ?_⟩ <;> intro he <;> subst he <;> simp_all
 
 end Sp1
 
@@ -257,6 +281,16 @@ def sp1AccelWrite (s : MachineState) (id : Word) : Word × List Word :=
       (Accel.leLimbsToNat (s.readWords (a1 + 32) 4))))
   else
     (0, [])
+
+/-- SP1's `COMMIT`: append `(a0, a1)` -- digest index and word -- to the commit
+    log. Writes no memory, so it needs no `writtenAddrs` arm.
+
+    `committed` already exists for exactly this: `MachineState` documents it as
+    "legacy SP1 word-pair commits". Recording rather than discarding keeps the
+    eight digest words available to a caller; discarding them would be sound but
+    would make a committed public-values digest unobservable. -/
+def sp1Commit (s : MachineState) : MachineState :=
+  { s with committed := s.committed ++ [(s.getReg .x10, s.getReg .x11)] }
 
 /-- Effect of an SP1 accelerator syscall on memory. Validity is checked
     separately by `sp1AccelValid`, and `stepSp1` traps when it fails; the PC

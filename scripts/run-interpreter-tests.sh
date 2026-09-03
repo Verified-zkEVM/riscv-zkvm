@@ -220,6 +220,15 @@ check_args wordops "--backend sp1" \
 check_args sraiw "--backend sp1" \
   'stopped   undecodable instruction 0x4015551b'
 
+# SP1's COMMIT shares id 0x10 with zkvm-standards write_output. Under sp1 it
+# must be COMMIT -- (index, word), no memory read -- so execution continues and
+# a3 = 7. Reading it as write_output(ptr=0, size=0x42c4b0e3) instead attempts a
+# 1.1 GB read and dies before reporting anything, which is what a real SP1 guest
+# hit. The zisk half keeps the write_output meaning and is pinned separately.
+check_args sp1commit "--backend sp1" \
+  'stopped   halted' \
+  '^  x13[[:space:]]+0x7$'
+
 echo
 echo "run-interpreter-tests: $pass passed, $fail failed"
 (( fail == 0 ))
