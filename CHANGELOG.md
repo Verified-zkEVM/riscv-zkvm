@@ -1,5 +1,42 @@
 # Changelog
 
+## Unreleased (branch `sp1-backend`) — a memory cell per backend
+
+- **`memIs` is now `memIsOn isValidDwordAccess`.** The separation-logic memory
+  cell carried ZisK's address map *inside the resource*: `a ↦ₘ v` required
+  `isValidDwordAccess a`, so at any address outside ZisK's three zones the cell
+  was not merely unguarded but unsatisfiable. An SP1 guest's writable segment
+  sits in the gap between those zones (the downstream ZIP-2005 guest's
+  `.data`/`.bss` starts at `0x78040618`, and `HINT_READ` bump-allocates its
+  input buffer there), so no assertion could name the memory an SP1 proof is
+  about.
+
+  `memIsOn valid a v` takes the validity predicate as a parameter. `↦ₘ` is the
+  ZisK instance and an `abbrev`, so every existing spec and proof is unchanged;
+  `Logic/Sp1Mem.lean` adds `memIsSp1 := memIsOn isValidDwordAccessSp1`, the
+  bridge `memIsSp1_of_memIs` (ZisK ⊂ SP1 for loads, strictly), and SP1 analogues
+  of `MemSat`'s zone-literal dischargers. Stores are deliberately *not* bridged:
+  `memOkSp1` asks `noCodeAt`, which ZisK never checks, and ZisK rejects the
+  `[0x78000000, 0xa0000000)` window, which SP1 does not. `bytesRegion` is
+  generalised the same way (`bytesRegionOn`), with the ZisK names as abbrevs.
+  The generic forms `holdsFor_memIsOn`, `pcFree_memIsOn` and
+  `holdsFor_sepConj_memIsOn_setMem` carry the proofs; the ZisK names remain as
+  one-line instances.
+
+- **`HINT_READ` range-checks its write window.** It checked only
+  `isAligned8 a0`: no `isValidMemAddrSp1`, no `noCodeAt`. It was therefore the
+  one write in the model that could land outside SP1's addressable space, or
+  over text -- updating `mem` while `code_hintRead` still certified `code`
+  unchanged, the same model-more-optimistic-than-machine pattern
+  `StepOn.lean`'s header rules out for stores. `hintWindowOk` now asks
+  `memOkSp1`'s two questions of the whole `n / 8 + 1`-doubleword window, on
+  `Nat` so a wrapping `ptr + width` cannot alias back in. The `sp1hint` fixture
+  writes at `0xa0000000` and is unaffected.
+
+- Two doc fixes in `StepOn.lean`: the header credited a `storeOkSp1` that does
+  not exist (the mechanism is `memOkSp1`'s `noCodeAt` conjunct), and attributed
+  `@[implicit_reducible]` to `isValidMemAddr` rather than to the zone constants.
+
 ## Unreleased (branch `feat/sp1-backend`) — range-check the output syscalls
 
 - **WRITE (`t0 = 0x02`, fd 13) and `write_output` (`t0 = 0x10`) are now range
