@@ -22,9 +22,10 @@
 
   ## The SP1 memory profile, and why it needs no declared text extent
 
-  `isValidMemAddr` is left exactly as it is — it *is* the ZisK profile, it is
-  `@[implicit_reducible]`, and roughly thirty `step_l*_trap` / `step_s*_trap`
-  lemmas unfold `MEM_START` / `MEM_END` by name. The SP1 profile is a separate
+  `isValidMemAddr` is left exactly as it is — it *is* the ZisK profile, its
+  zone constants `MEM_START` / `MEM_END` / … are `@[implicit_reducible]`, and
+  the eleven `step_l*_trap` / `step_s*_trap` lemmas (plus their positive
+  counterparts) unfold those constants by name. The SP1 profile is a separate
   predicate.
 
   The subtlety is `Word.lean:58-73`: excluding the text window is load-bearing
@@ -41,8 +42,11 @@
      `0x780014b0` — is legitimate. Only a *store* onto code is unfaithful.
   2. **"Does this address hold code" is already answerable**, from
      `MachineState.code`. So nothing has to declare a text extent, thread it
-     through `Backend`, or prove it well-formed: `storeOkSp1` asks the `code` map
-     directly, which is a strictly sharper question than any address window.
+     through `Backend`, or prove it well-formed: the `noCodeAt` conjunct of
+     `memOkSp1` asks the `code` map directly, which is a strictly sharper
+     question than any address window. `HINT_READ`, the one other way SP1
+     writes memory, asks the same two questions of its whole write window
+     (`hintWindowOk`).
 
   `code_execInstrBr` / `code_step` / `code_stepN` are unaffected — they never
   mention `isValidMemAddr` and hold structurally, because `setMem` does not touch
@@ -86,6 +90,11 @@ def SP1_MAX_MEMORY : Nat := 0x2000000000
 
 /-- SP1 load-validity: any address in the addressable space. -/
 def isValidMemAddrSp1 (addr : Word) : Bool := decide (addr.toNat < SP1_MAX_MEMORY)
+
+/-- SP1 doubleword access: in the addressable space and 8-aligned. The SP1
+    counterpart of `isValidDwordAccess`, and the predicate `Logic.Sp1Mem`'s
+    memory cell carries. -/
+def isValidDwordAccessSp1 (addr : Word) : Bool := isValidMemAddrSp1 addr && isAligned8 addr
 
 /-- Round down to a 4-byte boundary, the granularity `code` is keyed at. -/
 def align4 (a : Word) : Word := a &&& ~~~3#64
@@ -164,17 +173,33 @@ def hintLen (s : MachineState) : MachineState :=
     | none   => -1#64            -- u64::MAX
   (s.setReg .x5 v).setPC (s.pc + 4)
 
+/-- The window a `HINT_READ` of an `n`-byte hint at `ptr` writes -- `n / 8 + 1`
+    doublewords, the same extent `hintWrittenAddrs` enumerates -- lies in SP1's
+    addressable space and holds no code. These are the two questions `memOkSp1`
+    asks of a store, asked of the whole window; the bound is on `Nat`, so a
+    `ptr + width` that would wrap as a `BitVec` cannot alias back in. -/
+def hintWindowOk (s : MachineState) (ptr : Word) (n : Nat) : Bool :=
+  let width := 8 * (n / 8 + 1)
+  decide (ptr.toNat + width ≤ SP1_MAX_MEMORY) && noCodeAt s ptr width
+
 /-- `HINT_READ`: pop the front vector and write it as little-endian doublewords
     at `a0`.
 
     Traps when the stream is exhausted, when `a1` disagrees with the front
     vector's length, or when `a0` is not 8-byte aligned — all three are
-    `assert!`/`panic!` in SP1's executor, so a trap is the faithful reading.
+    `assert!`/`panic!` in SP1's executor, so a trap is the faithful reading —
+    and when the write window fails `hintWindowOk`.
 
     Note the write extent is `len / 8 + 1` doublewords, **not** `⌈len/8⌉`: SP1
     always writes a final zero-padded word, even when `len` is a multiple of 8.
     `writeBytesAsWords` stops when the payload runs out, so that trailing word is
-    written explicitly. -/
+    written explicitly.
+
+    The write window is also range checked (`hintWindowOk`), the way every
+    store under `memOkSp1` is. Without that, a `HINT_READ` at a bad `a0` was the
+    one write in the model that could land outside the addressable space, or on
+    text -- updating `mem` while `code` still certified the instruction stream
+    intact, exactly the unsoundness the header above rules out for stores. -/
 def hintRead (s : MachineState) : Option MachineState :=
   match frontHintLen s with
   | none => none
@@ -182,6 +207,7 @@ def hintRead (s : MachineState) : Option MachineState :=
     let ptr := s.getReg .x10
     let len := s.getReg .x11
     if !(isAligned8 ptr) then none
+    else if !(hintWindowOk s ptr n) then none
     else if len.toNat ≠ n then none
     else if s.privateInput.length < 8 + n then none
     else
