@@ -206,6 +206,22 @@ inductive Instr where
   -- RV64I *W instructions (word-size operations on lower 32 bits)
   /-- ADDIW rd, rs1, imm : rd := sext((rs1 + sext(imm))[31:0]) -/
   | ADDIW (rd rs1 : Reg) (imm : BitVec 12)
+  /-- ADDW rd, rs1, rs2 : rd := sext((rs1 + rs2)[31:0]) -/
+  | ADDW (rd rs1 rs2 : Reg)
+  /-- SUBW rd, rs1, rs2 : rd := sext((rs1 - rs2)[31:0]) -/
+  | SUBW (rd rs1 rs2 : Reg)
+  /-- SLLW rd, rs1, rs2 : rd := sext(rs1[31:0] << rs2[4:0]) -/
+  | SLLW (rd rs1 rs2 : Reg)
+  /-- SRLW rd, rs1, rs2 : rd := sext(rs1[31:0] >>u rs2[4:0]) -/
+  | SRLW (rd rs1 rs2 : Reg)
+  /-- SRAW rd, rs1, rs2 : rd := sext(rs1[31:0] >>s rs2[4:0]) -/
+  | SRAW (rd rs1 rs2 : Reg)
+  /-- SLLIW rd, rs1, shamt : rd := sext(rs1[31:0] << shamt) -/
+  | SLLIW (rd rs1 : Reg) (shamt : BitVec 5)
+  /-- SRLIW rd, rs1, shamt : rd := sext(rs1[31:0] >>u shamt) -/
+  | SRLIW (rd rs1 : Reg) (shamt : BitVec 5)
+  /-- SRAIW rd, rs1, shamt : rd := sext(rs1[31:0] >>s shamt) -/
+  | SRAIW (rd rs1 : Reg) (shamt : BitVec 5)
   -- RV64I system
   /-- ECALL: environment call -/
   | ECALL
@@ -231,6 +247,17 @@ inductive Instr where
   | REM  (rd rs1 rs2 : Reg)
   /-- REMU rd, rs1, rs2 : rd := rs1 %u rs2 (unsigned remainder) -/
   | REMU (rd rs1 rs2 : Reg)
+  -- RV64M *W instructions (word-size operations on lower 32 bits)
+  /-- MULW rd, rs1, rs2 : rd := sext((rs1 * rs2)[31:0]) -/
+  | MULW (rd rs1 rs2 : Reg)
+  /-- DIVW rd, rs1, rs2 : rd := sext(rs1[31:0] /s rs2[31:0]) -/
+  | DIVW (rd rs1 rs2 : Reg)
+  /-- DIVUW rd, rs1, rs2 : rd := sext(rs1[31:0] /u rs2[31:0]) -/
+  | DIVUW (rd rs1 rs2 : Reg)
+  /-- REMW rd, rs1, rs2 : rd := sext(rs1[31:0] %s rs2[31:0]) -/
+  | REMW (rd rs1 rs2 : Reg)
+  /-- REMUW rd, rs1, rs2 : rd := sext(rs1[31:0] %u rs2[31:0]) -/
+  | REMUW (rd rs1 rs2 : Reg)
   -- ZisK accelerator invocation
   /-- CSRS csr, rs1 (`csrrs x0, csr, rs1`): ZisK accelerator call with the
       operand-block pointer in `rs1`.  Modeled with concrete semantics per

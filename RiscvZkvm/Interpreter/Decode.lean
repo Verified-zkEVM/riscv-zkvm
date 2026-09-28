@@ -11,11 +11,6 @@
   against it either — the Sail side does not evaluate. This has to become a
   theorem; see `docs/validation.md`.
 
-  KNOWN GAP: the RV64 word-op family (`ADDW SUBW SLLW SRLW SRAW SLLIW SRLIW
-  SRAIW MULW DIVW DIVUW REMW REMUW`) is absent from `Instr` — only `ADDIW` is
-  modeled. Those encodings decode to `none` here rather than being silently
-  mapped to something else.
-
   `MV`, `LI` and `NOP` are assembler pseudo-instructions, not encodings. They are
   never produced: `addi rd, rs, 0` decodes to `ADDI`, not `MV`.
 -/
@@ -80,6 +75,8 @@ def decode (w : BitVec 32) : Option Instr :=
   -- RV64 shifts take a 6-bit shamt, so the discriminating field is funct6.
   let funct6 := (w.extractLsb' 26 6).toNat
   let shamt  := w.extractLsb' 20 6
+  -- RV64 word shifts take a 5-bit shamt; bit 25 belongs to funct7 and must be 0.
+  let shamtW := w.extractLsb' 20 5
   match opcode with
   -- OP: register-register
   | 0x33 =>
@@ -119,10 +116,31 @@ def decode (w : BitVec 32) : Option Instr :=
       else if funct6 == 0x10 then some (.SRAI rd rs1 shamt)
       else none
     | _ => none
-  -- OP-IMM-32: only ADDIW is modeled (SLLIW/SRLIW/SRAIW are the word-op gap).
-  | 0x1b => if funct3 == 0 then some (.ADDIW rd rs1 (immI w)) else none
-  -- OP-32: ADDW/SUBW/SLLW/SRLW/SRAW/MULW/DIVW/DIVUW/REMW/REMUW — word-op gap.
-  | 0x3b => none
+  -- OP-IMM-32: word-size register-immediate
+  | 0x1b =>
+    match funct3 with
+    | 0 => some (.ADDIW rd rs1 (immI w))
+    | 1 => if funct7 == 0x00 then some (.SLLIW rd rs1 shamtW) else none
+    | 5 =>
+      if funct7 == 0x00 then some (.SRLIW rd rs1 shamtW)
+      else if funct7 == 0x20 then some (.SRAIW rd rs1 shamtW)
+      else none
+    | _ => none
+  -- OP-32: word-size register-register
+  | 0x3b =>
+    match funct7, funct3 with
+    | 0x00, 0 => some (.ADDW rd rs1 rs2)
+    | 0x20, 0 => some (.SUBW rd rs1 rs2)
+    | 0x00, 1 => some (.SLLW rd rs1 rs2)
+    | 0x00, 5 => some (.SRLW rd rs1 rs2)
+    | 0x20, 5 => some (.SRAW rd rs1 rs2)
+    -- RV64M
+    | 0x01, 0 => some (.MULW rd rs1 rs2)
+    | 0x01, 4 => some (.DIVW rd rs1 rs2)
+    | 0x01, 5 => some (.DIVUW rd rs1 rs2)
+    | 0x01, 6 => some (.REMW rd rs1 rs2)
+    | 0x01, 7 => some (.REMUW rd rs1 rs2)
+    | _, _ => none
   | 0x37 => some (.LUI rd (immU w))
   | 0x17 => some (.AUIPC rd (immU w))
   | 0x6f => some (.JAL rd (immJ w))

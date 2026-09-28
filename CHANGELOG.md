@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased — the RV64 word ops
+
+- Added the thirteen RV64 word ops to `Instr`: `ADDW SUBW SLLW SRLW SRAW SLLIW
+  SRLIW SRAIW` (RV64I) and `MULW DIVW DIVUW REMW REMUW` (RV64M), with semantics
+  in `execInstr` and `execInstrBr` (new helpers `rv64_divw`, `rv64_divuw`,
+  `rv64_remw`, `rv64_remuw`), `Program` constructors, and decoder arms for OP-32
+  and OP-IMM-32. This closes the word-op gap in `docs/validation.md` and item 3
+  of the interpreter roadmap.
+- `SailEquiv` gains 13 `*_sail_equiv` theorems (64 in total), the
+  `toSailInstr?` / `fromSailInstr?` mappings for `RTYPEW`, `SHIFTIWOP`, `MULW`,
+  `DIVW` and `REMW` with their round-trip lemmas, and the matching `StepSim`
+  arms, so `sailStep_run_sim` covers programs that use them. The M-extension
+  proofs add width-32 counterparts of the existing division helpers, including
+  the `-2^31 / -1` overflow case.
+- Tests: `DecodeTests` checks all 13 encodings (cross-checked against
+  `llvm-mc`) and three reserved ones. The interpreter's `wordop` gap fixture is
+  replaced by `addw`, `wordalu` and `wordmext`, whose expected values cover
+  32-bit wrap-around, shift-amount masking, division by zero and the overflow
+  row of the M-extension table.
+- Public surface: `Instr` gains 13 constructors. The change is additive, but
+  EvmAsm matches on `Instr` exhaustively in `Codegen/Emit.lean` (`emitInstr`)
+  and in its own `Rv64/SailEquiv/StepSim.lean`, and its
+  `scripts/check-roundtrip-coverage.sh` wants a round-trip guard per
+  constructor, so bumping the pin needs arms and guards for the new
+  instructions there.
+
 ## v0.3.1 — licensing of the relocated layer
 
 - Copied the MIT licence from the code's origin to

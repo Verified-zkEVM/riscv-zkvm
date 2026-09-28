@@ -87,10 +87,38 @@ check trap \
   'stopped   trap' \
   '^retired   2$'
 
-# KNOWN GAP (ISA coverage): `addw` is real RV64IM that `Instr` does not model.
-check wordop \
-  'stopped   undecodable instruction' \
-  '^retired   2$'
+# RV64 word op: the 32-bit sum wraps and is sign-extended to 64 bits.
+check addw \
+  'stopped   halted' \
+  '^  x10[[:space:]]+0x7fffffff$' \
+  '^  x12[[:space:]]+0xffffffff80000000$'
+
+# RV64I word ops. Expected values come from the ISA manual's definitions,
+# computed independently of the model.
+check wordalu \
+  'stopped   halted' \
+  '^  x12[[:space:]]+0xffffffff80000002$' \
+  '^  x13[[:space:]]+0xfffffffffffffffe$' \
+  '^  x14[[:space:]]+0x7fffffff$' \
+  '^  x15[[:space:]]+0xffffffffffffffff$' \
+  '^  x16[[:space:]]+0xffffffff80000000$' \
+  '^  x17[[:space:]]+0x1$' \
+  '^  x18[[:space:]]+0xffffffffffffffff$'
+
+# RV64M word ops, with the division-by-zero and overflow rows of the spec's table.
+check wordmext \
+  'stopped   halted' \
+  '^  x12[[:space:]]+0x1$' \
+  '^  x13[[:space:]]+0x2$' \
+  '^  x14[[:space:]]+0xffffffffffffffff$' \
+  '^  x15[[:space:]]+0xffffffff80000000$' \
+  '^  x16[[:space:]]+0xfffffffffffffffd$' \
+  '^  x17[[:space:]]+0x55555554$' \
+  '^  x18[[:space:]]+0xfffffffffffffffe$' \
+  '^  x19[[:space:]]+0xffffffffffffffff$' \
+  '^  x20[[:space:]]+0x2$' \
+  '^  x21[[:space:]]+0xffffffffffffffff$' \
+  '^  x22[[:space:]]+0x0$'
 
 echo
 echo "run-interpreter-tests: $pass passed, $fail failed"
