@@ -78,7 +78,7 @@ and Lean emulators.
 
 `RiscvZkvm.Rv64` is a hand-written, computable RV64IM machine model
 (`Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`). `RiscvZkvm.Rv64.SailEquiv`
-ties it to the generated extraction by 51 per-instruction `*_sail_equiv`
+ties it to the generated extraction by 64 per-instruction `*_sail_equiv`
 theorems plus the consolidated `sailStep_run_sim` / `sailStepN_run_sim`. Both
 were relocated here from EvmAsm, where they lived under `EvmAsm.Rv64`.
 
@@ -97,7 +97,7 @@ second set of instruction semantics. See `RiscvZkvm/Interpreter/State.lean`.
 
 ```bash
 lake build riscv-zkvm-run
-scripts/run-interpreter-tests.sh      # hand-assembled fixtures, 5 cases
+scripts/run-interpreter-tests.sh      # hand-assembled fixtures, 7 cases
 ```
 
 ## Known gaps
@@ -123,26 +123,20 @@ closing it has to be a deliberate edit.
    **Sail** model (50/50 as of 2026-08-25). The interpreter's own tests use
    hand-assembled fixtures laid out for the zkVM memory map instead.
 
-2. **The RV64 word-op family is absent from `Instr`.** `ADDW SUBW SLLW SRLW SRAW
-   SLLIW SRLIW SRAIW MULW DIVW DIVUW REMW REMUW` — only `ADDIW` is modeled.
-   `decode` returns `none` for them rather than mapping them to something else,
-   and `riscv-zkvm-run` reports "undecodable instruction". This is the same gap
-   EvmAsm records in `docs/riscv-zkvm-compliance.md` §2.7.
-
-3. **`decode` is not tied to Sail.** No theorem relates
+2. **`decode` is not tied to Sail.** No theorem relates
    `RiscvZkvm.Interpreter.decode` to `RiscvZkvm.Sail.Functions.encdec_backwards`,
    and it cannot be checked by testing either: the proof extraction is
    `noncomputable`, so the Sail decoder does not evaluate. This has to become a
    theorem. `RiscvZkvm/Interpreter/DecodeTests.lean` pins the decoder against
    hand-computed encodings in the meantime, which is evidence, not a tie.
 
-4. **`stepExec` is not proved to simulate `step`.** `ExecState.toMachineState`
+3. **`stepExec` is not proved to simulate `step`.** `ExecState.toMachineState`
    states the refinement; nothing proves the hash-map memory and the model's
    function memory stay in step. The construction makes it very likely — the
    semantics *is* `step`, and only the written-address set is hand-written — but
    that is an argument, not a theorem.
 
-Gaps 3 and 4 mean interpreter results are evidence about the executable path.
+Gaps 2 and 3 mean interpreter results are evidence about the executable path.
 They are not, on their own, evidence about the model the `SailEquiv` theorems
 talk about.
 

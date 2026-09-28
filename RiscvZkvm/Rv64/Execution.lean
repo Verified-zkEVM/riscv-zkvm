@@ -172,6 +172,27 @@ def execInstrBr (s : MachineState) (i : Instr) : MachineState :=
   | .ADDIW rd rs1 imm =>
       let sum32 : BitVec 32 := ((s.getReg rs1).truncate 32) + ((signExtend12 imm).truncate 32)
       (s.setReg rd (sum32.signExtend 64)).setPC (s.pc + 4)
+  | .ADDW rd rs1 rs2 =>
+      let sum32 : BitVec 32 := ((s.getReg rs1).truncate 32) + ((s.getReg rs2).truncate 32)
+      (s.setReg rd (sum32.signExtend 64)).setPC (s.pc + 4)
+  | .SUBW rd rs1 rs2 =>
+      let diff32 : BitVec 32 := ((s.getReg rs1).truncate 32) - ((s.getReg rs2).truncate 32)
+      (s.setReg rd (diff32.signExtend 64)).setPC (s.pc + 4)
+  | .SLLW rd rs1 rs2 =>
+      let shamt := (s.getReg rs2).toNat % 32
+      (s.setReg rd ((((s.getReg rs1).truncate 32 : BitVec 32) <<< shamt).signExtend 64)).setPC (s.pc + 4)
+  | .SRLW rd rs1 rs2 =>
+      let shamt := (s.getReg rs2).toNat % 32
+      (s.setReg rd ((((s.getReg rs1).truncate 32 : BitVec 32) >>> shamt).signExtend 64)).setPC (s.pc + 4)
+  | .SRAW rd rs1 rs2 =>
+      let shamt := (s.getReg rs2).toNat % 32
+      (s.setReg rd ((BitVec.sshiftRight ((s.getReg rs1).truncate 32 : BitVec 32) shamt).signExtend 64)).setPC (s.pc + 4)
+  | .SLLIW rd rs1 shamt =>
+      (s.setReg rd ((((s.getReg rs1).truncate 32 : BitVec 32) <<< shamt.toNat).signExtend 64)).setPC (s.pc + 4)
+  | .SRLIW rd rs1 shamt =>
+      (s.setReg rd ((((s.getReg rs1).truncate 32 : BitVec 32) >>> shamt.toNat).signExtend 64)).setPC (s.pc + 4)
+  | .SRAIW rd rs1 shamt =>
+      (s.setReg rd ((BitVec.sshiftRight ((s.getReg rs1).truncate 32 : BitVec 32) shamt.toNat).signExtend 64)).setPC (s.pc + 4)
   -- RV64I system
   | .ECALL =>
       s.setPC (s.pc + 4)
@@ -200,6 +221,18 @@ def execInstrBr (s : MachineState) (i : Instr) : MachineState :=
       (s.setReg rd (rv64_rem (s.getReg rs1) (s.getReg rs2))).setPC (s.pc + 4)
   | .REMU rd rs1 rs2 =>
       (s.setReg rd (rv64_remu (s.getReg rs1) (s.getReg rs2))).setPC (s.pc + 4)
+  -- RV64M *W instructions
+  | .MULW rd rs1 rs2 =>
+      let prod32 : BitVec 32 := ((s.getReg rs1).truncate 32) * ((s.getReg rs2).truncate 32)
+      (s.setReg rd (prod32.signExtend 64)).setPC (s.pc + 4)
+  | .DIVW rd rs1 rs2 =>
+      (s.setReg rd (rv64_divw (s.getReg rs1) (s.getReg rs2))).setPC (s.pc + 4)
+  | .DIVUW rd rs1 rs2 =>
+      (s.setReg rd (rv64_divuw (s.getReg rs1) (s.getReg rs2))).setPC (s.pc + 4)
+  | .REMW rd rs1 rs2 =>
+      (s.setReg rd (rv64_remw (s.getReg rs1) (s.getReg rs2))).setPC (s.pc + 4)
+  | .REMUW rd rs1 rs2 =>
+      (s.setReg rd (rv64_remuw (s.getReg rs1) (s.getReg rs2))).setPC (s.pc + 4)
 
 /-- For non-branch instructions, execInstrBr agrees with execInstr
     (both advance PC by 4 and compute the same state update). -/

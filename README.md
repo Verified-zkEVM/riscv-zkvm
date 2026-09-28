@@ -7,7 +7,7 @@ Verified-zkEVM projects. It publishes four things:
 |---|---|
 | `RiscvZkvm.Sail` | Lean extraction of the official [`riscv/sail-riscv`](https://github.com/riscv/sail-riscv) specification — **generated**, not hand-maintained |
 | `RiscvZkvm.Rv64` | a hand-written, computable RV64IM machine model (`Instr`, `MachineState`, `step`) |
-| `RiscvZkvm.Rv64.SailEquiv` | the tie between them: 51 per-instruction `*_sail_equiv` theorems plus step/run simulation |
+| `RiscvZkvm.Rv64.SailEquiv` | the tie between them: 64 per-instruction `*_sail_equiv` theorems plus step/run simulation |
 | `RiscvZkvm.Rv64.Logic` | the program logic: separation logic over `MachineState`, the CPS specification layer, a weakest-precondition framework, and the symbolic-execution tactics that drive them |
 
 plus `RiscvZkvm.Interpreter` and the `riscv-zkvm-run` CLI, which execute the
@@ -67,7 +67,7 @@ Execution goes through `RiscvZkvm.Rv64.step` itself — the interpreter supplies
 an ELF loader and an efficient memory representation, not a second set of
 instruction semantics. Guest images must use the zkVM memory map the model
 hard-codes; **the standard `riscv-tests` images do not run here**, for reasons
-recorded in [validation](docs/validation.md) along with three other known gaps.
+recorded in [validation](docs/validation.md) along with two other known gaps.
 
 ## Downstream compatibility — read before changing anything
 

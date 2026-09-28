@@ -38,16 +38,10 @@ are closed, interpreter results are evidence about the executable path only.
    `SailEquiv.InstrMap`'s existing `toSailInstr?` / `fromSailInstr?` bridge.
    This cannot be tested — `encdec_backwards` is `noncomputable` — so it has to
    be a theorem.
-3. **Close the RV64 word-op gap.** Add `ADDW SUBW SLLW SRLW SRAW SLLIW SRLIW
-   SRAIW MULW DIVW DIVUW REMW REMUW` to `Instr`, their semantics, decoder arms,
-   and `*_sail_equiv` lemmas. Additive to `Instr`, so it does not disturb
-   existing proofs — but it does trip EvmAsm's
-   `scripts/check-roundtrip-coverage.sh` ratchet, which wants a round-trip guard
-   per constructor.
-4. **Model general CSR access**, or decide deliberately not to. Without it the
+3. **Model general CSR access**, or decide deliberately not to. Without it the
    `riscv-tests` corpus cannot run here at all (see `docs/validation.md`), and
    the model's only CSR form stays the ZisK accelerator call.
-5. **Differential traces against Sail's C++ emulator** for the same source and
+4. **Differential traces against Sail's C++ emulator** for the same source and
    configuration, as originally planned.
 
 ## What deliberately did not happen

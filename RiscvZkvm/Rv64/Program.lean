@@ -76,6 +76,14 @@ theorem execProgram_seq {s : MachineState} {p1 p2 : Program} :
 def ADD  (rd rs1 rs2 : Reg)                 : Program := single (.ADD rd rs1 rs2)
 def ADDI (rd rs1 : Reg) (imm : BitVec 12)   : Program := single (.ADDI rd rs1 imm)
 def ADDIW (rd rs1 : Reg) (imm : BitVec 12)  : Program := single (.ADDIW rd rs1 imm)
+def ADDW (rd rs1 rs2 : Reg)                 : Program := single (.ADDW rd rs1 rs2)
+def SUBW (rd rs1 rs2 : Reg)                 : Program := single (.SUBW rd rs1 rs2)
+def SLLW (rd rs1 rs2 : Reg)                 : Program := single (.SLLW rd rs1 rs2)
+def SRLW (rd rs1 rs2 : Reg)                 : Program := single (.SRLW rd rs1 rs2)
+def SRAW (rd rs1 rs2 : Reg)                 : Program := single (.SRAW rd rs1 rs2)
+def SLLIW (rd rs1 : Reg) (shamt : BitVec 5) : Program := single (.SLLIW rd rs1 shamt)
+def SRLIW (rd rs1 : Reg) (shamt : BitVec 5) : Program := single (.SRLIW rd rs1 shamt)
+def SRAIW (rd rs1 : Reg) (shamt : BitVec 5) : Program := single (.SRAIW rd rs1 shamt)
 def SUB  (rd rs1 rs2 : Reg)                 : Program := single (.SUB rd rs1 rs2)
 def SLL  (rd rs1 rs2 : Reg)                 : Program := single (.SLL rd rs1 rs2)
 def SLLI (rd rs1 : Reg) (shamt : BitVec 6)  : Program := single (.SLLI rd rs1 shamt)
@@ -128,6 +136,11 @@ def DIV' (rd rs1 rs2 : Reg)                 : Program := single (.DIV rd rs1 rs2
 def DIVU (rd rs1 rs2 : Reg)                 : Program := single (.DIVU rd rs1 rs2)
 def REM' (rd rs1 rs2 : Reg)                 : Program := single (.REM rd rs1 rs2)
 def REMU (rd rs1 rs2 : Reg)                 : Program := single (.REMU rd rs1 rs2)
+def MULW (rd rs1 rs2 : Reg)                 : Program := single (.MULW rd rs1 rs2)
+def DIVW (rd rs1 rs2 : Reg)                 : Program := single (.DIVW rd rs1 rs2)
+def DIVUW (rd rs1 rs2 : Reg)                : Program := single (.DIVUW rd rs1 rs2)
+def REMW (rd rs1 rs2 : Reg)                 : Program := single (.REMW rd rs1 rs2)
+def REMUW (rd rs1 rs2 : Reg)                : Program := single (.REMUW rd rs1 rs2)
 
 /-- HALT macro: set t0 := 0 (HALT syscall), a0 := exit code, then ecall. -/
 def HALT (exitCode : Word := 0) : Program :=

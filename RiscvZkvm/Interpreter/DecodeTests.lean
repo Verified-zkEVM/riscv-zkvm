@@ -8,8 +8,8 @@
   archive. CI builds this module explicitly.
 
   Each `#guard` fails the build if the decoder drifts. The negative cases are as
-  load-bearing as the positive ones: they pin the documented RV64 word-op gap and
-  the unmodeled CSR forms, so closing either gap has to be a deliberate edit here
+  load-bearing as the positive ones: they pin the reserved word-op encodings and
+  the unmodeled CSR forms, so changing either has to be a deliberate edit here
   rather than a silent behaviour change.
 -/
 
@@ -55,11 +55,26 @@ private def d (w : Nat) : Option Instr := decode (BitVec.ofNat 32 w)
 -- ZisK accelerator call: `csrrs x0, csr, rs1` only.
 #guard d 0x8002A073 == some (.CSRS 0x800 .x5)
 
--- KNOWN GAP: the RV64 word-op family is absent from `Instr`.
-#guard d 0x00B5063B == none   -- addw a2, a0, a1
-#guard d 0x40B5063B == none   -- subw a2, a0, a1
-#guard d 0x0015151B == none   -- slliw a0, a0, 1
-#guard d 0x02B5063B == none   -- mulw a2, a0, a1
+-- RV64 word ops (encodings cross-checked against `llvm-mc -triple=riscv64 -mattr=+m`).
+#guard d 0x00B5063B == some (.ADDW .x12 .x10 .x11)    -- addw a2, a0, a1
+#guard d 0x40B5063B == some (.SUBW .x12 .x10 .x11)    -- subw a2, a0, a1
+#guard d 0x00B5163B == some (.SLLW .x12 .x10 .x11)    -- sllw a2, a0, a1
+#guard d 0x00B5563B == some (.SRLW .x12 .x10 .x11)    -- srlw a2, a0, a1
+#guard d 0x40B5563B == some (.SRAW .x12 .x10 .x11)    -- sraw a2, a0, a1
+#guard d 0x0015151B == some (.SLLIW .x10 .x10 1)      -- slliw a0, a0, 1
+#guard d 0x01F5551B == some (.SRLIW .x10 .x10 31)     -- srliw a0, a0, 31
+#guard d 0x41F5551B == some (.SRAIW .x10 .x10 31)     -- sraiw a0, a0, 31
+#guard d 0x02B5063B == some (.MULW .x12 .x10 .x11)    -- mulw a2, a0, a1
+#guard d 0x02B5463B == some (.DIVW .x12 .x10 .x11)    -- divw a2, a0, a1
+#guard d 0x02B5563B == some (.DIVUW .x12 .x10 .x11)   -- divuw a2, a0, a1
+#guard d 0x02B5663B == some (.REMW .x12 .x10 .x11)    -- remw a2, a0, a1
+#guard d 0x02B5763B == some (.REMUW .x12 .x10 .x11)   -- remuw a2, a0, a1
+
+-- Reserved word-op encodings stay undecodable: a word shift with shamt[5] set
+-- (bit 25), and OP-32 funct3/funct7 combinations with no instruction.
+#guard d 0x0215151B == none   -- slliw a0, a0, 1 with bit 25 set
+#guard d 0x00B5263B == none   -- OP-32, funct3 = 2
+#guard d 0x20B5063B == none   -- OP-32, funct7 = 0x10
 
 -- KNOWN GAP: CSR access other than the accelerator form is not modeled.
 -- 0x34202F73 is `csrr t5, mcause`, the second instruction of every riscv-tests
