@@ -100,11 +100,15 @@ generated-diff review and independent byte-identical reproduction are complete.
 The instruction, memory, VM framing, and single-step/run equivalence proofs pass
 without hand-owned proof migrations. The axiom sweep passes: all 3,500 audited
 declarations use only the seven documented axioms. The complete no-warnings
-gate passes (184 jobs). The five-library build, upstream executable emulator
-suite, and full evm-asm build are pending.
-Release tagging must wait for those results.
+gate passes (184 jobs). Both required cold CI runs pass all five libraries,
+initializer/decoder tests, source gates, the axiom sweep, and interpreter ELF
+tests. The full evm-asm build passes (6,259 jobs); its final rebuild with the two
+new tactic-test shim imports also passes (6,263 jobs). The upstream executable
+emulator suite is pending; release tagging must wait for that result.
 
 The isolated downstream checkout uses evm-asm
 `7e65e4d024718f704226cd795f3d03d4e9aafe13`, matching Mathlib 4.33.1,
 and a local path to a separate copy of the candidate. Build artifacts are
 isolated from the release checkout; the sibling checkout is untouched.
+The downstream companion updates the diagnostic fixture, adds the generated
+tactic-test shims and their umbrella imports, and matches Lean/Mathlib 4.33.1.
