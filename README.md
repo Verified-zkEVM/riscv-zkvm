@@ -32,13 +32,18 @@ need only Lean and Lake; Sail, OCaml, CMake, and Z3 are regeneration tools.
 
 ## Use as a dependency
 
-Pin a release tag so Lake can download the prebuilt oleans:
+The Lean 4.33.1 candidate `v0.4.0` is held as a draft while an upstream runtime
+warning blocks release-cache reuse. See the [release review](docs/release-refresh.md).
+Do not bump downstream pins to it yet. The published `v0.3.1` release uses
+Lean 4.33.0; match that toolchain when using its prebuilt oleans.
+
+Pin a published release tag so Lake can download the prebuilt oleans:
 
 ```toml
 [[require]]
 name = "riscv-zkvm"
 git = "https://github.com/Verified-zkEVM/riscv-zkvm"
-rev = "v0.4.0"
+rev = "v0.3.1"
 ```
 
 Then import what you need:
