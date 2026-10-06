@@ -81,4 +81,79 @@ example (base v : Word) :
   have h := li_spec_gen_within .x5 v (0 : Word) base (by nofun)
   runBlock h
 
+/-! Auto selection must consume ownership atoms, regardless of registration
+order (issue #14). Cover each affected instruction and both MUL alias forms. -/
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.MUL .x5 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ v * w) ** (.x6 ↦ᵣ w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.MULHU .x5 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ rv64_mulhu v w) ** (.x6 ↦ᵣ w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.MULH .x5 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ rv64_mulh v w) ** (.x6 ↦ᵣ w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.MULHSU .x5 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ rv64_mulhsu v w) ** (.x6 ↦ᵣ w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.DIV .x5 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ rv64_div v w) ** (.x6 ↦ᵣ w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.DIVU .x5 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ rv64_divu v w) ** (.x6 ↦ᵣ w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.REM .x5 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ rv64_rem v w) ** (.x6 ↦ᵣ w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.REMU .x5 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ rv64_remu v w) ** (.x6 ↦ᵣ w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.MUL .x6 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ v * w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.MULHU .x6 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ rv64_mulhu v w)) := by
+  runBlock
+
+example (base v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.SLTU .x6 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w)) ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ (if BitVec.ult v w then (1 : Word) else 0))) := by
+  runBlock
+
+example (base v : Word) (imm : BitVec 12) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.ANDI .x5 .x5 imm))
+      (.x5 ↦ᵣ v) (.x5 ↦ᵣ (v &&& signExtend12 imm)) := by
+  runBlock
+
+example (base old v w : Word) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.MUL .x7 .x5 .x6))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w) ** (.x7 ↦ᵣ old))
+      ((.x5 ↦ᵣ v) ** (.x6 ↦ᵣ w) ** (.x7 ↦ᵣ v * w)) := by
+  runBlock
+
+example (base ptr v : Word) (offset : BitVec 12) :
+    cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.LD .x5 .x5 offset))
+      ((.x5 ↦ᵣ ptr) ** ((ptr + signExtend12 offset) ↦ₘ v))
+      ((.x5 ↦ᵣ v) ** ((ptr + signExtend12 offset) ↦ₘ v)) := by
+  runBlock
+
 end RiscvZkvm.Rv64.Tactics.RunBlockTests

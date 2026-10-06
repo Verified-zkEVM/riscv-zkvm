@@ -20,7 +20,7 @@ and [the WP framework notes](docs/agents/wp-framework.md) for the specification
 style.
 
 Everything is scoped to the RV64IM surface needed by the
-[`eth-act/zkevm-standards`](https://github.com/eth-act/zkevm-standards) RISC-V
+[`eth-act/zkvm-standards`](https://github.com/eth-act/zkvm-standards) RISC-V
 target, with the Zicsr, K, Zkr, Zicboz, and Zicbom definitions required by
 Sail's extension gating and model initialization.
 
@@ -38,7 +38,7 @@ Pin a release tag so Lake can download the prebuilt oleans:
 [[require]]
 name = "riscv-zkvm"
 git = "https://github.com/Verified-zkEVM/riscv-zkvm"
-rev = "v0.3.1"
+rev = "v0.4.0"
 ```
 
 Then import what you need:

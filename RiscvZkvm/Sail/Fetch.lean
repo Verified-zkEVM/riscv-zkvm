@@ -14,11 +14,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -202,7 +205,7 @@ open AmocasOddRegisterReservedBehavior
 def isRVC (h : (BitVec 16)) : Bool :=
   (not ((Sail.BitVec.extractLsb h 1 0) == 0b11#2))
 
-/-- Type quantifiers: width : Nat, width ∈ {2, 4} -/
+/-- Type quantifiers: width : Nat, List.elem width [2, 4] -/
 def fetch_bytes (fetch_start : (BitVec 64)) (granule_start : (BitVec 64)) (width : Nat) : SailM (FetchBytes_Result width) := SailME.run do
   match (ext_fetch_check_pc fetch_start granule_start) with
   | .some e => SailME.throw ((FetchBytes_Ext_Error e) : (FetchBytes_Result width))

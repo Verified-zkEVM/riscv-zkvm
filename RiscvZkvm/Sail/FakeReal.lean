@@ -1,6 +1,8 @@
 import Sail
 import RiscvZkvm.Sail.Defs
 
+namespace Sail
+
 abbrev real := Float
 
 -- val "neg_real" : real -> real

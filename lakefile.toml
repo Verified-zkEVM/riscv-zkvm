@@ -1,7 +1,7 @@
 # Scoped RV64IM Lean model extracted from riscv/sail-riscv for zkVM use, the
 # hand-written computable RV64IM model, and their equivalence proofs.
 name = "riscv-zkvm"
-version = "0.3.0"
+version = "0.4.0"
 # Libraries only. `riscv-zkvm-run` is deliberately excluded: its native output is
 # platform-specific and must never enter the platform-independent release archive.
 defaultTargets = [
@@ -71,11 +71,9 @@ srcDir = "scripts"
 root = "AxiomSweep"
 supportInterpreter = true
 
-# lean-sail v4 (79b4d08) + a 2-line fix for the Lean >= v4.32 do-elaborator
-# (readRegRef/writeRegRef dependent match), pinned on the dhsorens fork's
-# v4-lean4.33 branch. Upstream main (v5) restructured past what the vendored
-# model was generated against, so the v4 lineage is patched rather than bumped.
+# Official lean-sail v5, validated on Lean 4.33.1. Sail 0.20.3 targets the
+# concurrency-v1 API; regeneration preserves the established names via exports.
 [[require]]
 name = "Sail"
-git = "https://github.com/dhsorens/lean-sail"
-rev = "8d57a8b537f1a4e7cdf558c3d87a79f453bf3817"
+git = "https://github.com/rems-project/lean-sail.git"
+rev = "079463134b9c50450b8393e1566a09fc492a34d9"

@@ -6,11 +6,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -191,11 +194,11 @@ open AtomicSupport
 open Architecture
 open AmocasOddRegisterReservedBehavior
 
-/-- Type quantifiers: k_ex481836_ : Nat, k_ex481836_ ∈ {16, 32, 64, 128} -/
-def float_is_positive (op : (BitVec k_ex481836_)) : Bool :=
+/-- Type quantifiers: k_ex480925_ : Nat, List.elem k_ex480925_ [16, 32, 64, 128] -/
+def float_is_positive (op : (BitVec k_ex480925_)) : Bool :=
   (is_highest_zero op)
 
-/-- Type quantifiers: k_ex481838_ : Nat, k_ex481838_ ∈ {16, 32, 64, 128} -/
-def float_is_negative (op : (BitVec k_ex481838_)) : Bool :=
+/-- Type quantifiers: k_ex480927_ : Nat, List.elem k_ex480927_ [16, 32, 64, 128] -/
+def float_is_negative (op : (BitVec k_ex480927_)) : Bool :=
   (is_highest_one op)
 

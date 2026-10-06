@@ -1,3 +1,4 @@
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Flow
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Errors
@@ -22,11 +23,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -207,16 +211,16 @@ open AtomicSupport
 open Architecture
 open AmocasOddRegisterReservedBehavior
 
-/-- Type quantifiers: pte_size : Nat, pte_size ≥ 0, pte_size ∈ {4, 8} -/
+/-- Type quantifiers: pte_size : Nat, pte_size ≥ 0, List.elem pte_size [4, 8] -/
 def write_pte (paddr : physaddr) (pte_size : Nat) (pte : (BitVec (pte_size * 8))) : SailM (Result Bool (physaddr × ExceptionType)) := do
   (mem_write_value_priv paddr pte_size pte Supervisor (Store PageTableEntry) PBMT_PMA false false
     false)
 
-/-- Type quantifiers: pte_size : Nat, pte_size ≥ 0, pte_size ∈ {4, 8} -/
+/-- Type quantifiers: pte_size : Nat, pte_size ≥ 0, List.elem pte_size [4, 8] -/
 def read_pte (paddr : physaddr) (pte_size : Nat) : SailM (Result (BitVec (8 * pte_size)) (physaddr × ExceptionType)) := do
   (mem_read_priv (Load PageTableEntry) PBMT_PMA Supervisor paddr pte_size false false false)
 
-/-- Type quantifiers: pteWidth : Nat, pteWidth ≥ 0, pteWidth ∈ {4, 8} -/
+/-- Type quantifiers: pteWidth : Nat, pteWidth ≥ 0, List.elem pteWidth [4, 8] -/
 def update_and_write_pte (pteAddr : physaddr) (pteWidth : Nat) (pte : (BitVec (pteWidth * 8))) (access : (MemoryAccessType mem_payload)) : SailM (Result (Option (BitVec (pteWidth * 8))) PTW_Error) := do
   match (update_PTE_Bits pte access) with
   | none => (pure (Ok none))
@@ -231,8 +235,8 @@ def update_and_write_pte (pteAddr : physaddr) (pteWidth : Nat) (pte : (BitVec (p
           | .Err _ => (pure (Err (PTW_No_Access ()))))
       else (pure (Err (PTW_PTE_Needs_Update ()))))
 
-/-- Type quantifiers: k_ex506611_ : Bool, level : Nat, k_ex506609_ : Bool, k_ex506608_ : Bool, sv_width
-  : Nat, is_sv_mode(sv_width), 0 ≤ level ∧
+/-- Type quantifiers: k_ex482237_ : Bool, level : Nat, k_ex482235_ : Bool, k_ex482234_ : Bool, sv_width
+  : Nat, (is_sv_mode sv_width), 0 ≤ level ∧
   level ≤
   (if ( sv_width = 32  : Bool) then 1 else (if ( sv_width = 39  : Bool) then 2 else (if ( sv_width =
   48  : Bool) then 3 else 4))) -/
@@ -347,13 +351,13 @@ termination_by (let (_, _, _, _, _, _, _, level, _, _) :=
   (sv_width, vpn, access, priv, mxr, do_sum, pt_base, level, global, ext_ptw)
 level).toNat
 
-/-- Type quantifiers: k_n : Nat, k_n ≥ 0, k_n ∈ {32, 64} -/
+/-- Type quantifiers: k_n : Nat, k_n ≥ 0, List.elem k_n [32, 64] -/
 def satp_to_asid (satp_val : (BitVec k_n)) : (BitVec (if ( k_n = 32  : Bool) then 9 else 16)) :=
   if (((Sail.BitVec.length satp_val) == 32) : Bool)
   then (_get_Satp32_Asid (Mk_Satp32 satp_val))
   else (_get_Satp64_Asid (Mk_Satp64 satp_val))
 
-/-- Type quantifiers: k_n : Nat, k_n ≥ 0, k_n ∈ {32, 64} -/
+/-- Type quantifiers: k_n : Nat, k_n ≥ 0, List.elem k_n [32, 64] -/
 def satp_to_ppn (satp_val : (BitVec k_n)) : (BitVec (if ( k_n = 32  : Bool) then 22 else 44)) :=
   if (((Sail.BitVec.length satp_val) == 32) : Bool)
   then (_get_Satp32_PPN (Mk_Satp32 satp_val))
@@ -379,8 +383,8 @@ def translationMode (priv : Privilege) : SailM SATPMode := do
       | .some m => (pure m)
       | none => (internal_error "sys/vmem.sail" 264 "invalid translation mode in satp"))
 
-/-- Type quantifiers: tlb_index : Nat, k_ex506688_ : Bool, k_ex506687_ : Bool, sv_width : Nat, is_sv_mode(sv_width), 0
-  ≤ tlb_index ∧ tlb_index ≤ (2 ^ 6 - 1) -/
+/-- Type quantifiers: tlb_index : Nat, k_ex482245_ : Bool, k_ex482244_ : Bool, sv_width : Nat, (is_sv_mode
+  sv_width), 0 ≤ tlb_index ∧ tlb_index ≤ (2 ^ 6 - 1) -/
 def translate_TLB_hit (sv_width : Nat) (_asid : (BitVec (if ( 64 = 32  : Bool) then 9 else 16))) (vpn : (BitVec (sv_width - 12))) (access : (MemoryAccessType mem_payload)) (priv : Privilege) (mxr : Bool) (do_sum : Bool) (ext_ptw : Unit) (tlb_index : Nat) (ent : TLB_Entry) : SailM (Result ((BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44)) × page_based_mem_type × Unit) (PTW_Error × Unit)) := do
   let pte_size :=
@@ -405,7 +409,7 @@ def translate_TLB_hit (sv_width : Nat) (_asid : (BitVec (if ( 64 = 32  : Bool) t
       | .Err (.PTW_PTE_Needs_Update ()) => (pure (Err ((PTW_PTE_Needs_Update ()), ext_ptw)))
       | .Err e => (pure (Err (e, ext_ptw))))
 
-/-- Type quantifiers: k_ex506708_ : Bool, k_ex506707_ : Bool, sv_width : Nat, is_sv_mode(sv_width) -/
+/-- Type quantifiers: k_ex482253_ : Bool, k_ex482252_ : Bool, sv_width : Nat, (is_sv_mode sv_width) -/
 def translate_TLB_miss (sv_width : Nat) (asid : (BitVec (if ( 64 = 32  : Bool) then 9 else 16))) (base_ppn : (BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44))) (vpn : (BitVec (sv_width - 12))) (access : (MemoryAccessType mem_payload)) (priv : Privilege) (mxr : Bool) (do_sum : Bool) (ext_ptw : Unit) : SailM (Result ((BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44)) × page_based_mem_type × Unit) (PTW_Error × Unit)) := do
@@ -452,7 +456,7 @@ def satp_mode_width_forwards (arg_ : SATPMode) : SailM Int := do
       assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {32, 39, 48, 57} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [32, 39, 48, 57] -/
 def satp_mode_width_backwards (arg_ : Nat) : SATPMode :=
   match arg_ with
   | 32 => Sv32
@@ -468,7 +472,7 @@ def satp_mode_width_forwards_matches (arg_ : SATPMode) : Bool :=
   | .Sv57 => true
   | _ => false
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {32, 39, 48, 57} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [32, 39, 48, 57] -/
 def satp_mode_width_backwards_matches (arg_ : Nat) : Bool :=
   match arg_ with
   | 32 => true
@@ -477,7 +481,7 @@ def satp_mode_width_backwards_matches (arg_ : Nat) : Bool :=
   | 57 => true
   | _ => false
 
-/-- Type quantifiers: k_ex506743_ : Bool, k_ex506742_ : Bool, sv_width : Nat, is_sv_mode(sv_width) -/
+/-- Type quantifiers: k_ex482262_ : Bool, k_ex482261_ : Bool, sv_width : Nat, (is_sv_mode sv_width) -/
 def translate (sv_width : Nat) (asid : (BitVec (if ( 64 = 32  : Bool) then 9 else 16))) (base_ppn : (BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44))) (vpn : (BitVec (sv_width - 12))) (access : (MemoryAccessType mem_payload)) (priv : Privilege) (mxr : Bool) (do_sum : Bool) (ext_ptw : Unit) : SailM (Result ((BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44)) × page_based_mem_type × Unit) (PTW_Error × Unit)) := do
@@ -486,7 +490,7 @@ def translate (sv_width : Nat) (asid : (BitVec (if ( 64 = 32  : Bool) then 9 els
     (translate_TLB_hit sv_width asid vpn access priv mxr do_sum ext_ptw index ent)
   | none => (translate_TLB_miss sv_width asid base_ppn vpn access priv mxr do_sum ext_ptw)
 
-/-- Type quantifiers: sv_width : Nat, is_sv_mode(sv_width) -/
+/-- Type quantifiers: sv_width : Nat, (is_sv_mode sv_width) -/
 def get_satp (sv_width : Nat) : SailM (BitVec (if ( sv_width = 32  : Bool) then 32 else 64)) := do
   assert ((sv_width == 32) || (xlen == 64)) "sys/vmem.sail:396.30-396.31"
   if ((sv_width == 32) : Bool)

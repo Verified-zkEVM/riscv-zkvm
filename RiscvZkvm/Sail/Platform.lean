@@ -1,3 +1,4 @@
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Flow
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Errors
@@ -15,11 +16,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -364,7 +368,7 @@ def clint_load (access : (MemoryAccessType mem_payload)) (paddr : physaddr) (wid
                                 else ()
                               (pure (Err (paddr, (← (accessFaultFromAccessType access))))))))))))
 
-/-- Type quantifiers: k_ex487514_ : Bool -/
+/-- Type quantifiers: k_ex482102_ : Bool -/
 def clint_dispatch (mip_was_written : Bool) : SailM Unit := do
   let old_mip ← do readReg mip
   writeReg mip (Sail.BitVec.updateSubrange (← readReg mip) 7 7

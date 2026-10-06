@@ -10,11 +10,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -226,8 +229,8 @@ def num_of_float_class (arg_ : float_class) : Int :=
   | .float_class_snan => 8
   | .float_class_qnan => 9
 
-/-- Type quantifiers: k_ex482241_ : Nat, k_ex482241_ ∈ {16, 32, 64, 128} -/
-def float_classify (f : (BitVec k_ex482241_)) : SailM float_class := do
+/-- Type quantifiers: k_ex481015_ : Nat, List.elem k_ex481015_ [16, 32, 64, 128] -/
+def float_classify (f : (BitVec k_ex481015_)) : SailM float_class := do
   if ((float_is_snan f) : Bool)
   then (pure float_class_snan)
   else

@@ -12,11 +12,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -233,13 +236,13 @@ def get_pmlen (access : (MemoryAccessType mem_payload)) (eff_privilege : Privile
           (pure 0)))
   else (pure 0)
 
-/-- Type quantifiers: pmlen : Nat, pmlen ∈ {0, 7, 16} -/
+/-- Type quantifiers: pmlen : Nat, List.elem pmlen [0, 7, 16] -/
 def pm_transform_VA (typ_0 : virtaddr) (pmlen : Nat) : virtaddr :=
   let .Virtaddr effective_address : virtaddr := typ_0
   (Virtaddr
     (sign_extend (m := 64) (Sail.BitVec.extractLsb effective_address ((xlen -i pmlen) -i 1) 0)))
 
-/-- Type quantifiers: pmlen : Nat, pmlen ∈ {0, 7, 16} -/
+/-- Type quantifiers: pmlen : Nat, List.elem pmlen [0, 7, 16] -/
 def pm_transform_PA (typ_0 : virtaddr) (pmlen : Nat) : virtaddr :=
   let .Virtaddr effective_address : virtaddr := typ_0
   (Virtaddr

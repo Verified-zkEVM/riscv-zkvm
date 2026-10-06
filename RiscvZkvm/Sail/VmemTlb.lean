@@ -1,4 +1,4 @@
-import RiscvZkvm.Sail.Flow
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Types
 import RiscvZkvm.Sail.VmemTypes
@@ -10,11 +10,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -199,15 +202,15 @@ def tlb_vpn_bits := (57 -i 12)
 
 def tlb_ppn_bits := 44
 
-/-- Type quantifiers: pte_size : Nat, pte_size ≥ 0, pte_size ∈ {4, 8} -/
+/-- Type quantifiers: pte_size : Nat, pte_size ≥ 0, List.elem pte_size [4, 8] -/
 def tlb_get_pte (pte_size : Nat) (ent : TLB_Entry) : (BitVec (pte_size * 8)) :=
   (Sail.BitVec.extractLsb ent.pte ((pte_size *i 8) -i 1) 0)
 
-/-- Type quantifiers: k_n : Nat, k_n ≥ 0, k_n ∈ {4, 8} -/
+/-- Type quantifiers: k_n : Nat, k_n ≥ 0, List.elem k_n [4, 8] -/
 def tlb_set_pte (ent : TLB_Entry) (pte : (BitVec (k_n * 8))) : TLB_Entry :=
   { ent with pte := (zero_extend (m := 64) pte) }
 
-/-- Type quantifiers: sv_width : Nat, is_sv_mode(sv_width) -/
+/-- Type quantifiers: sv_width : Nat, (is_sv_mode sv_width) -/
 def tlb_get_ppn (sv_width : Nat) (ent : TLB_Entry) (vpn : (BitVec (sv_width - 12))) : (BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44)) :=
   let vpn : (BitVec 64) := (sign_extend (m := 64) vpn)
@@ -238,7 +241,7 @@ def tlb_flush_callback (x_0 : Nat) : Unit :=
 def tlb_flush_end_callback (x_0 : (Vector (Option TLB_Entry) (2 ^ 6))) : Unit :=
   ()
 
-/-- Type quantifiers: _sv_mode : Nat, is_sv_mode(_sv_mode) -/
+/-- Type quantifiers: _sv_mode : Nat, (is_sv_mode _sv_mode) -/
 def tlb_hash (_sv_mode : Nat) (vpn : (BitVec (_sv_mode - 12))) : Nat :=
   (BitVec.toNatInt (Sail.BitVec.extractLsb vpn (num_tlb_entries_exp -i 1) 0))
 
@@ -266,7 +269,7 @@ def flush_TLB_Entry (ent : TLB_Entry) (asid : (Option (BitVec (if ( 64 = 32  : B
     | none => true
   (asid_matches && addr_matches)
 
-/-- Type quantifiers: sv_width : Nat, is_sv_mode(sv_width) -/
+/-- Type quantifiers: sv_width : Nat, (is_sv_mode sv_width) -/
 def lookup_TLB (sv_width : Nat) (asid : (BitVec (if ( 64 = 32  : Bool) then 9 else 16))) (vpn : (BitVec (sv_width - 12))) : SailM (Option (Nat × TLB_Entry)) := do
   let index := (tlb_hash sv_width vpn)
   match (GetElem?.getElem! (← readReg tlb) index) with
@@ -276,7 +279,7 @@ def lookup_TLB (sv_width : Nat) (asid : (BitVec (if ( 64 = 32  : Bool) then 9 el
     then (pure (some (index, entry)))
     else (pure none))
 
-/-- Type quantifiers: k_ex506521_ : Bool, level : Nat, sv_width : Nat, is_sv_mode(sv_width), 0 ≤
+/-- Type quantifiers: k_ex482214_ : Bool, level : Nat, sv_width : Nat, (is_sv_mode sv_width), 0 ≤
   level ∧
   level ≤
   (if ( sv_width = 32  : Bool) then 1 else (if ( sv_width = 39  : Bool) then 2 else (if ( sv_width =

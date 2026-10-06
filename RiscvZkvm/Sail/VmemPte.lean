@@ -14,11 +14,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -227,14 +230,14 @@ def _set_PTE_Ext_RSW_60t59b (r_ref : (RegisterRef (BitVec 10))) (v : (BitVec 2))
 
 def default_sv32_ext_pte : pte_ext_bits := (zeros (n := 10))
 
-/-- Type quantifiers: k_pte_size : Nat, k_pte_size ≥ 0, k_pte_size ∈ {32, 64} -/
+/-- Type quantifiers: k_pte_size : Nat, k_pte_size ≥ 0, List.elem k_pte_size [32, 64] -/
 def ext_bits_of_PTE (pte : (BitVec k_pte_size)) : (BitVec 10) :=
   (Mk_PTE_Ext
     (if (((Sail.BitVec.length pte) == 64) : Bool)
     then (Sail.BitVec.extractLsb pte 63 54)
     else default_sv32_ext_pte))
 
-/-- Type quantifiers: k_pte_size : Nat, k_pte_size ≥ 0, k_pte_size ∈ {32, 64} -/
+/-- Type quantifiers: k_pte_size : Nat, k_pte_size ≥ 0, List.elem k_pte_size [32, 64] -/
 def PPN_of_PTE (pte : (BitVec k_pte_size)) : (BitVec (if ( k_pte_size = 32  : Bool) then 22 else 44)) :=
   if (((Sail.BitVec.length pte) == 32) : Bool)
   then (Sail.BitVec.extractLsb pte 31 10)
@@ -267,7 +270,7 @@ def pte_is_invalid (pte_flags : (BitVec 8)) (pte_ext : (BitVec 10)) : SailM Bool
                           (← (currentlyEnabled Ext_Svrsw60t59b)))) || ((_get_PTE_Ext_reserved
                           pte_ext) != (zeros (n := 5)))))))))))))
 
-/-- Type quantifiers: k_ex506304_ : Bool, k_ex506303_ : Bool -/
+/-- Type quantifiers: k_ex482184_ : Bool, k_ex482183_ : Bool -/
 def check_PTE_permission (access : (MemoryAccessType mem_payload)) (priv : Privilege) (mxr : Bool) (do_sum : Bool) (pte_flags : (BitVec 8)) (_ext : (BitVec 10)) (_ext_ptw : Unit) : SailM PTE_Check := SailME.run do
   let pte_U := (bit_to_bool (_get_PTE_Flags_U pte_flags))
   let pte_R := (bit_to_bool (_get_PTE_Flags_R pte_flags))
@@ -355,7 +358,7 @@ def check_PTE_permission (access : (MemoryAccessType mem_payload)) (priv : Privi
       then (pure (PTE_Check_Failure ((), (PTE_No_Permission ()))))
       else (pure (PTE_Check_Success ())))
 
-/-- Type quantifiers: k_pte_size : Nat, k_pte_size ≥ 0, k_pte_size ∈ {32, 64} -/
+/-- Type quantifiers: k_pte_size : Nat, k_pte_size ≥ 0, List.elem k_pte_size [32, 64] -/
 def update_PTE_Bits (pte : (BitVec k_pte_size)) (access : (MemoryAccessType mem_payload)) : (Option (BitVec k_pte_size)) :=
   let pte_flags := (Mk_PTE_Flags (Sail.BitVec.extractLsb pte 7 0))
   let update_d : Bool :=

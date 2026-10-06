@@ -19,11 +19,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -204,7 +207,7 @@ open AtomicSupport
 open Architecture
 open AmocasOddRegisterReservedBehavior
 
-/-- Type quantifiers: k_ex506788_ : Bool -/
+/-- Type quantifiers: k_ex482270_ : Bool -/
 def plat_misaligned_exception (access : (MemoryAccessType mem_payload)) (res : Bool) : (Option misaligned_exception) :=
   if ((is_amo_access access) : Bool)
   then plat_misaligned_access.amo
@@ -232,7 +235,7 @@ def transform_effective_address (vaddr : virtaddr) (access : (MemoryAccessType m
   then (pure (pm_transform_PA vaddr pmlen))
   else (pure (pm_transform_VA vaddr pmlen))
 
-/-- Type quantifiers: k_ex506795_ : Bool, k_ex506794_ : Bool, k_ex506793_ : Bool, width : Nat, width
+/-- Type quantifiers: k_ex482273_ : Bool, k_ex482272_ : Bool, k_ex482271_ : Bool, width : Nat, width
   ≥ 0, 0 < width ∧ width ≤ max_mem_access -/
 def translate_and_read_value (vaddr : virtaddr) (width : Nat) (access : (MemoryAccessType mem_payload)) (aq : Bool) (rl : Bool) (res : Bool) : SailM (Result (physaddr × (BitVec (8 * width))) ExecutionResult) := do
   match (← (translateAddr vaddr access)) with
@@ -246,8 +249,8 @@ def translate_and_read_value (vaddr : virtaddr) (width : Nat) (access : (MemoryA
           (pure (Err (← (memory_exception exc_vaddr e)))))
       | .Ok v => (pure (Ok (paddr, v))))
 
-/-- Type quantifiers: k_ex506804_ : Bool, k_ex506803_ : Bool, k_ex506802_ : Bool, width : Nat, width
-  ≥ 0, is_mem_width(width) -/
+/-- Type quantifiers: k_ex482279_ : Bool, k_ex482278_ : Bool, k_ex482277_ : Bool, width : Nat, width
+  ≥ 0, (is_mem_width width) -/
 def vmem_read_addr (vaddr : virtaddr) (width : Nat) (access : (MemoryAccessType mem_payload)) (aq : Bool) (rl : Bool) (res : Bool) : SailM (Result (BitVec (8 * width)) ExecutionResult) := SailME.run do
   if ((not (is_aligned_vaddr vaddr width)) : Bool)
   then
@@ -308,7 +311,7 @@ def vmem_read_addr (vaddr : virtaddr) (width : Nat) (access : (MemoryAccessType 
     else (pure data) ) : SailME (Result (BitVec (8 * width)) ExecutionResult) (BitVec (8 * width)) )
   (pure (Ok data))
 
-/-- Type quantifiers: k_ex506820_ : Bool, k_ex506819_ : Bool, k_ex506818_ : Bool, width : Nat, width
+/-- Type quantifiers: k_ex482284_ : Bool, k_ex482283_ : Bool, k_ex482282_ : Bool, width : Nat, width
   ≥ 0, 0 < width ∧ width ≤ max_mem_access -/
 def translate_and_write_value (vaddr : virtaddr) (width : Nat) (value : (BitVec (8 * width))) (access : (MemoryAccessType mem_payload)) (aq : Bool) (rl : Bool) (res : Bool) : SailM (Result Bool ExecutionResult) := do
   match (← (translateAddr vaddr access)) with
@@ -329,8 +332,8 @@ def translate_and_write_value (vaddr : virtaddr) (width : Nat) (value : (BitVec 
               (pure (Err (← (memory_exception exc_vaddr e)))))
           | .Ok s => (pure (Ok s))))
 
-/-- Type quantifiers: k_ex506834_ : Bool, k_ex506833_ : Bool, k_ex506832_ : Bool, width : Nat, width
-  ≥ 0, is_mem_width(width) -/
+/-- Type quantifiers: k_ex482290_ : Bool, k_ex482289_ : Bool, k_ex482288_ : Bool, width : Nat, width
+  ≥ 0, (is_mem_width width) -/
 def vmem_write_addr (vaddr : virtaddr) (width : Nat) (data : (BitVec (8 * width))) (access : (MemoryAccessType mem_payload)) (aq : Bool) (rl : Bool) (res : Bool) : SailM (Result Bool ExecutionResult) := SailME.run do
   if ((not (is_aligned_vaddr vaddr width)) : Bool)
   then
@@ -424,8 +427,8 @@ def get_transformed_data_addr (base : regidx) (offset : (BitVec 64)) (acc : (Mem
       let vaddr ← do (transform_effective_address vaddr acc)
       (pure (Ext_DataAddr_OK vaddr)))
 
-/-- Type quantifiers: k_ex506883_ : Bool, k_ex506882_ : Bool, k_ex506881_ : Bool, width : Nat, width
-  ≥ 0, is_mem_width(width) -/
+/-- Type quantifiers: k_ex482299_ : Bool, k_ex482298_ : Bool, k_ex482297_ : Bool, width : Nat, width
+  ≥ 0, (is_mem_width width) -/
 def vmem_read (rs : regidx) (offset : (BitVec 64)) (width : Nat) (access : (MemoryAccessType mem_payload)) (aq : Bool) (rl : Bool) (res : Bool) : SailM (Result (BitVec (8 * width)) ExecutionResult) := SailME.run do
   let vaddr ← (( do
     match (← (get_transformed_data_addr rs offset access width)) with
@@ -435,8 +438,8 @@ def vmem_read (rs : regidx) (offset : (BitVec 64)) (width : Nat) (access : (Memo
     ) : SailME (Result (BitVec (8 * width)) ExecutionResult) virtaddr )
   (vmem_read_addr vaddr width access aq rl res)
 
-/-- Type quantifiers: k_ex506893_ : Bool, k_ex506892_ : Bool, k_ex506891_ : Bool, width : Nat, width
-  ≥ 0, is_mem_width(width) -/
+/-- Type quantifiers: k_ex482307_ : Bool, k_ex482306_ : Bool, k_ex482305_ : Bool, width : Nat, width
+  ≥ 0, (is_mem_width width) -/
 def vmem_write (rs_addr : regidx) (offset : (BitVec 64)) (width : Nat) (data : (BitVec (8 * width))) (access : (MemoryAccessType mem_payload)) (aq : Bool) (rl : Bool) (res : Bool) : SailM (Result Bool ExecutionResult) := SailME.run do
   let vaddr ← (( do
     match (← (get_transformed_data_addr rs_addr offset access width)) with

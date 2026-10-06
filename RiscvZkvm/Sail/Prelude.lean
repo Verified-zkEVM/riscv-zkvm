@@ -1,4 +1,4 @@
-import RiscvZkvm.Sail.Flow
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Vector
 
 set_option maxHeartbeats 1_000_000_000
@@ -7,11 +7,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -250,7 +253,7 @@ def ones {n : _} : (BitVec n) :=
 def trunc {m : _} (v : (BitVec k_n)) : (BitVec m) :=
   (Sail.BitVec.truncate v m)
 
-/-- Type quantifiers: k_ex482262_ : Bool -/
+/-- Type quantifiers: k_ex481018_ : Bool -/
 def bool_bit_forwards (arg_ : Bool) : (BitVec 1) :=
   match arg_ with
   | true => 1#1
@@ -261,7 +264,7 @@ def bool_bit_backwards (arg_ : (BitVec 1)) : Bool :=
   | 1 => true
   | _ => false
 
-/-- Type quantifiers: k_ex482263_ : Bool -/
+/-- Type quantifiers: k_ex481019_ : Bool -/
 def bool_bit_forwards_matches (arg_ : Bool) : Bool :=
   match arg_ with
   | true => true
@@ -273,32 +276,32 @@ def bool_bit_backwards_matches (arg_ : (BitVec 1)) : Bool :=
   | 0 => true
   | _ => false
 
-/-- Type quantifiers: k_ex482264_ : Bool -/
+/-- Type quantifiers: k_ex481020_ : Bool -/
 def bool_int_forwards (arg_ : Bool) : Int :=
   match arg_ with
   | false => 0
   | true => 1
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {0, 1} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [0, 1] -/
 def bool_int_backwards (arg_ : Nat) : Bool :=
   match arg_ with
   | 0 => false
   | _ => true
 
-/-- Type quantifiers: k_ex482268_ : Bool -/
+/-- Type quantifiers: k_ex481022_ : Bool -/
 def bool_int_forwards_matches (arg_ : Bool) : Bool :=
   match arg_ with
   | false => true
   | true => true
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {0, 1} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [0, 1] -/
 def bool_int_backwards_matches (arg_ : Nat) : Bool :=
   match arg_ with
   | 0 => true
   | 1 => true
   | _ => false
 
-/-- Type quantifiers: k_ex482270_ : Bool -/
+/-- Type quantifiers: k_ex481024_ : Bool -/
 def bool_to_bit (x : Bool) : (BitVec 1) :=
   (bool_bit_forwards x)
 
@@ -385,7 +388,7 @@ def zopz0zIzJ_u (x : (BitVec k_n)) (y : (BitVec k_n)) : Bool :=
 def zopz0zKzJ_u (x : (BitVec k_n)) (y : (BitVec k_n)) : Bool :=
   ((BitVec.toNatInt x) ≥b (BitVec.toNatInt y))
 
-/-- Type quantifiers: k_ex482344_ : Bool, k_ex482343_ : Bool -/
+/-- Type quantifiers: k_ex481029_ : Bool, k_ex481028_ : Bool -/
 def zopz0zJzJzK (x : Bool) (y : Bool) : Bool :=
   ((not x) || y)
 

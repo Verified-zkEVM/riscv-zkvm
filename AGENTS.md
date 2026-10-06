@@ -49,7 +49,7 @@ scripts/check-no-warnings.sh          # builds and checks its own log
 Each gate takes `--report` to print its census and exit 0.
 
 `scripts/check-axioms.sh` is the load-bearing one: it walks every declaration
-under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` (3457 of them today) and
+under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` (3500 of them today) and
 fails on any axiom outside the seven `docs/validation.md` documents. If a Sail
 pin bump adds a platform axiom, update `scripts/AxiomSweep.lean`'s
 `allowedAxioms` and that document in the same change -- the list is the
@@ -79,14 +79,11 @@ Z3. If it cannot run, report that explicitly.
 `RiscvZkvm/Rv64/**`, `RiscvZkvm/Rv64/SailEquiv/**` and `RiscvZkvm/Rv64/Logic/**`
 were relocated from EvmAsm.
 Keep changes there reviewable as *relocations*: a behaviour change buried in a
-move is not. `scripts/check-relocation.sh` (machine model, SailEquiv) and
-`scripts/check-relocation-logic.sh` (program logic) verify that claim
-mechanically against their pinned evm-asm source commits -- run them with a
-sibling evm-asm
-checkout. It is a reviewer tool, not a CI gate: CI has no evm-asm checkout, and
-pinning a foreign repo's commit in CI would couple two release cadences.
-Once these files start diverging from their originals on purpose, retire the
-script rather than loosening its expected deltas. In particular the SP1/ZisK ECALL ABI in `Execution.step` and the
+move is not. The original relocation checks were retired once the Sail
+initialization proofs and program-logic tactics deliberately diverged from the
+pinned evm-asm sources. Review subsequent behavior changes explicitly and run
+the full downstream build; do not restore relocation checks with widened
+expected deltas. In particular the SP1/ZisK ECALL ABI in `Execution.step` and the
 accelerator CSR semantics in `ZiskAccel.lean` are carried over verbatim and are
 worth generalising only in a separate, clearly-labelled change.
 

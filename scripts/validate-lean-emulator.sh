@@ -68,41 +68,28 @@ if [[ "$actual_rev" != "$SAIL_RISCV_REV" ]]; then
   exit 1
 fi
 
-# The 0.13.1 support files contain a namespace-opening line intended for a newer
-# backend. Sail 0.20.2 emits top-level declarations, so remove the same reviewed
-# compatibility line used by the proof-model extraction.
-for support in \
-  "$source_dir/handwritten_support/RiscvExtras.lean" \
-  "$source_dir/handwritten_support/RiscvExtrasExecutable.lean"
-do
-  if grep -Fxq 'open THE_MODULE_NAME.Defs' "$support"; then
-    sed -i.bak '/^open THE_MODULE_NAME\.Defs$/d' "$support"
-    rm -f "$support.bak"
-  fi
-done
-# The upstream emulator wrapper targets a backend that nests declarations under `Defs`.
-# Sail 0.20.2 emits the types at the generated module's top level, so its
-# `open Defs` compatibility line must be removed alongside the support-file
-# namespace line above.
-if grep -Fxq 'open Defs' "$source_dir/lean_emulator/LeanRiscv.lean"; then
-  sed -i.bak '/^open Defs$/d' "$source_dir/lean_emulator/LeanRiscv.lean"
-  rm -f "$source_dir/lean_emulator/LeanRiscv.lean.bak"
-fi
-
 test_flag=FALSE
 [[ "$mode" == "--test" ]] && test_flag=TRUE
 cmake -S "$source_dir" -B "$build_dir" \
   -DCMAKE_BUILD_TYPE=Release \
+  -DDOWNLOAD_ASIO=OFF -DDOWNLOAD_JSONCONS=OFF -DDOWNLOAD_CLI11=OFF \
   -DSAIL_MODULES="$modules_cmake" \
   -DENABLE_LEAN_EMULATOR_TESTS="$test_flag"
 
 generated_config="$build_dir/config/rv64d_v256_e64.json"
-cmp "$ROOT/$CONFIG_FILE" "$generated_config" || {
-  echo "validate-lean-emulator: upstream generated config differs from pinned config" >&2
-  exit 1
-}
+# CMake supplies the upstream default. Validate the same deliberately scoped
+# configuration used by the proof extraction, rather than adopting new defaults.
+# Its timestamp is an input to the generation target below, so a changed pin
+# regenerates the executable model even in a reused validation directory.
+if ! cmp -s "$ROOT/$CONFIG_FILE" "$generated_config"; then
+  cp --remove-destination "$ROOT/$CONFIG_FILE" "$generated_config"
+fi
 
 cmake --build "$build_dir" --target generated_lean_executable_rv64d
+cmp "$ROOT/$CONFIG_FILE" "$generated_config" || {
+  echo "validate-lean-emulator: generation did not use the pinned config" >&2
+  exit 1
+}
 
 # Align the executable validation build with this repository's Lean/runtime pins.
 generated_pkg="$build_dir/model/Lean_RV64D_executable"
@@ -113,21 +100,35 @@ generated_pkg="$build_dir/model/Lean_RV64D_executable"
 # Totalize only the executable validation artifact by treating an omitted
 # extension as disabled. The theorem-facing `RiscvZkvm.Sail` extraction is never patched.
 platform_config="$generated_pkg/LeanRV64DExecutable/PlatformConfig.lean"
-partial_extension_assert='      assert false "Pattern match failure at extensions/Zicsr/zicsr_insts.sail:12.0-12.69"'
-if grep -Fxq "$partial_extension_assert" "$platform_config"; then
-  sed -i.bak \
-    '/^      assert false "Pattern match failure at extensions\/Zicsr\/zicsr_insts\.sail:12\.0-12\.69"$/,+1c\
-      pure false)' \
-    "$platform_config"
-  rm -f "$platform_config.bak"
-fi
-if ! sed -n '/| \.Ext_Zicsr =>/,+4p' "$platform_config" \
-  | grep -Fxq '      pure false)'
-then
-  echo "validate-lean-emulator: omitted-extension fallback was not totalized" >&2
-  exit 1
-fi
-# Sail 0.20.2 emits its own executable stub as a root-level `main`; the emulator
+python3 - "$platform_config" <<'PY'
+import re, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+start = text.index('def currentlyEnabled (')
+end = text.index('\ntermination_by ', start)
+body = text[start:end]
+fallback = r'(?m)^  \| _ =>\n    \(do\n      assert false "Pattern match failure at [^"\n]+"\n      throw Error\.Exit\)'
+totalized = '  | _ => (pure false)'
+body, count = re.subn(fallback, totalized, body)
+if count != 1 and not (count == 0 and body.endswith(totalized)):
+    sys.exit('validate-lean-emulator: unexpected currentlyEnabled fallback')
+path.write_text(text[:start] + body + text[end:])
+PY
+# Model 0.13.1's handwritten wrapper opens the former Defs namespace.
+# Sail 0.20.3 places those same declarations directly under the package.
+sed -i '/^open Defs$/d' "$source_dir/lean_emulator/LeanRiscv.lean"
+python3 - "$generated_pkg/LeanRV64DExecutable/RiscvExtrasExecutable.lean" <<'PYEXTRAS'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text().replace('open LeanRV64DExecutable.Defs\n', 'open LeanRV64DExecutable\n')
+if 'open LeanRV64DExecutable\n' not in text:
+    text = text.replace('import LeanRV64DExecutable.Defs\n',
+                        'import LeanRV64DExecutable.Defs\n\nopen LeanRV64DExecutable\n', 1)
+path.write_text(text)
+PYEXTRAS
+# Sail emits its own executable stub as a root-level `main`; the emulator
 # supplies the real ELF-emulator `main`, so keep the generated helper under a
 # non-conflicting validation-only name.
 if grep -Fxq 'def main (_ : List String) : IO UInt32 := do' \
@@ -154,7 +155,16 @@ rm -f "$generated_pkg/lake-manifest.json" \
 # or toolchain refresh.
 rm -f "$source_dir/lean_emulator/.lake/build/bin/lean_riscv_emulator"
 
-cmake --build "$build_dir" --target build_lean_emulator
+# A second CMake build can reconfigure after discovering generated files and
+# overwrite our config, runtime pins, and validation adapters. Run the target's
+# Lake commands directly after preparation, preserving those reviewed inputs.
+mkdir -p "$build_dir/lean-emulator-build"
+if [[ ! -e "$source_dir/lean_emulator/.lake" && ! -L "$source_dir/lean_emulator/.lake" ]]; then
+  ln -s "$build_dir/lean-emulator-build" "$source_dir/lean_emulator/.lake"
+fi
+( cd "$source_dir/lean_emulator"
+  lake update
+  lake build lean_riscv_emulator )
 
 if [[ "$mode" == "--test" ]]; then
   ctest --test-dir "$build_dir" --output-on-failure -R '^lean_emulator_'

@@ -1,4 +1,4 @@
-import Sail
+import RiscvZkvm.Sail.RuntimeCompat
 open PreSail
 
 set_option maxHeartbeats 1_000_000_000
@@ -7,7 +7,9 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
+
+noncomputable section
 
 /-- Type quantifiers: k_a : Type -/
 inductive option (k_a : Type) where
@@ -37,9 +39,9 @@ inductive regidx where
   deriving Inhabited, BEq, Repr
   open regidx
 
-abbrev base_E_enabled : Bool := false
+abbrev base_E_enabled  : Bool := false
 
-abbrev regidx_bit_width : Int := (if ( base_E_enabled  : Bool) then 4 else 5)
+abbrev regidx_bit_width  : Int := (if ( base_E_enabled  : Bool) then 4 else 5)
 
 inductive vregidx where
   | Vregidx (_ : (BitVec 5))
@@ -57,7 +59,7 @@ abbrev fp_exception_flags := (BitVec 5)
 
 abbrev fp_rounding_modes := (BitVec 5)
 
-
+abbrev is_fp_bits (k_n : Int) : Bool := List.elem k_n [16, 32, 64, 128]
 
 -- Abbreviation fp_bits skipped
 
@@ -84,7 +86,7 @@ inductive VectorHalf where | High | Low
   deriving BEq, Inhabited, Repr
   open VectorHalf
 
-abbrev max_mem_access : Int := 4096
+abbrev max_mem_access  : Int := 4096
 
 abbrev mem_access_width := Nat
 
@@ -117,35 +119,35 @@ inductive PointerMaskingMode where | PMM_Disabled | PMM_Reserved | PMM_PMLEN_7 |
   deriving BEq, Inhabited, Repr
   open PointerMaskingMode
 
-abbrev xlen : Int := 64
+abbrev xlen  : Int := 64
 
-abbrev physaddr_bits : Int := 56
+abbrev physaddr_bits  : Int := 56
 
-abbrev log2_xlen : Int := (if ( xlen = 32  : Bool) then 5 else 6)
+abbrev log2_xlen  : Int := (if ( xlen = 32  : Bool) then 5 else 6)
 
-abbrev xlen_bytes : Int := (if ( xlen = 32  : Bool) then 4 else 8)
+abbrev xlen_bytes  : Int := (if ( xlen = 32  : Bool) then 4 else 8)
 
-abbrev physaddrbits_len : Int := (if ( xlen = 32  : Bool) then 34 else 64)
+abbrev physaddrbits_len  : Int := (if ( xlen = 32  : Bool) then 34 else 64)
 
-abbrev asidlen : Int := (if ( xlen = 32  : Bool) then 9 else 16)
+abbrev asidlen  : Int := (if ( xlen = 32  : Bool) then 9 else 16)
 
 abbrev asidbits := (BitVec (if ( 64 = 32  : Bool) then 9 else 16))
 
-abbrev ext_d_supported : Bool := true
+abbrev ext_d_supported  : Bool := true
 
-abbrev flen_bytes : Int := (if ( ext_d_supported  : Bool) then 8 else 4)
+abbrev flen_bytes  : Int := (if ( ext_d_supported  : Bool) then 8 else 4)
 
-abbrev flen : Int := (if ( true  : Bool) then 8 else 4 * 8)
+abbrev flen  : Int := (if ( true  : Bool) then 8 else 4 * 8)
 
 abbrev flenbits := (BitVec (if ( true  : Bool) then 8 else 4 * 8))
 
-abbrev vlen_exp : Int := 8
+abbrev vlen_exp  : Int := 8
 
-abbrev elen_exp : Int := 6
+abbrev elen_exp  : Int := 6
 
-abbrev vlen : Int := (2 ^ 8)
+abbrev vlen  : Int := (2 ^ 8)
 
-abbrev elen : Int := (2 ^ 6)
+abbrev elen  : Int := (2 ^ 6)
 
 abbrev physaddrbits := (BitVec (if ( 64 = 32  : Bool) then 34 else 64))
 
@@ -509,7 +511,7 @@ abbrev ext_ptw_fail := Unit
 
 abbrev instbits := (BitVec 32)
 
-abbrev pagesize_bits : Int := 12
+abbrev pagesize_bits  : Int := 12
 
 inductive cregidx where
   | Cregidx (_ : (BitVec 3))
@@ -531,11 +533,11 @@ inductive CSRAccessType where | CSRRead | CSRWrite | CSRReadWrite
   deriving BEq, Inhabited, Repr
   open CSRAccessType
 
+abbrev is_mem_width (k_w : Int) : Bool := List.elem k_w [1, 2, 4, 8]
 
+abbrev max_mem_width_bytes_exp  : Int := 3
 
-abbrev max_mem_width_bytes_exp : Int := 3
-
-abbrev max_mem_width_bytes : Int := (2 ^ 3)
+abbrev max_mem_width_bytes  : Int := (2 ^ 3)
 
 inductive SWCheckCodes where | LANDING_PAD_FAULT
   deriving BEq, Inhabited, Repr
@@ -567,7 +569,7 @@ abbrev csrRW := (BitVec 2)
 
 abbrev word_width_wide := Int
 
-
+abbrev is_sv_mode (k_v : Int) : Bool := List.elem k_v [32, 39, 48, 57]
 
 abbrev level_range (k_v : Nat) := Nat
 
@@ -1048,7 +1050,7 @@ abbrev LMUL_pow := Int
 
 abbrev sew_bitsize := Int
 
-
+abbrev is_sew_bitsize (k_n : Int) : Bool := List.elem k_n [8, 16, 32, 64]
 
 inductive agtype where | UNDISTURBED | AGNOSTIC
   deriving BEq, Inhabited, Repr
@@ -1081,7 +1083,9 @@ inductive Splittability where | CanSplit | CannotSplit
   deriving BEq, Inhabited, Repr
   open Splittability
 
-
+abbrev valid_misaligned_order (k_n : Int) (k_first : Int) (k_last : Int) (k_step : Int) : Bool :=
+  k_first = 0 ∧ k_last = (k_n - 1) ∧ k_step = 1 ∨
+  k_first = (k_n - 1) ∧ k_last = 0 ∧ k_step = ((- 1))
 
 structure Phys_Mem_Access_Info where
   splittable : Splittability
@@ -1109,9 +1113,9 @@ inductive PTE_Check where
   deriving Inhabited, BEq, Repr
   open PTE_Check
 
-abbrev tlb_vpn_bits : Int := (57 - 12)
+abbrev tlb_vpn_bits  : Int := (57 - 12)
 
-abbrev tlb_ppn_bits : Int := 44
+abbrev tlb_ppn_bits  : Int := 44
 
 structure TLB_Entry where
   asid : asidbits
@@ -1123,13 +1127,13 @@ structure TLB_Entry where
   pteAddr : physaddr
   deriving BEq, Inhabited, Repr
 
-abbrev num_tlb_entries_exp : Int := 6
+abbrev num_tlb_entries_exp  : Int := 6
 
-abbrev num_tlb_entries : Int := (2 ^ 6)
+abbrev num_tlb_entries  : Int := (2 ^ 6)
 
 abbrev tlb_index_range := Nat
 
-/-- Type quantifiers: k_v : Int, is_sv_mode(k_v) -/
+/-- Type quantifiers: k_v : Int, (is_sv_mode k_v) -/
 structure PTW_Output (k_v : Nat) where
   ppn : (ppn_bits k_v)
   pte : (pte_bits k_v)
@@ -1574,6 +1578,34 @@ abbrev RegisterType : Register → Type
   | .rvfi_instruction => (BitVec 64)
   | .fp_rounding_global => (BitVec 5)
 
+/-- Type quantifiers: k_n : Nat, k_n ≥ 0, m : Nat, m ≥ 0, m ≥ k_n -/
+def zero_extend {m : _} (v : (BitVec k_n)) : (BitVec m) :=
+  (Sail.BitVec.zeroExtend v m)
+
+def physaddrbits_zero_extend (xs : (BitVec (if ( 64 = 32  : Bool) then 34 else 64))) : (BitVec 64) :=
+  (zero_extend (m := 64) xs)
+
+instance : Arch where
+  va_size := 64
+  pa := (BitVec (if ( 64 = 32  : Bool) then 34 else 64))
+  abort := Unit
+  translation := Unit
+  trans_start := Unit
+  trans_end := Unit
+  fault := Unit
+  tlb_op := Unit
+  cache_op := Unit
+  barrier := barrier_kind
+  arch_ak := RISCV_strong_access
+  sys_reg_id := Unit
+
+
+
+abbrev SailM := PreSailM RegisterType trivialChoiceSource exception
+abbrev SailME := PreSailME RegisterType trivialChoiceSource exception
+
+
+
 instance : Inhabited (RegisterRef RegisterType HartState) where
   default := .Reg hart_state
 instance : Inhabited (RegisterRef RegisterType Privilege) where
@@ -1612,27 +1644,3 @@ instance : Inhabited (RegisterRef RegisterType (Vector (BitVec 8) 64)) where
   default := .Reg pmpcfg_n
 instance : Inhabited (RegisterRef RegisterType (Vector (Option TLB_Entry) (2 ^ 6))) where
   default := .Reg tlb
-abbrev SailM := PreSailM RegisterType trivialChoiceSource exception
-abbrev SailME := PreSailME RegisterType trivialChoiceSource exception
-
-/-- Type quantifiers: k_n : Nat, k_n ≥ 0, m : Nat, m ≥ 0, m ≥ k_n -/
-def zero_extend {m : _} (v : (BitVec k_n)) : (BitVec m) :=
-  (Sail.BitVec.zeroExtend v m)
-
-def physaddrbits_zero_extend (xs : (BitVec (if ( 64 = 32  : Bool) then 34 else 64))) : (BitVec 64) :=
-  (zero_extend (m := 64) xs)
-
-instance : Arch where
-  va_size := 64
-  pa := (BitVec (if ( 64 = 32  : Bool) then 34 else 64))
-  abort := Unit
-  translation := Unit
-  trans_start := Unit
-  trans_end := Unit
-  fault := Unit
-  tlb_op := Unit
-  cache_op := Unit
-  barrier := barrier_kind
-  arch_ak := RISCV_strong_access
-  sys_reg_id := Unit
-

@@ -1,3 +1,4 @@
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Flow
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.PlatformConfig
@@ -11,11 +12,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6

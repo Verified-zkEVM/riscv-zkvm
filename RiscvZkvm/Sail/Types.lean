@@ -8,11 +8,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -886,7 +889,7 @@ def width_enc_backwards (arg_ : (BitVec 2)) : Int :=
   | 0b10 => 4
   | _ => 8
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {1, 2, 4, 8} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [1, 2, 4, 8] -/
 def width_enc_forwards_matches (arg_ : Nat) : Bool :=
   match arg_ with
   | 1 => true
@@ -914,7 +917,7 @@ def width_mnemonic_backwards (arg_ : String) : SailM Int := do
       assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {1, 2, 4, 8} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [1, 2, 4, 8] -/
 def width_mnemonic_forwards_matches (arg_ : Nat) : Bool :=
   match arg_ with
   | 1 => true
@@ -931,7 +934,7 @@ def width_mnemonic_backwards_matches (arg_ : String) : Bool :=
   | "d" => true
   | _ => false
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {1, 2, 4, 8, 16} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [1, 2, 4, 8, 16] -/
 def width_enc_wide_forwards (arg_ : Nat) : (BitVec 3) :=
   match arg_ with
   | 1 => 0b000#3
@@ -952,7 +955,7 @@ def width_enc_wide_backwards (arg_ : (BitVec 3)) : SailM Int := do
       assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {1, 2, 4, 8, 16} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [1, 2, 4, 8, 16] -/
 def width_enc_wide_forwards_matches (arg_ : Nat) : Bool :=
   match arg_ with
   | 1 => true
@@ -971,7 +974,7 @@ def width_enc_wide_backwards_matches (arg_ : (BitVec 3)) : Bool :=
   | 0b100 => true
   | _ => false
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {1, 2, 4, 8, 16} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [1, 2, 4, 8, 16] -/
 def width_mnemonic_wide_forwards (arg_ : Nat) : String :=
   match arg_ with
   | 1 => "b"
@@ -992,7 +995,7 @@ def width_mnemonic_wide_backwards (arg_ : String) : SailM Int := do
       assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {1, 2, 4, 8, 16} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [1, 2, 4, 8, 16] -/
 def width_mnemonic_wide_forwards_matches (arg_ : Nat) : Bool :=
   match arg_ with
   | 1 => true

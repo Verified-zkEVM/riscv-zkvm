@@ -92,11 +92,11 @@ lake build RiscvZkvm.Sail
 scripts/validate-lean-emulator.sh --test
 ```
 
-The emulator command also applies two Sail-0.20.2 compatibility adaptations to
-the upstream Lean emulator wrapper: generated definitions are top-level rather than
-under `Defs`, and the backend's generated CLI stub must be renamed so the ELF
-runner can own `main`. These are validation-artifact transformations, checked
-by a full emulator build. The omitted-extension fallback described above is
+The emulator command uses the pinned JSON configuration and runtime, updates obsolete `Defs` namespace openings, and
+renames the backend's generated CLI stub so the ELF runner can own `main`.
+It builds with Lake after generation so a CMake reconfiguration cannot overwrite
+those inputs. These validation-artifact transformations are checked by a full
+emulator build. The omitted-extension fallback described above is
 additionally exercised by the ELF suite during model initialization.
 
 A cold Lean 4.33 build is resource-intensive: `RiscvZkvm.Sail.RvfiDii` alone has been
@@ -121,11 +121,14 @@ generated files; a digest proves identity, not correctness.
 
 ## Updating Lean or lean-sail
 
-The released Sail 0.20.2 Lean backend emits code for the `lean-sail` v4 API. The
-repository currently pins a v4-compatible revision carrying the Lean 4.33
-do-elaborator compatibility fix. Do not move to `lean-sail` v5 merely because it
-is newer: regenerate with a Sail compiler that targets v5 and validate the full
-model first.
+Sail 0.20.3 targets the concurrency-v1 API of official `lean-sail` v5.
+Regeneration normalizes the backend's package/module names and copies
+`sail-import/RuntimeCompat.lean`, whose `export` aliases preserve the public
+names used by existing proofs without introducing semantics or axioms.
+
+The candidate retains Sail RISC-V 0.13.1. Model 0.14.1 and runtime v6 are
+pending upstream fixes; see [release review](release-refresh.md). Lean 4.34.1
+is deferred. Validate a newer combination before adopting its pins.
 
 When changing Lean:
 
@@ -145,6 +148,12 @@ or `step` semantics, the `SailEquiv` theorem names, the axiom set, the narrow
 evm-asm against the candidate revision first. Tagging is the point of no return
 for a cached consumer: nothing in this repository's CI can tell you whether
 ~2,500 evm-asm modules still compile.
+
+Use a separate candidate checkout for the downstream build, or run the builds
+sequentially. Concurrent Lake builds from different workspaces against the same
+path dependency share `.lake/build`; dependency-path changes can invalidate
+traces and remove an olean while the other build is importing it. Keep the
+candidate's Lean sources, package pins, and provenance identical.
 
 1. Merge a green extraction commit.
 2. Create and push an annotated semver tag such as `v0.1.1`.

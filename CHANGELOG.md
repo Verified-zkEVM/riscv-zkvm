@@ -1,7 +1,22 @@
 # Changelog
 
-## Unreleased
+## v0.4.0 — Lean 4.33.1
 
+- Update the toolchain to Lean 4.33.1 and use official lean-sail v5, replacing
+  the v4 compatibility-fork dependency. Regenerate Sail RISC-V 0.13.1 with
+  Sail 0.20.3; preserve module paths and runtime names through export aliases.
+- Defer Lean 4.34.1, runtime v6, and model 0.14.1 pending upstream fixes.
+  See [release review](docs/release-refresh.md) for reports and validation.
+- Fix issue #14: `runBlock` consumes each ownership atom once when matching
+  instruction specifications, so aliased operands select the appropriate spec.
+  Add regression proofs for aliased M-extension, SLTU, ANDI, and LD operands.
+- Fix regeneration's replacement boundary so `--write` replaces only the
+  generated Sail tree. Pin emulator configuration and runtime throughout its
+  build, and download the provenance-selected Sail compiler in validation CI.
+- Retire the relocation checks after deliberate proof/tactic divergence; keep
+  full downstream compilation as the compatibility requirement.
+- Review the current Ethereum zkVM standards proposals and record existing
+  model, loader, and vendor-integration gaps without changing the instruction API.
 - **`xperm` no longer reports success on a permutation it did not find.**
   Every prover in the `xperm` family matches atoms with `isDefEq`, which is
   allowed to make its two arguments equal by *assigning* a metavariable. On the

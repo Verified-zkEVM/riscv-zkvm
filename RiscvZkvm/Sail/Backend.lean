@@ -1,4 +1,8 @@
-import RiscvZkvm.Sail.Common
+import Sail
+import RiscvZkvm.Sail.Defs
+import RiscvZkvm.Sail.Specialization
+import RiscvZkvm.Sail.FakeReal
+import RiscvZkvm.Sail.RiscvExtras
 
 set_option maxHeartbeats 1_000_000_000
 set_option maxRecDepth 1_000_000
@@ -194,18 +198,7 @@ open AtomicSupport
 open Architecture
 open AmocasOddRegisterReservedBehavior
 
-/-- Type quantifiers: k_ex480917_ : Nat, List.elem k_ex480917_ [16, 32, 64, 128] -/
-def float_is_nan (op : (BitVec k_ex480917_)) : Bool :=
-  let { exp := exp, mantissa := mantissa, sign := _ } := (float_decompose op)
-  ((is_all_ones exp) && (! (is_all_zeros mantissa)))
-
-/-- Type quantifiers: k_ex480919_ : Nat, List.elem k_ex480919_ [16, 32, 64, 128] -/
-def float_is_snan (op : (BitVec k_ex480919_)) : Bool :=
-  let { mantissa := mantissa, sign := _, exp := _ } := (float_decompose op)
-  ((float_is_nan op) && (is_highest_zero mantissa))
-
-/-- Type quantifiers: k_ex480921_ : Nat, List.elem k_ex480921_ [16, 32, 64, 128] -/
-def float_is_qnan (op : (BitVec k_ex480921_)) : Bool :=
-  let { mantissa := mantissa, sign := _, exp := _ } := (float_decompose op)
-  ((float_is_nan op) && (is_highest_one mantissa))
+/-- Type quantifiers: x : Int -/
+def __id (x : Int) : Int :=
+  x
 
