@@ -6,15 +6,14 @@
 sail_riscv_repo = "https://github.com/riscv/sail-riscv.git"
 sail_riscv_tag = "0.13.1"
 sail_riscv_rev = "27224ccb2290f022e46213c05b3e72e8a9ea635e"
-sail_compiler_version = "0.20.2"
-sail_compiler_rev = "3b7af38d66466ecadad563158b07ce2f82fe05da"
+sail_compiler_version = "0.20.3"
+sail_compiler_rev = "60695b1ea377048f0adc39c62671cd099b2ed9f6"
 
 [runtime]
-# Sail 0.20.2 emits code for lean-sail v4. The dhsorens revision is upstream v4
-# (79b4d08) plus the two-line Lean >=4.32 dependent-match elaborator fix.
-lean_sail_repo = "https://github.com/dhsorens/lean-sail"
-lean_sail_rev = "8d57a8b537f1a4e7cdf558c3d87a79f453bf3817"
-lean_toolchain = "leanprover/lean4:v4.33.0"
+# Official lean-sail v5 passes Sail and SailTest on Lean 4.33.1 without patches.
+lean_sail_repo = "https://github.com/rems-project/lean-sail.git"
+lean_sail_rev = "079463134b9c50450b8393e1566a09fc492a34d9"
+lean_toolchain = "leanprover/lean4:v4.33.1"
 
 [extraction]
 root_module = "RiscvZkvm.Sail"
@@ -22,8 +21,8 @@ sail_modules = ["main", "I_insts", "M_insts", "Zicsr_insts", "K_core", "Zkr", "Z
 config_file = "sail-import/rv64d_v256_e64.json"
 config_sha256 = "a3b545eb174247f5552a27dbb60f32c4ee95af85bdc8ea92ce0661254fbff674"
 # Rewritten after the 0.13.1 refresh by `scripts/check-model-pin.sh --write`.
-model_sha256 = "97744e1767e81047ebf5c36e0eab9969f933f2bcf7a4fc8139cd75da80c13c2e"
-expected_lean_files = 119
+model_sha256 = "559bb257093328400e5b47722b0bb8dd004396a8b8c45e32ecaefaa79256d992"
+expected_lean_files = 121
 
 [validation]
 lean_emulator_source = "https://github.com/riscv/sail-riscv/tree/main/lean_emulator"

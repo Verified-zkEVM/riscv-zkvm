@@ -16,11 +16,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -570,7 +573,7 @@ def itype_mnemonic_forwards (arg_ : iop) : String :=
   | .ORI => "ori"
   | .ANDI => "andi"
 
-/-- Type quantifiers: k_ex483309_ : Bool -/
+/-- Type quantifiers: k_ex481387_ : Bool -/
 def maybe_u_forwards (arg_ : Bool) : String :=
   match arg_ with
   | true => "u"
@@ -731,7 +734,7 @@ def utype_mnemonic_forwards (arg_ : uop) : String :=
   | .LUI => "lui"
   | .AUIPC => "auipc"
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {1, 2, 4, 8} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [1, 2, 4, 8] -/
 def width_mnemonic_forwards (arg_ : Nat) : String :=
   match arg_ with
   | 1 => "b"
@@ -1810,7 +1813,7 @@ def encdec_uop_forwards (arg_ : uop) : (BitVec 7) :=
   | .LUI => 0b0110111#7
   | .AUIPC => 0b0010111#7
 
-/-- Type quantifiers: k_ex484299_ : Bool, width : Nat, width ∈ {1, 2, 4, 8} -/
+/-- Type quantifiers: k_ex481878_ : Bool, width : Nat, List.elem width [1, 2, 4, 8] -/
 def valid_load_encdec (width : Nat) (is_unsigned : Bool) : Bool :=
   ((width <b xlen_bytes) || ((not is_unsigned) && (width ≤b xlen_bytes)))
 
@@ -1818,7 +1821,7 @@ def virtual_memory_supported (_ : Unit) : SailM Bool := do
   (pure ((← (currentlyEnabled Ext_Sv32)) || ((← (currentlyEnabled Ext_Sv39)) || ((← (currentlyEnabled
               Ext_Sv48)) || (← (currentlyEnabled Ext_Sv57))))))
 
-/-- Type quantifiers: arg_ : Nat, arg_ ∈ {1, 2, 4, 8} -/
+/-- Type quantifiers: arg_ : Nat, List.elem arg_ [1, 2, 4, 8] -/
 def width_enc_forwards (arg_ : Nat) : (BitVec 2) :=
   match arg_ with
   | 1 => 0b00#2

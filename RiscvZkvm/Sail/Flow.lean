@@ -10,11 +10,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -258,8 +261,4 @@ def privileged_isa_version_gt (x : Privileged_ISA_Version) (y : Privileged_ISA_V
 
 def vector_support_gt (x : vector_support) (y : vector_support) : Bool :=
   ((num_of_vector_support x) >b (num_of_vector_support y))
-
-/-- Type quantifiers: x : Int -/
-def __id (x : Int) : Int :=
-  x
 

@@ -1,4 +1,4 @@
-import RiscvZkvm.Sail.Flow
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Arith
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Vlen
@@ -10,11 +10,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -197,13 +200,13 @@ open AmocasOddRegisterReservedBehavior
 
 def max_index_eew_exp : Nat := 6
 
-/-- Type quantifiers: SEW : Nat, LMUL_pow : Int, ((- 3)) ≤ LMUL_pow ∧ LMUL_pow ≤ 3, SEW ∈
-  {8, 16, 32, 64} -/
+/-- Type quantifiers: SEW : Nat, LMUL_pow : Int, ((- 3)) ≤ LMUL_pow ∧ LMUL_pow ≤ 3, List.elem
+  SEW [8, 16, 32, 64] -/
 def get_num_elem (LMUL_pow : Int) (SEW : Nat) : SailM Nat := do
   assert (vlen ≥b SEW) "extensions/V/vext_control.sail:40.20-40.21"
   (pure (Int.tdiv ((2 ^i (Max.max 0 LMUL_pow)) *i vlen) SEW))
 
-/-- Type quantifiers: index : Nat, EEW : Nat, EEW ≥ 0, is_sew_bitsize(EEW), 0 ≤ index -/
+/-- Type quantifiers: index : Nat, EEW : Nat, EEW ≥ 0, (is_sew_bitsize EEW), 0 ≤ index -/
 def read_single_element (EEW : Nat) (index : Nat) (vrid : vregidx) : SailM (BitVec EEW) := do
   assert (EEW ≤b vlen) "extensions/V/vext_control.sail:47.20-47.21"
   let _ : Unit := (static_assert ((Int.tmod vlen EEW) == 0))
@@ -216,7 +219,7 @@ def read_single_element (EEW : Nat) (index : Nat) (vrid : vregidx) : SailM (BitV
   (pure (Sail.BitVec.extractLsb (← (rV_bits vrid)) ((offset +i EEW) -i 1) offset))
 
 /-- Type quantifiers: num_elem : Nat, num_elem ≥ 0, SEW : Nat, SEW ≥ 0, LMUL_pow : Int, num_elem
-  ≥ 0 ∧ is_sew_bitsize(SEW) -/
+  ≥ 0 ∧ (is_sew_bitsize SEW) -/
 def read_vreg (num_elem : Nat) (SEW : Nat) (LMUL_pow : Int) (vrid : vregidx) : SailM (Vector (BitVec SEW) num_elem) := do
   let vrid_val := (BitVec.toNatInt (vregidx_bits vrid))
   let LMUL_pow_reg :=
@@ -241,7 +244,7 @@ def read_vreg (num_elem : Nat) (SEW : Nat) (LMUL_pow : Int) (vrid : vregidx) : S
     loop_vars ← do (pure (vectorUpdate result i (← (read_single_element SEW i vrid))))
   (pure loop_vars)
 
-/-- Type quantifiers: index : Nat, EEW : Nat, EEW ≥ 0, is_sew_bitsize(EEW), 0 ≤ index -/
+/-- Type quantifiers: index : Nat, EEW : Nat, EEW ≥ 0, (is_sew_bitsize EEW), 0 ≤ index -/
 def write_single_element (EEW : Nat) (index : Nat) (vrid : vregidx) (value : (BitVec EEW)) : SailM Unit := do
   assert (EEW ≤b vlen) "extensions/V/vext_control.sail:89.20-89.21"
   let _ : Unit := (static_assert ((Int.tmod vlen EEW) == 0))
@@ -255,7 +258,7 @@ def write_single_element (EEW : Nat) (index : Nat) (vrid : vregidx) (value : (Bi
     (Sail.BitVec.updateSubrange (← (rV_bits vrid)) ((offset +i EEW) -i 1) offset value))
 
 /-- Type quantifiers: LMUL_pow : Int, num_elem : Nat, num_elem ≥ 0, SEW : Nat, SEW ≥ 0, num_elem
-  ≥ 0 ∧ is_sew_bitsize(SEW), ((- 3)) ≤ LMUL_pow ∧ LMUL_pow ≤ 3 -/
+  ≥ 0 ∧ (is_sew_bitsize SEW), ((- 3)) ≤ LMUL_pow ∧ LMUL_pow ≤ 3 -/
 def write_vreg (num_elem : Nat) (SEW : Nat) (LMUL_pow : Int) (vrid : vregidx) (vec : (Vector (BitVec SEW) num_elem)) : SailM Unit := do
   let group_size := (2 ^i (Max.max LMUL_pow 0))
   assert (SEW ≤b vlen) "extensions/V/vext_control.sail:124.20-124.21"

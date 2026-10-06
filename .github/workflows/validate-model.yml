@@ -31,8 +31,9 @@ jobs:
       - name: Install official Sail binary and bundled Z3
         run: |
           mkdir -p "$RUNNER_TEMP/sail"
-          curl -L \
-            https://github.com/rems-project/sail/releases/download/0.20.2-binary/sail-Linux-x86_64.tar.gz \
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("sail-import/PROVENANCE.toml", "rb"))["source"]["sail_compiler_version"])')
+          curl --fail -L \
+            "https://github.com/rems-project/sail/releases/download/${version}-binary/sail-Linux-x86_64.tar.gz" \
             -o "$RUNNER_TEMP/sail.tar.gz"
           tar xzf "$RUNNER_TEMP/sail.tar.gz" -C "$RUNNER_TEMP/sail" --strip-components=1
           echo "$RUNNER_TEMP/sail/bin" >> "$GITHUB_PATH"

@@ -1,3 +1,4 @@
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Flow
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Flen
@@ -13,11 +14,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -198,7 +202,7 @@ open AtomicSupport
 open Architecture
 open AmocasOddRegisterReservedBehavior
 
-/-- Type quantifiers: n : Nat, n ≥ 0, n ∈ {16, 32, 64, 128} -/
+/-- Type quantifiers: n : Nat, n ≥ 0, List.elem n [16, 32, 64, 128] -/
 def canonical_NaN {n : _} : (BitVec n) :=
   match n with
   | 16 => (0#1 +++ ((ones (n := 5)) +++ (1#1 +++ (zeros (n := 9)))))
@@ -224,7 +228,8 @@ def canonical_NaN_Q (_ : Unit) : (BitVec 128) :=
 def nan_box {n : _} (x : (BitVec k_n)) : (BitVec n) :=
   ((ones (n := (n -i (Sail.BitVec.length x)))) +++ x)
 
-/-- Type quantifiers: k_n : Nat, k_n ≥ 0, m : Nat, m ≥ 0, m ∈ {16, 32, 64, 128} ∧ k_n ≥ m -/
+/-- Type quantifiers: k_n : Nat, k_n ≥ 0, m : Nat, m ≥ 0, List.elem m [16, 32, 64, 128] ∧
+  k_n ≥ m -/
 def nan_unbox {m : _} (x : (BitVec k_n)) : (BitVec m) :=
   if (((Sail.BitVec.length x) == m) : Bool)
   then x

@@ -1,4 +1,4 @@
-import RiscvZkvm.Sail.Flow
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Errors
 import RiscvZkvm.Sail.MemAddrtype
@@ -12,11 +12,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -1242,7 +1245,7 @@ def _set_Satp64_Mode (r_ref : (RegisterRef (BitVec 64))) (v : (BitVec 4)) : Sail
   let r ← do (reg_deref r_ref)
   writeRegRef r_ref (_update_Satp64_Mode r v)
 
-/-- Type quantifiers: vectored_alignment_exp : Nat, k_ex484872_ : Bool, direct_alignment_exp : Nat, k_ex484870_
+/-- Type quantifiers: vectored_alignment_exp : Nat, k_ex481975_ : Bool, direct_alignment_exp : Nat, k_ex481973_
   : Bool, 2 ≤ direct_alignment_exp ∧ direct_alignment_exp ≤ 24, 2 ≤ vectored_alignment_exp
   ∧ vectored_alignment_exp ≤ 24 -/
 def legalize_tvec (o : (BitVec 64)) (v : (BitVec 64)) (direct_supported : Bool) (direct_alignment_exp : Nat) (vectored_supported : Bool) (vectored_alignment_exp : Nat) : SailM (BitVec 64) := do

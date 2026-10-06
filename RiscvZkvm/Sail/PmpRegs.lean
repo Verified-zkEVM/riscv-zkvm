@@ -1,4 +1,4 @@
-import RiscvZkvm.Sail.Flow
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Errors
 import RiscvZkvm.Sail.Xlen
@@ -12,11 +12,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -337,7 +340,7 @@ def pmpWriteCfgReg (n : Nat) (v : (BitVec 64)) : SailM Unit := do
       else (pure ())
   (pure loop_vars)
 
-/-- Type quantifiers: k_ex485102_ : Bool, k_ex485101_ : Bool -/
+/-- Type quantifiers: k_ex482023_ : Bool, k_ex482022_ : Bool -/
 def pmpWriteAddr (locked : Bool) (tor_locked : Bool) (reg : (BitVec 64)) (v : (BitVec 64)) : (BitVec 64) :=
   if ((locked || tor_locked) : Bool)
   then reg

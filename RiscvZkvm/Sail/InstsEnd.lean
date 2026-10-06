@@ -1,3 +1,4 @@
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Flow
 import RiscvZkvm.Sail.Arith
 import RiscvZkvm.Sail.Prelude
@@ -30,11 +31,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -4506,7 +4510,7 @@ def execute_UTYPE (imm : (BitVec 20)) (rd : regidx) (op : uop) : SailM Execution
       | .AUIPC => (pure ((← (get_arch_pc ())) + off))))
   (pure RETIRE_SUCCESS)
 
-/-- Type quantifiers: width : Nat, width ∈ {1, 2, 4, 8} -/
+/-- Type quantifiers: width : Nat, List.elem width [1, 2, 4, 8] -/
 def execute_STORE (imm : (BitVec 12)) (rs2 : regidx) (rs1 : regidx) (width : Nat) : SailM ExecutionResult := do
   let offset : xlenbits := (sign_extend (m := 64) imm)
   assert (width ≤b xlen_bytes) "extensions/I/base_insts.sail:320.28-320.29"
@@ -4648,7 +4652,7 @@ def execute_RTYPE (rs2 : regidx) (rs1 : regidx) (rd : regidx) (op : rop) : SailM
             (Sail.BitVec.extractLsb (← (rX_bits rs2)) (log2_xlen -i 1) 0)))))
   (pure RETIRE_SUCCESS)
 
-/-- Type quantifiers: k_ex510349_ : Bool -/
+/-- Type quantifiers: k_ex482316_ : Bool -/
 def execute_REMW (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) : SailM ExecutionResult := do
   let rs1_bits ← do (pure (Sail.BitVec.extractLsb (← (rX_bits rs1)) 31 0))
   let rs2_bits ← do (pure (Sail.BitVec.extractLsb (← (rX_bits rs2)) 31 0))
@@ -4667,7 +4671,7 @@ def execute_REMW (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool
   (wX_bits rd (sign_extend (m := 64) (to_bits_truncate (l := 32) remainder)))
   (pure RETIRE_SUCCESS)
 
-/-- Type quantifiers: k_ex510358_ : Bool -/
+/-- Type quantifiers: k_ex482317_ : Bool -/
 def execute_REM (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) : SailM ExecutionResult := do
   let rs1_bits ← do (rX_bits rs1)
   let rs2_bits ← do (rX_bits rs2)
@@ -4758,7 +4762,7 @@ def execute_LPAD (lpl : (BitVec 20)) : SailM ExecutionResult := do
           (pure RETIRE_SUCCESS)))
   else (pure RETIRE_SUCCESS)
 
-/-- Type quantifiers: width : Nat, k_ex510392_ : Bool, width ∈ {1, 2, 4, 8} -/
+/-- Type quantifiers: width : Nat, k_ex482318_ : Bool, List.elem width [1, 2, 4, 8] -/
 def execute_LOAD (imm : (BitVec 12)) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) (width : Nat) : SailM ExecutionResult := do
   let offset : xlenbits := (sign_extend (m := 64) imm)
   assert (width ≤b xlen_bytes) "extensions/I/base_insts.sail:289.28-289.29"
@@ -4848,7 +4852,7 @@ def execute_ECALL (_ : Unit) : SailM ExecutionResult := do
 def execute_EBREAK (_ : Unit) : SailM ExecutionResult := do
   (trap (make_sync_exception (E_Breakpoint Brk_Software) (← readReg PC)))
 
-/-- Type quantifiers: k_ex510399_ : Bool -/
+/-- Type quantifiers: k_ex482320_ : Bool -/
 def execute_DIVW (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) : SailM ExecutionResult := do
   let rs1_bits ← do (pure (Sail.BitVec.extractLsb (← (rX_bits rs1)) 31 0))
   let rs2_bits ← do (pure (Sail.BitVec.extractLsb (← (rX_bits rs2)) 31 0))
@@ -4871,7 +4875,7 @@ def execute_DIVW (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool
   (wX_bits rd (sign_extend (m := 64) (to_bits_truncate (l := 32) quotient)))
   (pure RETIRE_SUCCESS)
 
-/-- Type quantifiers: k_ex510408_ : Bool -/
+/-- Type quantifiers: k_ex482321_ : Bool -/
 def execute_DIV (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) : SailM ExecutionResult := do
   let rs1_bits ← do (rX_bits rs1)
   let rs2_bits ← do (rX_bits rs2)

@@ -70,6 +70,9 @@ jobs:
 
       # --- source-level gates (no build required) ---------------------------
 
+      - name: Regeneration replacement-boundary regression
+        run: scripts/test-regen-model.sh
+
       - name: Verify generated-source pins
         run: scripts/check-model-pin.sh
 

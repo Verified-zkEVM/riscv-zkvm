@@ -79,13 +79,6 @@ if [[ "$actual_rev" != "$SAIL_RISCV_REV" ]]; then
   exit 1
 fi
 
-# Sail 0.20.2 emits top-level declarations. The 0.13.1 support file includes a
-# namespace-opening line intended for a newer backend; remove that one known,
-# reviewed incompatibility before extraction.
-support="$work/sail-riscv/handwritten_support/RiscvExtras.lean"
-sed -i.bak '/^open THE_MODULE_NAME\.Defs$/d' "$support"
-rm -f "$support.bak"
-
 candidate_parent="$work/generated"
 mkdir -p "$candidate_parent"
 config_abs="$ROOT/$CONFIG_FILE"
@@ -117,27 +110,26 @@ echo ">> generate proof model (${SAIL_MODULES[*]})" >&2
 
 # Sail derives the package directory directly from `-o Out`. Normalize that
 # backend-internal name into this package's public module/namespace after
-# generation. This transformation changes only module imports and the generated
-# `Functions` namespace; it is deterministic and covered by the model digest.
+# generation. This transformation preserves the established module/type names,
+# specialization namespaces, and `Functions` namespace. The runtime adapter is
+# copied alongside them; all outputs are covered by the model digest.
 generated_package="$candidate_parent/Out"
 [[ -f "$generated_package/Out.lean" && -d "$generated_package/Out" ]] || {
   echo "regen-model: generator did not produce expected Out package" >&2
   find "$candidate_parent" -maxdepth 2 -type f -print >&2
   exit 1
 }
+if [[ -n "${REGEN_REVIEW_DIR:-}" ]]; then
+  mkdir -p "$REGEN_REVIEW_DIR"
+  cp -a "$generated_package" "$REGEN_REVIEW_DIR/backend"
+fi
 public_parent="$candidate_parent/RiscvZkvm"
 candidate_root="$public_parent/Sail.lean"
 candidate="$public_parent/Sail"
 mkdir -p "$public_parent"
 mv "$generated_package/Out.lean" "$candidate_root"
 mv "$generated_package/Out" "$candidate"
-while IFS= read -r -d '' generated_file; do
-  sed -i.bak \
-    -e 's/^import Out\./import RiscvZkvm.Sail./' \
-    -e 's/Out\.Functions/RiscvZkvm.Sail.Functions/g' \
-    "$generated_file"
-  rm -f "$generated_file.bak"
-done < <(find "$candidate_root" "$candidate" -name '*.lean' -print0)
+python3 -B "$ROOT/scripts/normalize-extraction.py" "$public_parent" "$ROOT/sail-import/RuntimeCompat.lean"
 if grep -R -n -w Out "$candidate_root" "$candidate"; then
   echo "regen-model: backend-internal Out name survived normalization" >&2
   exit 1
@@ -157,7 +149,8 @@ fi
 
 # `--write` is explicit and the targets are fixed repository paths. Validate the
 # candidate before replacing the generated tree so a failed generation is harmless.
-rm -rf "$ROOT/RiscvZkvm"
-cp -a "$public_parent" "$ROOT/RiscvZkvm"
+rm -rf "$ROOT/RiscvZkvm/Sail"
+cp -a "$candidate" "$ROOT/RiscvZkvm/Sail"
+cp "$candidate_root" "$ROOT/RiscvZkvm/Sail.lean"
 echo "regen-model: replaced RiscvZkvm/Sail.lean and RiscvZkvm/Sail/ from ${SAIL_RISCV_TAG}"
 echo "regen-model: run scripts/check-model-pin.sh --write, then review the diff"

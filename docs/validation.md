@@ -24,12 +24,12 @@ the theorem-facing `RiscvZkvm.Sail` library and is not packed into release olean
 
 The selected Sail modules deliberately exclude extensions such as A, H, and V.
 Because `currentlyEnabled` is a scattered function, their clauses are absent
-from the generated model. Sail 0.20.2 represents an omitted clause as a failing
+from the generated model. Sail 0.20.3 represents an omitted clause as a failing
 catch-all, while the emulator's initialization queries every extension.
 
 The validation script totalizes that catch-all in the executable artifact as
 `pure false`: an extension omitted from the zkVM scope is disabled. It also
-removes two obsolete `Defs` namespace openings and renames Sail's generated CLI
+updates the obsolete `Defs` namespace openings and renames Sail's generated CLI
 stub so the upstream ELF runner can provide `main`. None of these compatibility
 adaptations modify `RiscvZkvm.Sail`, its provenance digest, or release oleans.
 
@@ -164,7 +164,7 @@ Two CI gates keep it that way:
   `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
   `bv_decide` fails the build rather than silently widening the base.
 * `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
-  environment (3457 declarations today) and fails on any axiom outside the table
+  environment (3500 declarations today) and fails on any axiom outside the table
   above, including `sorryAx`.
 
 The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the

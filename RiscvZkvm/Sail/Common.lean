@@ -1,4 +1,4 @@
-import RiscvZkvm.Sail.Flow
+import RiscvZkvm.Sail.Backend
 import RiscvZkvm.Sail.Vector
 
 set_option maxHeartbeats 1_000_000_000
@@ -7,11 +7,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -242,7 +245,7 @@ def undefined_float_bits (atom_n : Int) : SailM (float_bits atom_n) := do
                   then 52
                   else 112)))) })
 
-/-- Type quantifiers: k_n : Nat, k_n ≥ 0, is_fp_bits(k_n) -/
+/-- Type quantifiers: k_n : Nat, k_n ≥ 0, (is_fp_bits k_n) -/
 def float_decompose (op : (BitVec k_n)) : (float_bits k_n) :=
   match (Sail.BitVec.length op) with
   | 16 =>
@@ -262,11 +265,11 @@ def float_decompose (op : (BitVec k_n)) : (float_bits k_n) :=
       exp := (Sail.BitVec.extractLsb op 126 112)
       mantissa := (Sail.BitVec.extractLsb op 111 0) }
 
-/-- Type quantifiers: k_n : Nat, k_n ≥ 0, is_fp_bits(k_n) -/
+/-- Type quantifiers: k_n : Nat, k_n ≥ 0, (is_fp_bits k_n) -/
 def float_compose (op : (float_bits k_n)) : (BitVec k_n) :=
   (op.sign +++ (op.exp +++ op.mantissa))
 
-/-- Type quantifiers: k_n : Nat, k_n ≥ 0, is_fp_bits(k_n) -/
+/-- Type quantifiers: k_n : Nat, k_n ≥ 0, (is_fp_bits k_n) -/
 def float_has_max_exp (op : (BitVec k_n)) : Bool :=
   let fp := (float_decompose op)
   let bitsize := (Sail.BitVec.length op)

@@ -10,11 +10,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -262,7 +265,7 @@ def misaligned_order (n : Int) : (Int × Int × Int) :=
   else (0, (n -i 1), 1)
 
 /-- Type quantifiers: k_n : Nat, k_n ≥ 0, width : Nat, 13 ≤ k_n ∧ k_n ≤ 64 ∧
-  is_mem_width(width) -/
+  (is_mem_width width) -/
 def split_on_page_boundary (addr : (BitVec k_n)) (width : Nat) : SailM (Int × Int) := do
   let page_mask :=
     (Sail.BitVec.updateSubrange ((ones (n := (Sail.BitVec.length addr))) : (BitVec k_n))
@@ -278,7 +281,7 @@ def split_on_page_boundary (addr : (BitVec k_n)) (width : Nat) : SailM (Int × I
       assert (nbytes_to_boundary <b width) "sys/split_access_utils.sail:111.37-111.38"
       (pure (nbytes_to_boundary, (width -i nbytes_to_boundary))))
 
-/-- Type quantifiers: width : Nat, is_mem_width(width) -/
+/-- Type quantifiers: width : Nat, (is_mem_width width) -/
 def prop_access_in_same_page (addr : (BitVec 16)) (width : Nat) : SailM Bool := do
   let (p, q) ← do (split_on_page_boundary addr width)
   let page_mask : (BitVec 16) := 0xF000#16
@@ -287,7 +290,7 @@ def prop_access_in_same_page (addr : (BitVec 16)) (width : Nat) : SailM Bool := 
         ((addr &&& page_mask) == ((BitVec.subInt (BitVec.addInt addr width) 1) &&& page_mask))
         (q == 0))))
 
-/-- Type quantifiers: width : Nat, is_mem_width(width) -/
+/-- Type quantifiers: width : Nat, (is_mem_width width) -/
 def prop_access_across_page_boundary (addr : (BitVec 16)) (width : Nat) : SailM Bool := do
   let (p, q) ← do (split_on_page_boundary addr width)
   let page_mask : (BitVec 16) := 0xF000#16

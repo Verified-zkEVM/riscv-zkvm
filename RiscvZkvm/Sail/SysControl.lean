@@ -24,11 +24,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -487,7 +490,7 @@ def tval (excinfo : (Option (BitVec 64))) : (BitVec 64) :=
   | .some e => e
   | none => (zeros (n := 64))
 
-/-- Type quantifiers: k_ex487398_ : Bool -/
+/-- Type quantifiers: k_ex482097_ : Bool -/
 def track_trap (p : Privilege) (is_interrupt : Bool) (cause : (BitVec 6)) : SailM Unit := do
   (long_csr_write_callback "mstatus" "mstatush" (← readReg mstatus))
   match p with

@@ -8,11 +8,14 @@ set_option linter.unusedVariables false
 set_option match.ignoreUnusedAlts true
 
 open Sail
-open ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1
 
 noncomputable section
+namespace RiscvZkvm.Sail
 
-namespace RiscvZkvm.Sail.Functions
+open ConcurrencyInterfaceV1
+
+namespace Functions
 
 open xRET_type
 open wxfunct6
@@ -193,7 +196,7 @@ open AtomicSupport
 open Architecture
 open AmocasOddRegisterReservedBehavior
 
-/-- Type quantifiers: k_n : Nat, k_n ≥ 0, k_n ∈ {16, 32} -/
+/-- Type quantifiers: k_n : Nat, k_n ≥ 0, List.elem k_n [16, 32] -/
 def fetch_callback (x_0 : (BitVec k_n)) : Unit :=
   ()
 
@@ -223,11 +226,11 @@ def csr_full_read_callback (x_0 : String) (x_1 : (BitVec 12)) (x_2 : (BitVec 64)
 def redirect_callback (x_0 : (BitVec 64)) : Unit :=
   ()
 
-/-- Type quantifiers: k_ex484694_ : Bool -/
+/-- Type quantifiers: k_ex481963_ : Bool -/
 def trap_callback (x_0 : Bool) (x_1 : (BitVec 6)) : Unit :=
   ()
 
-/-- Type quantifiers: k_ex484695_ : Bool -/
+/-- Type quantifiers: k_ex481964_ : Bool -/
 def xret_callback (x_0 : Bool) : Unit :=
   ()
 

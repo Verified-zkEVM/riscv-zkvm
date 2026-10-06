@@ -695,34 +695,44 @@ private meta def tryInstantiateSpec (specName : Name) (instrExpr instrAddr : Exp
         throwError "instruction mismatch"
   -- Step 2b: Unify regIs atoms
   let stateRegAtoms := stateAtoms.filter (·.isAppOfArity `RiscvZkvm.Rv64.regIs 2)
+  -- Separation requires distinct ownership: a state atom can satisfy only one
+  -- spec atom. Otherwise an all-distinct spec also matches aliased operands.
+  let mut usedRegAtoms : Array Nat := #[]
   for atom in specAtoms do
     if atom.isAppOfArity `RiscvZkvm.Rv64.regIs 2 then
       let specReg ← instantiateMVars atom.getAppArgs[0]!
       let specVal := atom.getAppArgs[1]!
       let mut found := false
-      for stateAtom in stateRegAtoms do
+      for (stateAtom, idx) in stateRegAtoms.zipIdx do
+        if usedRegAtoms.contains idx then continue
         let stateReg := stateAtom.getAppArgs[0]!
         let stateVal := stateAtom.getAppArgs[1]!
         if ← withoutModifyingState (isDefEq specReg stateReg) then
           let _ ← isDefEq specReg stateReg
-          let _ ← isDefEq specVal stateVal
+          unless ← isDefEq specVal stateVal do
+            throwError "register {specReg} has a different value in state"
+          usedRegAtoms := usedRegAtoms.push idx
           found := true
           break
       unless found do
         throwError "register {specReg} not found in state"
   -- Step 2c: Unify memIs atoms
   let stateMemAtoms := stateAtoms.filter (·.isAppOfArity `RiscvZkvm.Rv64.memIs 2)
+  let mut usedMemAtoms : Array Nat := #[]
   for atom in specAtoms do
     if atom.isAppOfArity `RiscvZkvm.Rv64.memIs 2 then
       let specAddr ← instantiateMVars atom.getAppArgs[0]!
       let specVal := atom.getAppArgs[1]!
       let mut found := false
-      for stateAtom in stateMemAtoms do
+      for (stateAtom, idx) in stateMemAtoms.zipIdx do
+        if usedMemAtoms.contains idx then continue
         let stateAddr := stateAtom.getAppArgs[0]!
         let stateVal := stateAtom.getAppArgs[1]!
         if ← withoutModifyingState (isDefEq specAddr stateAddr) then
           let _ ← isDefEq specAddr stateAddr
-          let _ ← isDefEq specVal stateVal
+          unless ← isDefEq specVal stateVal do
+            throwError "memory at {specAddr} has a different value in state"
+          usedMemAtoms := usedMemAtoms.push idx
           found := true
           break
       unless found do
