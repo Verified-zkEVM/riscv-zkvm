@@ -103,8 +103,16 @@ declarations use only the seven documented axioms. The complete no-warnings
 gate passes (184 jobs). Both required cold CI runs pass all five libraries,
 initializer/decoder tests, source gates, the axiom sweep, and interpreter ELF
 tests. The full evm-asm build passes (6,259 jobs); its final rebuild with the two
-new tactic-test shim imports also passes (6,263 jobs). The upstream executable
-emulator suite is pending; release tagging must wait for that result.
+new tactic-test shim imports also passes (6,263 jobs). All 3,106 downstream
+modules are reachable and all 60 generated shims are current.
+
+The [uncached validation workflow](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/37398012658)
+independently reproduces the extraction byte for byte, builds the executable
+emulator (256 jobs), and passes all 50 selected upstream ELF tests on the same
+pins. Slower duplicate local full-model/emulator builds were stopped after
+these clean hosted results completed; they are not counted as local passes.
+The [required CI build](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/37394595210)
+also passes every source, library, axiom, warning, and interpreter gate.
 
 The isolated downstream checkout uses evm-asm
 `7e65e4d024718f704226cd795f3d03d4e9aafe13`, matching Mathlib 4.33.1,

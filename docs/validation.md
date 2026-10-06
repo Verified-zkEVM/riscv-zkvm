@@ -52,8 +52,9 @@ The script accepts `VALIDATION_DIR` to preserve a build between runs. It also
 honours `SAIL_BIN_DIR` and `Z3_BIN_DIR`. The official Sail binary distribution
 bundles both tools.
 
-The 0.13.1 refresh was exercised locally on 2026-08-25: the emulator built with
-Sail 0.20.2 and all 50 selected `rv64ui-p-*` ELF tests passed.
+The 0.13.1 model was validated in clean CI on 2026-10-06 with Lean 4.33.1,
+official lean-sail v5, and Sail 0.20.3: all 50 selected `rv64ui-p-*` ELF tests
+passed. The proof extraction independently reproduced byte for byte.
 
 ## What a pass establishes
 
@@ -120,7 +121,7 @@ closing it has to be a deliberate edit.
 
    ISA-conformance evidence therefore continues to come from
    `scripts/validate-lean-emulator.sh`, which runs those same ELFs against the
-   **Sail** model (50/50 as of 2026-08-25). The interpreter's own tests use
+   **Sail** model (50/50 as of 2026-10-06). The interpreter's own tests use
    hand-assembled fixtures laid out for the zkVM memory map instead.
 
 2. **The RV64 word-op family is absent from `Instr`.** `ADDW SUBW SLLW SRLW SRAW
