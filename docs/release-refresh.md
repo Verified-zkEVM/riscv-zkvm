@@ -12,6 +12,30 @@ Inputs were reviewed on 2026-10-06. Official v5 passes `Sail` and `SailTest`
 on Lean 4.33.1 without patches. Its namespace warning is already tracked by
 [lean-sail PR #14](https://github.com/rems-project/lean-sail/pull/14).
 
+**Release status: held as a draft.** PR #16 is merged and the annotated
+`v0.4.0` tag is preserved, but the required tagged-consumer cache check exposed
+a blocker after the cold archive build and upload passed. Do not update a
+downstream release pin yet. Source compilation and cached-consumer validation
+are separate requirements; the passing source checks below do not establish
+that the archive can be reused.
+
+The v5 ambiguous-namespace warning serializes its absolute source path into
+`Sail.Sail.olean`. A fresh consumer builds the same runtime at a different
+path, changing that olean's hash and invalidating the extraction through legacy
+transitive imports. An independent consumer downloaded the archive and used
+RV64 successfully, but importing all five libraries rebuilt
+`RiscvZkvm.Sail.RuntimeCompat` and generated Sail modules. The
+[hosted consumer check](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/37403317272)
+and duplicate local rebuild were stopped after this was confirmed; neither
+counts as a passing cache check.
+
+A core-only reproduction produces different oleans from identical sources at
+two absolute paths when the warning is enabled. Qualifying the namespace, as
+in upstream PR #14, makes them byte-identical. Keep the official upstream pin
+and wait for a warning-free upstream revision; adopting v6 also requires its
+finite-choice fix in PR #15. Revalidate the runtime, proofs, downstream build,
+and tagged-consumer cache before publishing a new immutable release tag.
+
 ## Deferred upgrades and upstream reports
 
 - Lean 4.34.1 is deferred: its intrinsic `assert` syntax collides with generated
