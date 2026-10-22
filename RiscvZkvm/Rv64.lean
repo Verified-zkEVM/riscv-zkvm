@@ -9,5 +9,6 @@
 
 -- `Execution` transitively imports `Instructions`, `ZiskAccel`, `Basic`, and `Word`.
 import RiscvZkvm.Rv64.Execution
+import RiscvZkvm.Rv64.HintInterface
 import RiscvZkvm.Rv64.Program
 import RiscvZkvm.Rv64.Bytes
