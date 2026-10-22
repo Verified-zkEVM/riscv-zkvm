@@ -6,7 +6,11 @@
   #9522-style CPS scripts easy to adapt.
 -/
 
-import RiscvZkvm.Rv64.Logic.WP.Call
+module
+
+public import RiscvZkvm.Rv64.Logic.WP.Call
+
+@[expose] public section
 
 namespace RiscvZkvm.Rv64
 

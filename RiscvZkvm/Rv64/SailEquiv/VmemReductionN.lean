@@ -247,20 +247,20 @@ theorem extractWord32_recon (mem : Std.ExtHashMap Nat (BitVec 8)) (base pos : Na
     show (pos*32 + i) % 8 = i % 8 from by omega]
   rcases Nat.lt_or_ge i 8 with h0i | h0i
   · rw [show (pos*32 + i) / 8 = pos*4 by omega]
-    simp only [show i < 8 by omega, if_true, ← g0]
+    simp only [show i < 8 by omega, ite_true, ← g0]
     congr 1 <;> omega
   rcases Nat.lt_or_ge i 16 with h1i | h1i
   · rw [show (pos*32 + i) / 8 = pos*4 + 1 by omega]
-    simp only [show ¬ i < 8 by omega, if_false, show i - 8 < 8 by omega, if_true, ← g1]
+    simp only [show ¬ i < 8 by omega, ite_false, show i - 8 < 8 by omega, ite_true, ← g1]
     congr 1 <;> omega
   rcases Nat.lt_or_ge i 24 with h2i | h2i
   · rw [show (pos*32 + i) / 8 = pos*4 + 2 by omega]
-    simp only [show ¬ i < 8 by omega, if_false, show ¬ i - 8 < 8 by omega,
-      show i - 8 - 8 < 8 by omega, if_true, ← g2]
+    simp only [show ¬ i < 8 by omega, ite_false, show ¬ i - 8 < 8 by omega,
+      show i - 8 - 8 < 8 by omega, ite_true, ← g2]
     congr 1 <;> omega
   · rw [show (pos*32 + i) / 8 = pos*4 + 3 by omega]
-    simp only [show ¬ i < 8 by omega, if_false, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 8 - 8 < 8 by omega, if_false, ← g3]
+    simp only [show ¬ i < 8 by omega, ite_false, show ¬ i - 8 < 8 by omega,
+      show ¬ i - 8 - 8 < 8 by omega, ite_false, ← g3]
     congr 1 <;> omega
 
 /-- `extractHalfword` of the reconstructed dword equals the 2-byte little-endian assembly. -/
@@ -278,10 +278,10 @@ theorem extractHalfword_recon (mem : Std.ExtHashMap Nat (BitVec 8)) (base pos : 
     show (pos*16 + i) % 8 = i % 8 from by omega]
   rcases Nat.lt_or_ge i 8 with h0i | h0i
   · rw [show (pos*16 + i) / 8 = pos*2 by omega]
-    simp only [show i < 8 by omega, if_true, ← g0]
+    simp only [show i < 8 by omega, ite_true, ← g0]
     congr 1 <;> omega
   · rw [show (pos*16 + i) / 8 = pos*2 + 1 by omega]
-    simp only [show ¬ i < 8 by omega, if_false, ← g1]
+    simp only [show ¬ i < 8 by omega, ite_false, ← g1]
     congr 1 <;> omega
 
 /-- `extractByte` of the reconstructed dword equals the single byte at the access offset. -/
@@ -345,7 +345,7 @@ theorem vmem_read_addr_load_core (w : Nat) (vaddr : virtaddr) (s : SailState)
   have htrv := translate_and_read_value_load_bare vaddr w s mst v h_priv h_mst h_mprv hmem
   unfold vmem_read_addr
   simp +decide only [h_valign, Functions.not, Bool.not_true, Bool.not_false,
-    Bool.false_eq_true, if_false,
+    Bool.false_eq_true, ite_false,
     SailME.run, PreSail.PreSailME.run,
     hpage, PreSail.readReg, h_priv, h_mst,
     effectivePrivilege_machine s _ mst _ h_mprv, translationMode_machine,

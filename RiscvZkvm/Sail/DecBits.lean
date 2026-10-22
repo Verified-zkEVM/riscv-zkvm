@@ -229,7 +229,7 @@ def dec_bits_1_forwards (arg_ : (BitVec 1)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_1_backwards (arg_ : String) : (BitVec 1) :=
@@ -268,7 +268,7 @@ def dec_bits_2_forwards (arg_ : (BitVec 2)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_2_backwards (arg_ : String) : (BitVec 2) :=
@@ -307,7 +307,7 @@ def dec_bits_3_forwards (arg_ : (BitVec 3)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_3_backwards (arg_ : String) : (BitVec 3) :=
@@ -346,7 +346,7 @@ def dec_bits_4_forwards (arg_ : (BitVec 4)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_4_backwards (arg_ : String) : (BitVec 4) :=
@@ -385,7 +385,7 @@ def dec_bits_5_forwards (arg_ : (BitVec 5)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_5_backwards (arg_ : String) : (BitVec 5) :=
@@ -424,7 +424,7 @@ def dec_bits_6_forwards (arg_ : (BitVec 6)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_6_backwards (arg_ : String) : (BitVec 6) :=
@@ -463,7 +463,7 @@ def dec_bits_7_forwards (arg_ : (BitVec 7)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_7_backwards (arg_ : String) : (BitVec 7) :=
@@ -502,7 +502,7 @@ def dec_bits_8_forwards (arg_ : (BitVec 8)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_8_backwards (arg_ : String) : (BitVec 8) :=
@@ -541,7 +541,7 @@ def dec_bits_9_forwards (arg_ : (BitVec 9)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_9_backwards (arg_ : String) : (BitVec 9) :=
@@ -580,7 +580,7 @@ def dec_bits_10_forwards (arg_ : (BitVec 10)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_10_backwards (arg_ : String) : (BitVec 10) :=
@@ -619,7 +619,7 @@ def dec_bits_32_forwards (arg_ : (BitVec 32)) : SailM String := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def dec_bits_32_backwards (arg_ : String) : (BitVec 32) :=

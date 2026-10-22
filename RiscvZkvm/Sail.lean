@@ -3,13 +3,6 @@ import RiscvZkvm.Sail.Common
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Xlen
 import RiscvZkvm.Sail.PlatformConfig
-import RiscvZkvm.Sail.SysRegs
-import RiscvZkvm.Sail.InterruptRegs
-import RiscvZkvm.Sail.SysControl
-import RiscvZkvm.Sail.Platform
-import RiscvZkvm.Sail.Pma
-import RiscvZkvm.Sail.VmemTlb
-import RiscvZkvm.Sail.Step
 import RiscvZkvm.Sail.Main
 
 set_option maxHeartbeats 1_000_000_000

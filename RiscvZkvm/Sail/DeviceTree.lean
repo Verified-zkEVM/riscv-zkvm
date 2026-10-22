@@ -3,7 +3,6 @@ import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Xlen
 import RiscvZkvm.Sail.PlatformConfig
 import RiscvZkvm.Sail.Extensions
-import RiscvZkvm.Sail.Pma
 
 set_option maxHeartbeats 1_000_000_000
 set_option maxRecDepth 1_000_000
@@ -200,7 +199,7 @@ open Architecture
 open AmocasOddRegisterReservedBehavior
 
 def mmu_type (_ : Unit) : SailM String := do
-  assert (xlen == 64) "postlude/device_tree.sail:14.21-14.22"
+  sail_assert (xlen == 64) "postlude/device_tree.sail:14.21-14.22"
   if ((hartSupports Ext_Sv57) : Bool)
   then (pure "sv57")
   else

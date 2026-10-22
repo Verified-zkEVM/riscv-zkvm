@@ -67,8 +67,15 @@ theorem get_pmlen_machine_zero_store (s : SailState) (mst msec : BitVec 64)
     (h_sec : s.regs.get? Register.mseccfg = some msec)
     (h_pmm : _get_Seccfg_PMM msec = 0#2) :
     (get_pmlen (MemoryAccessType.Store mem_payload.Data) Privilege.Machine) s = .ok 0 s := by
+  have _h_mst := h_mst
   unfold get_pmlen is_pmm_applicable get_pmm
-  simp +decide [PreSail.readReg, h_mst, h_sec, h_pmm, pmm_mode_backwards,
+  simp +decide [andM, orM, toBool,
+    show (MemoryAccessType.Store mem_payload.Data == MemoryAccessType.InstructionFetch ()) = false by decide,
+    show (MemoryAccessType.Store mem_payload.Data == MemoryAccessType.Load mem_payload.PageTableEntry) = false by decide,
+    show (MemoryAccessType.Store mem_payload.Data == MemoryAccessType.Store mem_payload.PageTableEntry) = false by decide,
+    show (Privilege.Machine == Privilege.Machine) = true by decide,
+    RiscvZkvm.Sail.Functions.xlen,
+    PreSail.readReg, h_sec, h_pmm, pmm_mode_backwards,
     pure, EStateM.pure, bind, EStateM.bind, EStateM.get,
     get, MonadState.get, getThe, MonadStateOf.get, bne]
 
@@ -85,7 +92,7 @@ theorem transform_effective_address_bare_store (s : SailState) (vaddr : virtaddr
   unfold transform_effective_address
   sail_reduce [h_priv, h_mst, effectivePrivilege_machine s _ mst _ h_mprv,
     get_pmlen_machine_zero_store s mst msec h_mst h_sec h_pmm,
-    translationMode_machine s, if_true, Int.toNat_zero]
+    translationMode_machine s, ite_true, Int.toNat_zero]
 
 /-- **`pmpCheck` permits a store in Machine mode with all PMP entries OFF.** Twin of
     `pmpCheck_machine_off`: the 16-entry scan is the same read-only no-op (the access
@@ -106,7 +113,7 @@ theorem pmpCheck_machine_off_store (addr : physaddr) (width : Nat) (s : SailStat
   simp +decide only [SailME.run, PreSail.PreSailME.run,
     bind, EStateM.bind,
     ExceptT.run, ExceptT.mk, ExceptT.bind]
-  simp only [if_false, if_true]
+  simp only [ite_false, ite_true]
   rw [forIn]
   simp only [instForInOfForIn', EStateM.bind]
   rw [forIn'_noop_except _ () s _ ?hf]
@@ -147,7 +154,7 @@ theorem pmaCheck_store_ok (paddr : physaddr) (width : Nat) (s : SailState)
     get, MonadState.get, getThe, MonadStateOf.get,
     ExceptT.run, ExceptT.mk, ExceptT.pure, ExceptT.bind, ExceptT.bindCont, ExceptT.lift,
     MonadLift.monadLift, monadLift, liftM, Functor.map, EStateM.map,
-    Sail.assert, PreSail.assert]
+    Sail.sail_assert, PreSail.sail_assert]
 
 /-- **`check_pma_with_pmp_priority` permits an aligned writable store.** The PMA check
     succeeds first, so the PMP fallback is never consulted (any privilege). Twin of
@@ -178,11 +185,11 @@ theorem within_mmio_writable_ram (addr : physaddr) (width : Nat) (s : SailState)
     (within_mmio_writable addr width) s = .ok false s := by
   unfold within_mmio_writable
   -- Rewrite `get_config_rvfi ()` everywhere at once (Decidable instance included) so the
-  -- RVFI guard stays well-typed and reduces via `Bool.false_eq_true`/`if_false`.
+  -- RVFI guard stays well-typed and reduces via `Bool.false_eq_true`/`ite_false`.
   rw [show get_config_rvfi () = false from rfl]
-  simp only [Bool.false_eq_true, if_false,
+  simp only [orM, toBool, Bool.false_eq_true, ite_false,
     bind, EStateM.bind, hclint, hsig, hhtif,
-    pure, EStateM.pure, Bool.false_or, Bool.false_and]
+    pure, EStateM.pure, Bool.false_and]
 
 /-- **`phys_access_check` permits a bare-mode aligned writable store.** Composes the
     store-side `pmpCheck` `none` result with the `pmaCheck` `Ok alignedAccessInfo`. -/
@@ -338,7 +345,7 @@ theorem mem_write_ea_plain (addr : BitVec 64) (width : Nat) (s : SailState) (mst
     effectivePrivilege_machine s _ mst _ h_mprv,
     hcheck, alignedAccessInfo, hsplit, misaligned_order_one,
     Int.toNat_one, Int.toNat_zero, untilFuelM_one,
-    Sail.assert, PreSail.assert, if_true,
+    Sail.sail_assert, PreSail.sail_assert, ite_true,
     BitVec.addInt, Int.natCast_zero, Int.zero_mul, Int.zero_add,
     ofInt_zero_bv, add_zero_physaddrbits,
     Int.toNat_natCast, bits_of_physaddr_mk,
@@ -386,11 +393,11 @@ theorem checked_mem_write_store_N (w : Nat) (addr : BitVec 64) (s s' : SailState
   simp +decide only [SailME.run, PreSail.PreSailME.run,
     hcheck, alignedAccessInfo, hsplit, misaligned_order_one,
     Int.toNat_one, Int.toNat_zero, untilFuelM_one,
-    Sail.assert, PreSail.assert, if_true,
+    Sail.sail_assert, PreSail.sail_assert, ite_true,
     BitVec.addInt, Int.natCast_zero, Int.zero_mul, Int.zero_add,
     ofInt_zero_bv, add_zero_physaddrbits,
     Int.toNat_natCast, bits_of_physaddr_mk,
-    hpmp, hmmio, if_false, write_kind_of_flags,
+    hpmp, hmmio, ite_false, write_kind_of_flags,
     EStateM.map, bind, EStateM.bind, pure, EStateM.pure,
     ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure,
     MonadLift.monadLift, monadLift, liftM, Functor.map]
@@ -485,7 +492,7 @@ theorem vmem_write_addr_store_core (w : Nat) (vaddr : virtaddr) (s s' : SailStat
     h_match h_write h_palign hclint hsig hhtif hwrite
   unfold vmem_write_addr
   simp +decide only [h_valign, Functions.not, Bool.not_true, Bool.not_false,
-    Bool.false_eq_true, if_false,
+    Bool.false_eq_true, ite_false,
     SailME.run, PreSail.PreSailME.run,
     hpage, PreSail.readReg, h_priv, h_mst,
     effectivePrivilege_machine s _ mst _ h_mprv, translationMode_machine,
@@ -494,7 +501,7 @@ theorem vmem_write_addr_store_core (w : Nat) (vaddr : virtaddr) (s s' : SailStat
     Bool.false_and, Bool.true_and, ite_self,
     Int.toNat_natCast,
     htrans, zero_extend64_id,
-    Sail.assert, PreSail.assert, if_true,
+    Sail.sail_assert, PreSail.sail_assert, ite_true,
     EStateM.map, bind, EStateM.bind, pure, EStateM.pure, EStateM.get,
     get, MonadState.get, getThe, MonadStateOf.get,
     ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure,

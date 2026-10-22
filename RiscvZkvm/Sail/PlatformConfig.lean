@@ -257,7 +257,7 @@ def misaligned_exception_str_backwards (arg_ : String) : SailM misaligned_except
   | "AlignmentException" => (pure AlignmentException)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def misaligned_exception_str_forwards_matches (arg_ : misaligned_exception) : Bool :=
@@ -304,7 +304,7 @@ def atomic_support_str_backwards (arg_ : String) : SailM AtomicSupport := do
   | "AMOCASQ" => (pure AMOCASQ)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def atomic_support_str_forwards (arg_ : AtomicSupport) : String :=
@@ -552,14 +552,15 @@ def bit_maybe_w_forwards (arg_ : (BitVec 1)) : String :=
   | _ => ""
 
 def fence_bits_forwards (arg_ : (BitVec 4)) : String :=
-  match arg_ with
-  | 0b0000 => "0"
-  | v__8 =>
-    (let i : (BitVec 1) := (Sail.BitVec.extractLsb v__8 3 3)
-    let w : (BitVec 1) := (Sail.BitVec.extractLsb v__8 0 0)
-    let r : (BitVec 1) := (Sail.BitVec.extractLsb v__8 1 1)
-    let o : (BitVec 1) := (Sail.BitVec.extractLsb v__8 2 2)
-    let i : (BitVec 1) := (Sail.BitVec.extractLsb v__8 3 3)
+  let b__0 := arg_
+  if ((b__0 == (0x0#4 : (BitVec 4))) : Bool)
+  then "0"
+  else
+    (let i : (BitVec 1) := (Sail.BitVec.extractLsb b__0 3 3)
+    let w : (BitVec 1) := (Sail.BitVec.extractLsb b__0 0 0)
+    let r : (BitVec 1) := (Sail.BitVec.extractLsb b__0 1 1)
+    let o : (BitVec 1) := (Sail.BitVec.extractLsb b__0 2 2)
+    let i : (BitVec 1) := (Sail.BitVec.extractLsb b__0 3 3)
     (String.append (bit_maybe_i_forwards i)
       (String.append (bit_maybe_o_forwards o)
         (String.append (bit_maybe_r_forwards r) (String.append (bit_maybe_w_forwards w) "")))))
@@ -573,7 +574,7 @@ def itype_mnemonic_forwards (arg_ : iop) : String :=
   | .ORI => "ori"
   | .ANDI => "andi"
 
-/-- Type quantifiers: k_ex481387_ : Bool -/
+/-- Type quantifiers: k_ex480179_ : Bool -/
 def maybe_u_forwards (arg_ : Bool) : String :=
   match arg_ with
   | true => "u"
@@ -587,7 +588,7 @@ def mul_mnemonic_forwards (arg_ : mul_op) : SailM String := do
   | { result_part := .High, signed_rs1 := .Unsigned, signed_rs2 := .Unsigned } => (pure "mulhu")
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def encdec_reg_forwards (arg_ : regidx) : (BitVec 5) :=
@@ -693,7 +694,7 @@ def reg_name_forwards (arg_ : regidx) : SailM String := do
       | .some result => (pure result)
       | _ =>
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
 
 def rtype_mnemonic_forwards (arg_ : rop) : String :=
@@ -856,7 +857,7 @@ def assembly_forwards (arg_ : instruction) : SailM String := do
                 (HAppend.hAppend (sep_forwards ()) (fence_bits_forwards succ))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .ECALL () => (pure "ecall")
   | .MRET () => (pure "mret")
@@ -956,7 +957,7 @@ def assembly_forwards (arg_ : instruction) : SailM String := do
         (String.append (spc_forwards ()) (String.append (← (hex_bits_16_forwards s)) ""))))
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def assembly_forwards_matches (arg_ : instruction) : Bool :=
@@ -1502,39 +1503,46 @@ def currentlyEnabled (merge_var : extension) : SailM Bool := do
   | .Ext_Zvks => (pure (hartSupports Ext_Zvks))
   | .Ext_Zvksc => (pure (hartSupports Ext_Zvksc))
   | .Ext_Zvksg => (pure (hartSupports Ext_Zvksg))
-  | .Ext_Ssnpm => (pure ((hartSupports Ext_Ssnpm) && (← (currentlyEnabled Ext_S))))
-  | .Ext_Sstvala => (pure ((hartSupports Ext_Sstvala) && (← (currentlyEnabled Ext_S))))
+  | .Ext_Ssnpm => (pure (hartSupports Ext_Ssnpm)) <&&> (do (currentlyEnabled Ext_S))
+  | .Ext_Sstvala => (pure (hartSupports Ext_Sstvala)) <&&> (do (currentlyEnabled Ext_S))
   | .Ext_Smmpm => (pure (hartSupports Ext_Smmpm))
   | .Ext_Smnpm => (pure (hartSupports Ext_Smnpm))
-  | .Ext_Sspm => (pure ((hartSupports Ext_Sspm) && (← (currentlyEnabled Ext_S))))
-  | .Ext_Supm => (pure ((hartSupports Ext_Supm) && (← (currentlyEnabled Ext_U))))
+  | .Ext_Sspm => (pure (hartSupports Ext_Sspm)) <&&> (do (currentlyEnabled Ext_S))
+  | .Ext_Supm => (pure (hartSupports Ext_Supm)) <&&> (do (currentlyEnabled Ext_U))
   | .Ext_Sstc => (pure (hartSupports Ext_Sstc))
   | .Ext_U =>
-    (pure ((hartSupports Ext_U) && (((_get_Misa_U (← readReg misa)) == 1#1) && (← (currentlyEnabled
-              Ext_Zicsr)))))
+    (pure (hartSupports Ext_U)) <&&> (do
+      (pure ((_get_Misa_U (← readReg misa)) == 1#1)) <&&> (do
+        (currentlyEnabled Ext_Zicsr)))
   | .Ext_S =>
-    (pure ((hartSupports Ext_S) && (((_get_Misa_S (← readReg misa)) == 1#1) && (← (currentlyEnabled
-              Ext_Zicsr)))))
-  | .Ext_Ssu64xl => (pure ((hartSupports Ext_Ssu64xl) && (← (currentlyEnabled Ext_S))))
+    (pure (hartSupports Ext_S)) <&&> (do
+      (pure ((_get_Misa_S (← readReg misa)) == 1#1)) <&&> (do
+        (currentlyEnabled Ext_Zicsr)))
+  | .Ext_Ssu64xl => (pure (hartSupports Ext_Ssu64xl)) <&&> (do (currentlyEnabled Ext_S))
   | .Ext_Svbare => (currentlyEnabled Ext_S)
-  | .Ext_Sv32 => (pure ((hartSupports Ext_Sv32) && (← (currentlyEnabled Ext_S))))
-  | .Ext_Sv39 => (pure ((hartSupports Ext_Sv39) && (← (currentlyEnabled Ext_S))))
-  | .Ext_Sv48 => (pure ((hartSupports Ext_Sv48) && (← (currentlyEnabled Ext_S))))
-  | .Ext_Sv57 => (pure ((hartSupports Ext_Sv57) && (← (currentlyEnabled Ext_S))))
-  | .Ext_Sstvecd => (pure ((hartSupports Ext_Sstvecd) && (← (currentlyEnabled Ext_S))))
-  | .Ext_Sscounterenw => (pure ((hartSupports Ext_Sscounterenw) && (← (currentlyEnabled Ext_S))))
-  | .Ext_Smstateen => (pure ((hartSupports Ext_Smstateen) && (← (currentlyEnabled Ext_Zicsr))))
-  | .Ext_Ssstateen => (pure ((hartSupports Ext_Ssstateen) && (← (currentlyEnabled Ext_Zicsr))))
+  | .Ext_Sv32 => (pure (hartSupports Ext_Sv32)) <&&> (do (currentlyEnabled Ext_S))
+  | .Ext_Sv39 => (pure (hartSupports Ext_Sv39)) <&&> (do (currentlyEnabled Ext_S))
+  | .Ext_Sv48 => (pure (hartSupports Ext_Sv48)) <&&> (do (currentlyEnabled Ext_S))
+  | .Ext_Sv57 => (pure (hartSupports Ext_Sv57)) <&&> (do (currentlyEnabled Ext_S))
+  | .Ext_Sstvecd => (pure (hartSupports Ext_Sstvecd)) <&&> (do (currentlyEnabled Ext_S))
+  | .Ext_Sscounterenw => (pure (hartSupports Ext_Sscounterenw)) <&&> (do (currentlyEnabled Ext_S))
+  | .Ext_Smstateen => (pure (hartSupports Ext_Smstateen)) <&&> (do (currentlyEnabled Ext_Zicsr))
+  | .Ext_Ssstateen => (pure (hartSupports Ext_Ssstateen)) <&&> (do (currentlyEnabled Ext_Zicsr))
   | .Ext_F =>
-    (pure ((hartSupports Ext_F) && (((_get_Misa_F (← readReg misa)) == 1#1) && (((_get_Mstatus_FS
-                (← readReg mstatus)) != 0b00#2) && (← (currentlyEnabled Ext_Zicsr))))))
+    (pure (hartSupports Ext_F)) <&&> (do
+      (pure ((_get_Misa_F (← readReg misa)) == 1#1)) <&&> (do
+        (pure ((_get_Mstatus_FS (← readReg mstatus)) != 0b00#2)) <&&> (do
+          (currentlyEnabled Ext_Zicsr))))
   | .Ext_D =>
-    (pure ((hartSupports Ext_D) && (((_get_Misa_D (← readReg misa)) == 1#1) && (((_get_Mstatus_FS
-                (← readReg mstatus)) != 0b00#2) && ((flen ≥b 64) && (← (currentlyEnabled
-                  Ext_Zicsr)))))))
+    (pure (hartSupports Ext_D)) <&&> (do
+      (pure ((_get_Misa_D (← readReg misa)) == 1#1)) <&&> (do
+        (pure ((_get_Mstatus_FS (← readReg mstatus)) != 0b00#2)) <&&> (do
+          (pure (flen ≥b 64)) <&&> (do
+            (currentlyEnabled Ext_Zicsr)))))
   | .Ext_Zfinx =>
-    (pure ((hartSupports Ext_Zfinx) && ((← (currentlyEnabled Ext_Zicsr)) && (← (is_zfinx_enabled_by_stateen
-              ())))))
+    (pure (hartSupports Ext_Zfinx)) <&&> (do
+      (currentlyEnabled Ext_Zicsr) <&&> (do
+        (is_zfinx_enabled_by_stateen ())))
   | .Ext_Zvl32b => (pure (hartSupports Ext_Zvl32b))
   | .Ext_Zvl64b => (pure (hartSupports Ext_Zvl64b))
   | .Ext_Zvl128b => (pure (hartSupports Ext_Zvl128b))
@@ -1542,56 +1550,70 @@ def currentlyEnabled (merge_var : extension) : SailM Bool := do
   | .Ext_Zvl512b => (pure (hartSupports Ext_Zvl512b))
   | .Ext_Zvl1024b => (pure (hartSupports Ext_Zvl1024b))
   | .Ext_Zve32x =>
-    (pure ((hartSupports Ext_Zve32x) && ((← (currentlyEnabled Ext_Zvl32b)) && (((_get_Mstatus_VS
-                (← readReg mstatus)) != 0b00#2) && (← (currentlyEnabled Ext_Zicsr))))))
+    (pure (hartSupports Ext_Zve32x)) <&&> (do
+      (currentlyEnabled Ext_Zvl32b) <&&> (do
+        (pure ((_get_Mstatus_VS (← readReg mstatus)) != 0b00#2)) <&&> (do
+          (currentlyEnabled Ext_Zicsr))))
   | .Ext_Zve32f =>
-    (pure ((hartSupports Ext_Zve32f) && ((← (currentlyEnabled Ext_Zve32x)) && (← (currentlyEnabled
-              Ext_F)))))
+    (pure (hartSupports Ext_Zve32f)) <&&> (do
+      (currentlyEnabled Ext_Zve32x) <&&> (do
+        (currentlyEnabled Ext_F)))
   | .Ext_Zve64x =>
-    (pure ((hartSupports Ext_Zve64x) && ((← (currentlyEnabled Ext_Zvl64b)) && (← (currentlyEnabled
-              Ext_Zve32x)))))
+    (pure (hartSupports Ext_Zve64x)) <&&> (do
+      (currentlyEnabled Ext_Zvl64b) <&&> (do
+        (currentlyEnabled Ext_Zve32x)))
   | .Ext_Zve64f =>
-    (pure ((hartSupports Ext_Zve64f) && ((← (currentlyEnabled Ext_Zve64x)) && (← (currentlyEnabled
-              Ext_Zve32f)))))
+    (pure (hartSupports Ext_Zve64f)) <&&> (do
+      (currentlyEnabled Ext_Zve64x) <&&> (do
+        (currentlyEnabled Ext_Zve32f)))
   | .Ext_Zve64d =>
-    (pure ((hartSupports Ext_Zve64d) && ((← (currentlyEnabled Ext_Zve64f)) && (← (currentlyEnabled
-              Ext_D)))))
+    (pure (hartSupports Ext_Zve64d)) <&&> (do
+      (currentlyEnabled Ext_Zve64f) <&&> (do
+        (currentlyEnabled Ext_D)))
   | .Ext_V =>
-    (pure ((hartSupports Ext_V) && (((_get_Misa_V (← readReg misa)) == 1#1) && ((← (currentlyEnabled
-                Ext_Zvl128b)) && (← (currentlyEnabled Ext_Zve64d))))))
+    (pure (hartSupports Ext_V)) <&&> (do
+      (pure ((_get_Misa_V (← readReg misa)) == 1#1)) <&&> (do
+        (currentlyEnabled Ext_Zvl128b) <&&> (do
+          (currentlyEnabled Ext_Zve64d))))
   | .Ext_Zvfh =>
-    (pure ((hartSupports Ext_Zvfh) && ((← (currentlyEnabled Ext_Zve32f)) && (← (currentlyEnabled
-              Ext_Zfhmin)))))
+    (pure (hartSupports Ext_Zvfh)) <&&> (do
+      (currentlyEnabled Ext_Zve32f) <&&> (do
+        (currentlyEnabled Ext_Zfhmin)))
   | .Ext_Zvfhmin =>
-    (pure (((hartSupports Ext_Zvfhmin) && (← (currentlyEnabled Ext_Zve32f))) || (← (currentlyEnabled
-            Ext_Zvfh))))
-  | .Ext_Smcntrpmf => (pure ((hartSupports Ext_Smcntrpmf) && (← (currentlyEnabled Ext_Zicntr))))
+    (pure (hartSupports Ext_Zvfhmin)) <&&> (do
+      (currentlyEnabled Ext_Zve32f)) <||> (do
+      (currentlyEnabled Ext_Zvfh))
+  | .Ext_Smcntrpmf => (pure (hartSupports Ext_Smcntrpmf)) <&&> (do (currentlyEnabled Ext_Zicntr))
   | .Ext_Zicfilp =>
-    (pure ((← (currentlyEnabled Ext_Zicsr)) && ((hartSupports Ext_Zicfilp) && (← (get_xLPE
-              (← readReg cur_privilege))))))
-  | .Ext_Svnapot => (pure ((hartSupports Ext_Svnapot) && (← (currentlyEnabled Ext_Sv39))))
-  | .Ext_Svpbmt => (pure ((hartSupports Ext_Svpbmt) && (← (currentlyEnabled Ext_Sv39))))
-  | .Ext_Svrsw60t59b => (pure ((hartSupports Ext_Svrsw60t59b) && (← (currentlyEnabled Ext_Sv39))))
+    (currentlyEnabled Ext_Zicsr) <&&> (do
+      (pure (hartSupports Ext_Zicfilp)) <&&> (do
+        (get_xLPE (← readReg cur_privilege))))
+  | .Ext_Svnapot => (pure (hartSupports Ext_Svnapot)) <&&> (do (currentlyEnabled Ext_Sv39))
+  | .Ext_Svpbmt => (pure (hartSupports Ext_Svpbmt)) <&&> (do (currentlyEnabled Ext_Sv39))
+  | .Ext_Svrsw60t59b => (pure (hartSupports Ext_Svrsw60t59b)) <&&> (do (currentlyEnabled Ext_Sv39))
   | .Ext_Svvptc =>
-    (pure ((hartSupports Ext_Svvptc) && ((← (currentlyEnabled Ext_Sv32)) || (← (currentlyEnabled
-              Ext_Sv39)))))
+    (pure (hartSupports Ext_Svvptc)) <&&> (do
+      (currentlyEnabled Ext_Sv32) <||> (do
+        (currentlyEnabled Ext_Sv39)))
   | .Ext_Svade => (pure (hartSupports Ext_Svade))
   | .Ext_Svadu => (pure (hartSupports Ext_Svadu))
   | .Ext_Ssccptr =>
-    (pure ((hartSupports Ext_Ssccptr) && ((← (currentlyEnabled Ext_Sv32)) || (← (currentlyEnabled
-              Ext_Sv39)))))
-  | .Ext_C => (pure ((hartSupports Ext_C) && ((_get_Misa_C (← readReg misa)) == 1#1)))
+    (pure (hartSupports Ext_Ssccptr)) <&&> (do
+      (currentlyEnabled Ext_Sv32) <||> (do
+        (currentlyEnabled Ext_Sv39)))
+  | .Ext_C => (pure (hartSupports Ext_C)) <&&> (do (pure ((_get_Misa_C (← readReg misa)) == 1#1)))
   | .Ext_Zca =>
-    (pure ((hartSupports Ext_Zca) && ((← (currentlyEnabled Ext_C)) || (not (hartSupports Ext_C)))))
-  | .Ext_M => (pure ((hartSupports Ext_M) && ((_get_Misa_M (← readReg misa)) == 1#1)))
-  | .Ext_Zmmul => (pure ((hartSupports Ext_Zmmul) || (← (currentlyEnabled Ext_M))))
+    (pure (hartSupports Ext_Zca)) <&&> (do
+      (pure ((← (currentlyEnabled Ext_C)) || (not (hartSupports Ext_C)))))
+  | .Ext_M => (pure (hartSupports Ext_M)) <&&> (do (pure ((_get_Misa_M (← readReg misa)) == 1#1)))
+  | .Ext_Zmmul => (pure (hartSupports Ext_Zmmul)) <||> (do (currentlyEnabled Ext_M))
   | .Ext_Zkr => (pure (hartSupports Ext_Zkr))
   | .Ext_Zicsr => (pure (hartSupports Ext_Zicsr))
   | .Ext_Zicbom => (pure (hartSupports Ext_Zicbom))
   | .Ext_Zicboz => (pure (hartSupports Ext_Zicboz))
   | _ =>
     (do
-      assert false "Pattern match failure at extensions/Zicboz/zicboz_insts.sail:11.0-11.71"
+      sail_assert false "Pattern match failure at extensions/Zicboz/zicboz_insts.sail:11.0-11.71"
       throw Error.Exit)
 termination_by (let ext := merge_var
 (currentlyEnabled_measure ext)).toNat
@@ -1638,13 +1660,15 @@ def get_xLPE (p : Privilege) : SailM Bool := do
 termination_by (let _ := p
 2).toNat
 def is_hstateen_accessible (_ : Unit) : SailM Bool := do
-  (pure ((← (currentlyEnabled Ext_H)) && ((← (currentlyEnabled Ext_Smstateen)) || (← (currentlyEnabled
-            Ext_Ssstateen)))))
+  (currentlyEnabled Ext_H) <&&> (do
+    (currentlyEnabled Ext_Smstateen) <||> (do
+      (currentlyEnabled Ext_Ssstateen)))
 termination_by (let () := ()
 5).toNat
 def is_sstateen_accessible (_ : Unit) : SailM Bool := do
-  (pure ((← (currentlyEnabled Ext_S)) && ((← (currentlyEnabled Ext_Smstateen)) || (← (currentlyEnabled
-            Ext_Ssstateen)))))
+  (currentlyEnabled Ext_S) <&&> (do
+    (currentlyEnabled Ext_Smstateen) <||> (do
+      (currentlyEnabled Ext_Ssstateen)))
 termination_by (let () := ()
 2).toNat
 def is_zfinx_enabled_by_stateen (_ : Unit) : SailM Bool := do
@@ -1706,11 +1730,13 @@ def legalize_menvcfg (o : (BitVec 64)) (v : (BitVec 64)) : SailM (BitVec 64) := 
 
 def legalize_mseccfg (o : (BitVec 64)) (v : (BitVec 64)) : SailM (BitVec 64) := do
   let sseed_read_only_zero ← do
-    (pure ((false : Bool) || ((not (← (currentlyEnabled Ext_S))) || (not
-            (← (currentlyEnabled Ext_Zkr))))))
+    (pure (false : Bool)) <||> (do
+      (pure (not (← (currentlyEnabled Ext_S)))) <||> (do
+        (pure (not (← (currentlyEnabled Ext_Zkr))))))
   let useed_read_only_zero ← do
-    (pure ((false : Bool) || ((not (← (currentlyEnabled Ext_U))) || (not
-            (← (currentlyEnabled Ext_Zkr))))))
+    (pure (false : Bool)) <||> (do
+      (pure (not (← (currentlyEnabled Ext_U)))) <||> (do
+        (pure (not (← (currentlyEnabled Ext_Zkr))))))
   let v := (Mk_Seccfg v)
   (pure (_update_Seccfg_USEED
       (_update_Seccfg_SSEED
@@ -1805,7 +1831,7 @@ def encdec_mul_op_forwards (arg_ : mul_op) : SailM (BitVec 3) := do
   | { result_part := .High, signed_rs1 := .Unsigned, signed_rs2 := .Unsigned } => (pure 0b011#3)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def encdec_uop_forwards (arg_ : uop) : (BitVec 7) :=
@@ -1813,13 +1839,15 @@ def encdec_uop_forwards (arg_ : uop) : (BitVec 7) :=
   | .LUI => 0b0110111#7
   | .AUIPC => 0b0010111#7
 
-/-- Type quantifiers: k_ex481878_ : Bool, width : Nat, List.elem width [1, 2, 4, 8] -/
+/-- Type quantifiers: k_ex480670_ : Bool, width : Nat, List.elem width [1, 2, 4, 8] -/
 def valid_load_encdec (width : Nat) (is_unsigned : Bool) : Bool :=
   ((width <b xlen_bytes) || ((not is_unsigned) && (width ≤b xlen_bytes)))
 
 def virtual_memory_supported (_ : Unit) : SailM Bool := do
-  (pure ((← (currentlyEnabled Ext_Sv32)) || ((← (currentlyEnabled Ext_Sv39)) || ((← (currentlyEnabled
-              Ext_Sv48)) || (← (currentlyEnabled Ext_Sv57))))))
+  (currentlyEnabled Ext_Sv32) <||> (do
+    (currentlyEnabled Ext_Sv39) <||> (do
+      (currentlyEnabled Ext_Sv48) <||> (do
+        (currentlyEnabled Ext_Sv57))))
 
 /-- Type quantifiers: arg_ : Nat, List.elem arg_ [1, 2, 4, 8] -/
 def width_enc_forwards (arg_ : Nat) : (BitVec 2) :=
@@ -1837,7 +1865,7 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
       then (pure ((lpl : (BitVec 20)) +++ (0b00000#5 +++ 0b0010111#7)))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .UTYPE (imm, rd, op) =>
     (pure ((imm : (BitVec 20)) +++ ((encdec_reg_forwards rd) +++ (encdec_uop_forwards op))))
@@ -1851,7 +1879,7 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
                   imm 10 10) +++ ((Sail.BitVec.extractLsb imm 18 11) +++ ((encdec_reg_forwards rd) +++ 0b1101111#7)))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .JALR (imm, rs1, rd) =>
     (pure ((imm : (BitVec 12)) +++ ((encdec_reg_forwards rs1) +++ (0b000#3 +++ ((encdec_reg_forwards
@@ -1867,7 +1895,7 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
                         imm 3 0) +++ ((Sail.BitVec.extractLsb imm 10 10) +++ 0b1100011#7)))))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .ITYPE (imm, rs1, rd, op) =>
     (pure ((imm : (BitVec 12)) +++ ((encdec_reg_forwards rs1) +++ ((encdec_iop_forwards op) +++ ((encdec_reg_forwards
@@ -1919,7 +1947,7 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
                   is_unsigned) +++ ((width_enc_forwards width) +++ ((encdec_reg_forwards rd) +++ 0b0000011#7))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .STORE (imm, rs2, rs1, width) =>
     (pure ((Sail.BitVec.extractLsb imm 11 5) +++ ((encdec_reg_forwards rs2) +++ ((encdec_reg_forwards
@@ -1973,17 +2001,18 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
         (pure (0b0001001#7 +++ ((encdec_reg_forwards rs2) +++ ((encdec_reg_forwards rs1) +++ (0b000#3 +++ (0b00000#5 +++ 0b1110011#7))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .MUL (rs2, rs1, rd, mul_op) =>
     (do
-      if (((← (currentlyEnabled Ext_M)) || (← (currentlyEnabled Ext_Zmmul))) : Bool)
+      if ((←((currentlyEnabled Ext_M) <||> (do
+           (currentlyEnabled Ext_Zmmul)))) : Bool)
       then
         (pure (0b0000001#7 +++ ((encdec_reg_forwards rs2) +++ ((encdec_reg_forwards rs1) +++ ((← (encdec_mul_op_forwards
                       mul_op)) +++ ((encdec_reg_forwards rd) +++ 0b0110011#7))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .DIV (rs2, rs1, rd, is_unsigned) =>
     (do
@@ -1993,7 +2022,7 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
                       is_unsigned) +++ ((encdec_reg_forwards rd) +++ 0b0110011#7)))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .REM (rs2, rs1, rd, is_unsigned) =>
     (do
@@ -2003,37 +2032,41 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
                       is_unsigned) +++ ((encdec_reg_forwards rd) +++ 0b0110011#7)))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .MULW (rs2, rs1, rd) =>
     (do
-      if (((xlen == 64) && ((← (currentlyEnabled Ext_M)) || (← (currentlyEnabled Ext_Zmmul)))) : Bool)
+      if ((←((pure (xlen == 64)) <&&> (do
+           (currentlyEnabled Ext_M) <||> (do
+             (currentlyEnabled Ext_Zmmul))))) : Bool)
       then
         (pure (0b0000001#7 +++ ((encdec_reg_forwards rs2) +++ ((encdec_reg_forwards rs1) +++ (0b000#3 +++ ((encdec_reg_forwards
                       rd) +++ 0b0111011#7))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .DIVW (rs2, rs1, rd, is_unsigned) =>
     (do
-      if (((xlen == 64) && (← (currentlyEnabled Ext_M))) : Bool)
+      if ((←((pure (xlen == 64)) <&&> (do
+           (currentlyEnabled Ext_M)))) : Bool)
       then
         (pure (0b0000001#7 +++ ((encdec_reg_forwards rs2) +++ ((encdec_reg_forwards rs1) +++ (0b10#2 +++ ((bool_bit_forwards
                       is_unsigned) +++ ((encdec_reg_forwards rd) +++ 0b0111011#7)))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .REMW (rs2, rs1, rd, is_unsigned) =>
     (do
-      if (((xlen == 64) && (← (currentlyEnabled Ext_M))) : Bool)
+      if ((←((pure (xlen == 64)) <&&> (do
+           (currentlyEnabled Ext_M)))) : Bool)
       then
         (pure (0b0000001#7 +++ ((encdec_reg_forwards rs2) +++ ((encdec_reg_forwards rs1) +++ (0b11#2 +++ ((bool_bit_forwards
                       is_unsigned) +++ ((encdec_reg_forwards rd) +++ 0b0111011#7)))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .CSRReg (csr, rs1, rd, op) =>
     (do
@@ -2043,7 +2076,7 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
                     op) +++ ((encdec_reg_forwards rd) +++ 0b1110011#7))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .CSRImm (csr, imm, rd, op) =>
     (do
@@ -2053,7 +2086,7 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
                       rd) +++ 0b1110011#7))))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .ZICBOM (cbop, rs1) =>
     (do
@@ -2062,7 +2095,7 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
         (pure ((encdec_cbop_forwards cbop) +++ ((encdec_reg_forwards rs1) +++ (0b010#3 +++ (0b00000#5 +++ 0b0001111#7)))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .ZICBOZ rs1 =>
     (do
@@ -2071,12 +2104,12 @@ noncomputable def encdec_forwards (arg_ : instruction) : SailM (BitVec 32) := do
         (pure (0b000000000100#12 +++ ((encdec_reg_forwards rs1) +++ (0b010#3 +++ (0b00000#5 +++ 0b0001111#7)))))
       else
         (do
-          assert false "Pattern match failure at unknown location"
+          sail_assert false "Pattern match failure at unknown location"
           throw Error.Exit))
   | .ILLEGAL s => (pure s)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def instruction_to_str (insn : instruction) : SailM String := do
@@ -2107,7 +2140,7 @@ def memory_region_type_str_backwards (arg_ : String) : SailM MemoryRegionType :=
   | "IO memory" => (pure IOMemory)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def memory_region_type_str_forwards (arg_ : MemoryRegionType) : String :=
@@ -2228,7 +2261,7 @@ def reservability_str_backwards (arg_ : String) : SailM Reservability := do
   | "RsrvEventual" => (pure RsrvEventual)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def trapCause_to_str (t : TrapCause) : String :=
@@ -2243,7 +2276,7 @@ def wait_name_backwards (arg_ : String) : SailM WaitReason := do
   | "WAIT-WRS-NTO" => (pure WAIT_WRS_NTO)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def wait_name_forwards (arg_ : WaitReason) : String :=
@@ -2285,13 +2318,13 @@ def plat_mstatus_legal_vs : ExtContextPolicy := ExtContext_FourState
 
 def plat_have_clint : Bool := true
 
-def plat_clint_base : physaddrbits := unwrapValue ((to_bits_checked (l := 64) (33554432 : Int)))
+def plat_clint_base : physaddrbits := unwrapValue (do (to_bits_checked (l := 64) (33554432 : Int)))
 
-def plat_clint_size : physaddrbits := unwrapValue ((to_bits_checked (l := 64) (786432 : Int)))
+def plat_clint_size : physaddrbits := unwrapValue (do (to_bits_checked (l := 64) (786432 : Int)))
 
 def plat_have_sig : Bool := true
 
-def plat_sig_base : physaddrbits := unwrapValue ((to_bits_checked (l := 64) (201326592 : Int)))
+def plat_sig_base : physaddrbits := unwrapValue (do (to_bits_checked (l := 64) (201326592 : Int)))
 
 def plat_sig_size : physaddrbits := (zero_extend (m := 64) 0x20#8)
 

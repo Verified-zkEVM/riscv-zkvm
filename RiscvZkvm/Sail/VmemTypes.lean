@@ -227,7 +227,7 @@ def mem_payload_name_backwards (arg_ : String) : SailM mem_payload := do
   | "ShadowStack" => (pure ShadowStack)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def mem_payload_name_forwards_matches (arg_ : mem_payload) : Bool :=
@@ -251,7 +251,7 @@ def mem_payload_str_backwards (arg_ : String) : SailM mem_payload := do
   | ".ss" => (pure ShadowStack)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def mem_payload_str_forwards_matches (arg_ : mem_payload) : Bool :=
@@ -336,7 +336,7 @@ def page_based_mem_type_forwards (arg_ : (BitVec 2)) : SailM page_based_mem_type
   | 0b10 => (pure PBMT_IO)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def page_based_mem_type_backwards (arg_ : page_based_mem_type) : (BitVec 2) :=

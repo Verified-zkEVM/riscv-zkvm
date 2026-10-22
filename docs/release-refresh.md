@@ -1,146 +1,162 @@
-# Lean 4.33.1 release review
+# Lean 4.35.0 upstream and zkEVM standards review
 
-The candidate uses Lean 4.33.1, official lean-sail v5
-[`0794631`](https://github.com/rems-project/lean-sail/tree/079463134b9c50450b8393e1566a09fc492a34d9),
-Sail [0.20.3](https://github.com/rems-project/sail/releases/tag/0.20.3-binary),
-and the proven Sail RISC-V [0.13.1](https://github.com/riscv/sail-riscv/releases/tag/0.13.1)
-model. It introduces no fork dependency. The selected modules and JSON
-configuration are unchanged. Exact pins and generated digests live in
-[`PROVENANCE.toml`](../sail-import/PROVENANCE.toml).
+Reviewed on 2026-10-22. The v0.5.0 candidate uses:
 
-Inputs were reviewed on 2026-10-06. Official v5 passes `Sail` and `SailTest`
-on Lean 4.33.1 without patches. Its namespace warning is already tracked by
-[lean-sail PR #14](https://github.com/rems-project/lean-sail/pull/14).
-
-**Release status: held as a draft.** PR #16 is merged and the annotated
-`v0.4.0` tag is preserved, but the required tagged-consumer cache check exposed
-a blocker after the cold archive build and upload passed. Do not update a
-downstream release pin yet. Source compilation and cached-consumer validation
-are separate requirements; the passing source checks below do not establish
-that the archive can be reused.
-
-The v5 ambiguous-namespace warning serializes its absolute source path into
-`Sail.Sail.olean`. A fresh consumer builds the same runtime at a different
-path, changing that olean's hash and invalidating the extraction through legacy
-transitive imports. An independent consumer downloaded the archive and used
-RV64 successfully, but importing all five libraries rebuilt
-`RiscvZkvm.Sail.RuntimeCompat` and generated Sail modules. The
-[hosted consumer check](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/37403317272)
-and duplicate local rebuild were stopped after this was confirmed; neither
-counts as a passing cache check.
-
-A core-only reproduction produces different oleans from identical sources at
-two absolute paths when the warning is enabled. Qualifying the namespace, as
-in upstream PR #14, makes them byte-identical. Keep the official upstream pin
-and wait for a warning-free upstream revision; adopting v6 also requires its
-finite-choice fix in PR #15. Revalidate the runtime, proofs, downstream build,
-and tagged-consumer cache before publishing a new immutable release tag.
-
-## Deferred upgrades and upstream reports
-
-- Lean 4.34.1 is deferred: its intrinsic `assert` syntax collides with generated
-  Sail runtime calls. Reported in [Sail #1765](https://github.com/rems-project/sail/issues/1765).
-- Runtime v6 needs a finite-choice elaboration fix on both toolchains.
-  Submitted as [lean-sail PR #15](https://github.com/rems-project/lean-sail/pull/15),
-  with kernel-checked regression proofs and builds on both versions.
-- Latest stable Sail RISC-V 0.14.1 generates an invalid VM termination measure.
-  Reported in [sail-riscv #2004](https://github.com/riscv/sail-riscv/issues/2004).
-  Its memory-proof migration also needs review alongside the extraction's
-  effectful short-circuit behavior, addressed by existing
-  [Sail PR #1750](https://github.com/rems-project/sail/pull/1750).
-  The maintainer confirmed that Lean/Rocq builds are advisory for model
-  releases and suggested main commit `4f8ce828fcac` and
-  [sail-riscv PR #2000](https://github.com/riscv/sail-riscv/pull/2000).
-  Issue #2004 was closed after that discussion, rather than after a verified
-  repair to the 0.14.1 tag. The suggested main commit also ports physical
-  memory to concurrency-v2, requiring a separate downstream proof migration.
-
-The v6/0.14.1 experiment is preserved separately; its runtime and termination
-patches are not part of this candidate. A compiler refresh does not imply that
-we have adopted the latest model or completed its proof migration.
-
-## PRs and issues
-
-| Item | Release decision |
+| Input | Candidate |
 | --- | --- |
-| [PR #9](https://github.com/Verified-zkEVM/riscv-zkvm/pull/9) | Included: metavariable guards, helper-tactic goal checks, and code-requirement diagnostics. The downstream diagnostic fixture needs the corresponding update. |
-| [PR #13](https://github.com/Verified-zkEVM/riscv-zkvm/pull/13) | Deferred at the user's request; preserve the current instruction API. |
-| [Issue #14](https://github.com/Verified-zkEVM/riscv-zkvm/issues/14) | Consume each register/memory ownership atom once when matching spec preconditions; regression proofs cover aliased instruction registers. |
-| [Issue #15](https://github.com/Verified-zkEVM/riscv-zkvm/issues/15) | Lean 4.33.1 candidate; 4.34.1 release deferred. |
+| Lean | `leanprover/lean4:v4.35.0` (latest stable; 4.36.0-rc1 is a prerelease) |
+| lean-sail | Official [v7](https://github.com/rems-project/lean-sail/tree/01bb54c7c8a69e52ba11863c67e7c403a6cd198a), `01bb54c7c8a69e52ba11863c67e7c403a6cd198a` |
+| Sail compiler | Official development commit [`57fd0cef`](https://github.com/rems-project/sail/commit/57fd0cef057bb90ed58208599056439edee22e60), plus the recorded upstream PR #1774 patch |
+| Sail RISC-V | Proven stable 0.13.1; latest stable 0.16 evaluated separately below |
 
-Ethereum standards review uses snapshot
-[`d1191c57`](https://github.com/eth-act/zkvm-standards/tree/d1191c57b5c19c13e4ad3520adf08fa75bb8db4d).
-These proposals are tentative and are a review reference, not a dependency.
+The compiler still reports version 0.20.3. Its released binary predates the
+assertion and effectful Boolean fixes, so a source build is required. The runtime
+is pinned directly to the official repository; there is no runtime fork.
+[`PROVENANCE.toml`](../sail-import/PROVENANCE.toml) records the exact compiler,
+runtime, model, JSON, generated tree, and compiler-patch digest.
 
-## Standards review
+The previous annotated `v0.4.0` tag remains immutable and its release remains a
+draft. It is not republished with different sources or artifacts. A successful
+new candidate needs a new tag and its own verified archive.
 
-The target remains `riscv64im_zicclsm-unknown-none-elf`, LP64, little endian,
-statically linked ELF, machine mode, without compressed or floating-point
-instructions. This package is a semantics and proof library, not a complete
-conforming zkVM implementation.
+## Previous blockers
 
-- RV64IM: the hand model still lacks the 13 word operations in PR #13.
-- Zicclsm: the hand model traps on misaligned multi-byte data accesses;
-  it does not implement the mandatory transparent handling or observability.
-- Instruction-address misalignment: abnormal-termination behavior needs a
-  separate audit of `step` and the interpreter; data misalignment is distinct.
-- Termination: the SP1/ZisK ECALL ABI remains the carried-over vendor ABI.
-  Verifier-side Type 1/Type 2 failure guarantees are outside this package.
-- ELF loading: the current loader is not certified against the new loading
-  and validation proposal (program headers, permissions, overlap, entry point,
-  and initial-memory constraints). Its known limitations remain documented.
-- IO, cryptographic accelerators, accelerated memory functions, linker scripts,
-  and stack/null guard regions need vendor-specific integration work. Existing
-  accelerator CSR semantics are not a proof of the proposed C ABI contracts.
+| Item | Status on 2026-10-22 |
+| --- | --- |
+| [lean-sail PR #14](https://github.com/rems-project/lean-sail/pull/14): ambiguous namespace/cache instability | The PR remains open, but upstream independently fixed it in [`2c33d84e`](https://github.com/rems-project/lean-sail/commit/2c33d84e7c467706fd6c373314367eb26133306d), included in v7. |
+| [lean-sail PR #15](https://github.com/rems-project/lean-sail/pull/15): finite-choice elaboration | Closed by replacement commit [`30af7f40`](https://github.com/rems-project/lean-sail/commit/30af7f40a5715e2a7b92d577c20393d3c512e7b2), included in v7. |
+| [Sail #1765](https://github.com/rems-project/sail/issues/1765): intrinsic `assert` collision | Fixed by merged [PR #1776](https://github.com/rems-project/sail/pull/1776); generated calls now use `sail_assert`. |
+| [Sail PR #1750](https://github.com/rems-project/sail/pull/1750): effectful Boolean short circuit | Superseded by merged [PR #1784](https://github.com/rems-project/sail/pull/1784); generated code uses `<&&>` and `<||>`. |
+| [sail-riscv #2004](https://github.com/riscv/sail-riscv/issues/2004): VM recursion measures | The newer model unrolls cross-stage recursion with `--const-prop-mutrec translate_g_stage`; its complete extraction still needs validation past newer errors. |
+| [sail-riscv PR #2000](https://github.com/riscv/sail-riscv/pull/2000): non-BEq type list | Merged. Model 0.16 uses the expanded list including `instr_info` and `HartState`. |
 
-These are follow-up requirements. Updating a compiler or Sail snapshot does
-not close gaps in the hand model or imply standards conformance. This release
-must preserve the existing instruction and machine API.
+Official v7 passes `Sail` and `SailTest` on Lean 4.35.0 (14 jobs) without warnings.
+Compiling its `Sail.Sail` module at two absolute paths produces byte-identical
+oleans, addressing the specific warning-path instability that held v0.4.0.
+A complete tagged-consumer archive check is still a separate release gate.
 
-## Generated review
+## Compiler correctness patch
 
-All existing generated module paths are retained; `Backend` and `RuntimeCompat`
-are added. The JSON configuration hash and selected Sail modules are unchanged.
-Instruction execution, decoder, memory-access, VM translation, exception, and
-platform-function bodies are unchanged after ignoring comments, whitespace, and
-module/namespace boilerplate. The identity helper moves from `Flow` to
-`Backend`, retaining its `RiscvZkvm.Sail.Functions.__id` name.
+[Sail PR #1774](https://github.com/rems-project/sail/pull/1774) remains open. The
+existing extraction demonstrates its precedence bug: the configured FP width
+was printed as `(if true then 8 else 4 * 8)`, which is 8, rather than
+`((if true then 8 else 4) * 8)`, which is 64. The selected instruction modules
+exclude floating-point execution, but the Sail register metadata still has to
+match its configuration.
 
-Other differences are extracted type-predicate definitions, reordered
-specialization declarations, renamed implicit floating-point width variables,
-and removal of duplicate identical string-pattern arms. The specialization
-wrapper now uses concurrency-v1 runtime names directly and drops unused
-concurrency-v2 wrappers. The compatibility adapter exports the same v5
-constants under the established names used by the proof API.
+The exact upstream patch, including its regression cases, is recorded in
+[`sail-import/patches/1774-type-arithmetic.patch`](../sail-import/patches/1774-type-arithmetic.patch).
+[`scripts/build-pinned-sail.sh`](../scripts/build-pinned-sail.sh) verifies its
+digest, checks out the immutable compiler commit, applies it, and builds from
+source. This is explicitly a patched compiler build, not an unmodified release
+binary. Remove the patch only when a pinned upstream revision contains the fix.
+The regenerated width is 64 and `SailInitTests.lean` checks it with kernel proofs.
 
-## Validation
+## Latest RISC-V model
 
-Official v5 runtime and runtime regression suite: pass on Lean 4.33.1.
-The runtime compatibility adapter, replacement-boundary regression, generated
-pin/source gates, program logic and issue #14 regressions, decoder tests,
-interpreter ELF tests (5/5), downstream shim check, and downstream
-`EvmAsm.Stateless.EntrySpec` build (935 jobs) pass. Fresh extraction and
-generated-diff review and independent byte-identical reproduction are complete.
-The instruction, memory, VM framing, and single-step/run equivalence proofs pass
-without hand-owned proof migrations. The axiom sweep passes: all 3,500 audited
-declarations use only the seven documented axioms. The complete no-warnings
-gate passes (184 jobs). Both required cold CI runs pass all five libraries,
-initializer/decoder tests, source gates, the axiom sweep, and interpreter ELF
-tests. The full evm-asm build passes (6,259 jobs); its final rebuild with the two
-new tactic-test shim imports also passes (6,263 jobs). All 3,106 downstream
-modules are reachable and all 60 generated shims are current.
+Latest stable 0.16 resolves to
+[`e5acebb04ff573e93203596486b831a5974117c3`](https://github.com/riscv/sail-riscv/tree/e5acebb04ff573e93203596486b831a5974117c3).
+Its [release notes](https://github.com/riscv/sail-riscv/blob/0.16/doc/ChangeLog.md)
+include new trigger and configuration support; 0.15 also moved physical memory
+to concurrency-v2. That is a memory-proof migration, not a compiler-only bump.
+Both the [0.16 Lean workflow](https://github.com/riscv/sail-riscv/actions/runs/38939586315)
+and [current-main workflow](https://github.com/riscv/sail-riscv/actions/runs/39649059304)
+fail in generated `Defs.lean`: unresolved `Nat` placeholders and an unknown
+`MemoryTriggerPayload` namespace. These are generated-model failures, distinct
+from downstream equivalence proofs. Their runs use Lean 4.29.0, so they do not
+establish a Lean 4.35 regression. An isolated local trial uses our eight selected modules, the upstream 0.16
+RV64D configuration, Lean 4.35.0, official runtime v7, and the patched compiler
+above. Generation succeeds, but `lake build LeanRV64D.Defs` reproduces the
+unresolved `Nat` placeholders in `MemoryTriggerPayload` (lines 1277–1281).
+The old 0.13.1 JSON is not claimed to be the 0.16 trial configuration. No
+generated Lean was edited to work around the failure. The reproduction is
+[reported on Sail #1472](https://github.com/rems-project/sail/issues/1472#issuecomment-6341918010),
+the existing missing-existential-width issue. Sail #1768 concerns a distinct
+typechecker multiplication-unification failure, not this accepted-input Lean
+extraction failure.
 
-The [uncached validation workflow](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/37398012658)
-independently reproduces the extraction byte for byte, builds the executable
-emulator (256 jobs), and passes all 50 selected upstream ELF tests on the same
-pins. Slower duplicate local full-model/emulator builds were stopped after
-these clean hosted results completed; they are not counted as local passes.
-The [required CI build](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/37394595210)
-also passes every source, library, axiom, warning, and interpreter gate.
+Retain model 0.13.1 for the release until a newer extraction and its memory-proof
+migration pass without editing generated Lean. The selected modules and JSON
+configuration are unchanged.
 
-The isolated downstream checkout uses evm-asm
-`7e65e4d024718f704226cd795f3d03d4e9aafe13`, matching Mathlib 4.33.1,
-and a local path to a separate copy of the candidate. Build artifacts are
-isolated from the release checkout; the sibling checkout is untouched.
-The downstream companion updates the diagnostic fixture, adds the generated
-tactic-test shims and their umbrella imports, and matches Lean/Mathlib 4.33.1.
+## Repository PRs and compatibility
+
+PR #9 and the issue #14 alias-register fix remain included. PR #13's thirteen
+word-operation constructors remain deferred as requested. The newly opened
+[PR #18](https://github.com/Verified-zkEVM/riscv-zkvm/pull/18) is a separate
+hint-interface and CLI feature, not a merged standards requirement. Its updated
+head `68b043db` removes the earlier missing `HintInterfaceDraft` import and adds
+interaction-tree/oracle completeness results. The author reports passing local
+checks on the existing stack; there are no published CI check results on that
+head. Its Lean 4.35 integration remains a separate follow-up and it is not
+included in this toolchain candidate. Issue #15's request for the example
+toolchain update is addressed when the new release and downstream pin are ready.
+The instruction,
+`MachineState`, `step`, theorem-name, and axiom boundaries remain those documented
+in the README. Proof adaptations use the new assertion-helper name and current
+core lemma names; they must not weaken theorem statements or invariants.
+
+The downstream check uses an isolated current evm-asm checkout at
+`7e65e4d024718f704226cd795f3d03d4e9aafe13` and matching Mathlib 4.35.0. It uses a
+separate candidate copy so parallel Lake builds cannot invalidate the release
+checkout's artifacts. Update the downstream release pin only after the archive
+and tagged-consumer checks pass.
+
+The migration also exposed expensive code-map comparisons in `seqFrame`.
+Composition now checks structural equality and range disjointness before the
+full definitional-equality fallback, restoring speculative state on failure.
+Regressions cover long adjacent blocks, equivalent requirements hidden by
+definitions, and incompatible overlaps. The previously failing MULMOD targets
+pass with their original proof structure and default heartbeat limit.
+
+## zkEVM standards review
+
+The canonical repository is now
+[`eth-act/zkevm-standards`](https://github.com/eth-act/zkevm-standards).
+Its main snapshot remains
+[`d1191c57b5c19c13e4ad3520adf08fa75bb8db4d`](https://github.com/eth-act/zkevm-standards/tree/d1191c57b5c19c13e4ad3520adf08fa75bb8db4d),
+unchanged since the preceding review. The following assessment checks the actual
+texts and current implementation; a standards review does not assert complete
+zkVM conformance.
+
+| Area | Current implementation and remaining obligations |
+| --- | --- |
+| RISC-V target | Target remains RV64IM + Zicclsm, LP64, little endian, machine mode, flat memory, static ELF, without C/F/D. The hand model lacks the 13 word operations in deferred PR #13. The generated Sail configuration retains broader register/extension metadata; it is not the hand model's supported-instruction list. |
+| Misaligned data | The hand model requires aligned halfword/word/dword accesses and traps otherwise. Zicclsm requires transparent main-memory handling and unaligned-access observability. This remains a conformance gap; changing it requires a separately reviewed machine/proof/downstream migration. |
+| Instruction-address alignment | The standard requires abnormal termination when the ISA raises instruction-address-misaligned. `CodeMem` is an arbitrary map, `step` has no universal PC-alignment guard, and the ELF loader does not validate entry alignment. Missing code may stop execution, but is not a proof of the required exception semantics for all states. |
+| Termination | SP1/ZisK HALT/ECALL conventions remain preserved. Interpreter reporting of `a0` is a host convention; the model does not prove the standard's zero/nonzero `main` return contract or Type 1/Type 2 verifier soundness. Those are end-to-end runtime/verifier obligations. |
+| ELF loading | Magic/class/endianness/type/machine and file bounds are checked, memory comes from `PT_LOAD`, and absent BSS bytes read as zero. Missing checks include segment overlap, alignment/address bounds, W^X, executable permission policy, and entry membership/alignment. Permission enforcement and initial-state determinism across malformed overlapping segments are not established. Section headers are used only for optional `.tohost` reporting. |
+| IO C interface | Modeled `read_input` is idempotent and `write_output` appends bytes. These match part of the C contract, but do not certify the full vendor C adapter, input mapping/read-only behavior, linker integration, or host transcript/verifier binding. |
+| Cryptographic accelerators | Concrete ZisK CSR semantics remain preserved. They do not establish every function, ABI layout/alignment, status code, aliasing rule, or output contract in `zkvm_accelerators.h`. |
+| Accelerated memory operations | Acceleration is optional. Any provided `memcpy`/`memmove`/`memset`/`memcmp` implementation must preserve C semantics for arbitrary alignment, overlap where permitted, zero length, return value/sign, and symbol/link resolution. This package does not supply a certified vendor static library for those symbols. |
+| Memory layout | Vendor-specific layouts and linker scripts remain allowed. The carried-over validity ranges remain unchanged; the package does not claim binary portability across vendors or compatibility with Linux ELF layouts. |
+| Guard regions and startup/linking | The required first-4-KiB null trap region and at-least-4-KiB stack guard are not certified here. Some low addresses from `0x20` are valid in the carried-over model. `_start`, `main` return handling, heap symbols, segment layout, and static-library integration need vendor-side proofs. |
+
+Open proposals were reviewed separately from main: [#46](https://github.com/eth-act/zkevm-standards/pull/46)
+(`abort`), [#42](https://github.com/eth-act/zkevm-standards/pull/42) (host randomness),
+[#36](https://github.com/eth-act/zkevm-standards/pull/36) (cost estimation),
+[#27](https://github.com/eth-act/zkevm-standards/pull/27) (logging),
+[#26](https://github.com/eth-act/zkevm-standards/pull/26) (Keccak-f interface),
+[#22](https://github.com/eth-act/zkevm-standards/pull/22) (U256 interface), and
+[#20](https://github.com/eth-act/zkevm-standards/pull/20) (minimum memory resources).
+They are not merged requirements. In particular, existing concrete Keccak or
+arithmetic CSR semantics do not imply those proposed C interfaces, and no
+host-randomness axiom or unreviewed termination ABI is added by this refresh.
+
+## Validation status
+
+Runtime build, the runtime path-independence experiment, all hand-owned libraries,
+decode tests, and source pin/forbidden-tactic/reachability gates pass. The
+185-job warning gate reports zero hand-owned warnings. The kernel axiom sweep
+passes for 3498 declarations against the same seven documented axioms.
+The exact compiler-build script passes locally. [Clean extraction CI](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/39787930429)
+also builds it, reproduces the generated tree byte for byte, and passes all 50
+selected ELF tests. [Build CI](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/39801245497)
+passes all five libraries, decode and width/initializer regressions, warning and
+axiom gates, and all five interpreter CLI fixtures. The generated library also
+passed the initial cold CI build; the subsequent retry reuses that unchanged
+model build while checking the final hand-owned sources.
+
+The full downstream build and release-cache checks must pass before publication.
+This section is updated with actual final results; no previous-version pass is
+counted for this stack.
