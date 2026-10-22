@@ -35,4 +35,4 @@ lean_emulator_source = "https://github.com/riscv/sail-riscv/tree/main/lean_emula
 lean_emulator_first_release = "0.13"
 notes = "The executable Lean emulator is a validation artifact and is not included in the proof-model release archive."
 omitted_extension_policy = "Executable validation only: extensions omitted by sail_modules are treated as disabled; the theorem-facing extraction remains unchanged."
-last_elf_validation = "2026-10-06: 50/50 selected rv64ui-p tests passed in clean CI with Lean 4.33.1, official lean-sail v5, and Sail 0.20.3"
+last_elf_validation = "2026-10-22: 50/50 selected rv64ui-p tests passed in clean CI with Lean 4.35.0, official lean-sail v7, and Sail 57fd0cef plus the recorded PR #1774 patch (run 39787930429)"

@@ -140,10 +140,12 @@ Runtime build, the runtime path-independence experiment, all hand-owned librarie
 decode tests, and source pin/forbidden-tactic/reachability gates pass. The
 185-job warning gate reports zero hand-owned warnings. The kernel axiom sweep
 passes for 3498 declarations against the same seven documented axioms.
-The exact compiler-build script passes locally; clean CI also builds it and
-reproduces the generated tree byte for byte.
+The exact compiler-build script passes locally. [Clean extraction CI](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/39787930429)
+also builds it, reproduces the generated tree byte for byte, and passes all 50
+selected ELF tests. All five interpreter CLI fixtures pass locally. The cold CI
+build compiles all five libraries; its separate width/initializer test exposed
+ambiguous width names and missing lazy-Boolean proof plumbing, now corrected.
 
-The final five-library build, width/initializer regressions, interpreter CLI
-fixtures, emulator ELF tests, full downstream build, and release-cache checks
-must pass before publication. This section is updated with actual final results;
-no previous-version pass is counted for this stack.
+The corrected width/initializer regressions, full downstream build, and
+release-cache checks must pass before publication. This section is updated with
+actual final results; no previous-version pass is counted for this stack.
