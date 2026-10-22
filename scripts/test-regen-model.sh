@@ -64,4 +64,12 @@ test "$(cat "$fixture/RiscvZkvm/Interpreter/Decode.lean")" = 'hand-owned interpr
 test "$(cat "$fixture/RiscvZkvm/Rv64.lean")" = 'hand-owned root'
 PATH="$work/bin:$PATH" SAIL_BIN_DIR="$work/bin" \
   "$fixture/scripts/regen-model.sh" --check
+# A solver bundle may contain an older Sail binary. The explicitly selected
+# compiler must win over that bundle's compiler.
+mkdir "$work/solver-bin"
+cp "$work/bin/z3" "$work/solver-bin/z3"
+printf '#!/usr/bin/env bash\nexit 99\n' > "$work/solver-bin/sail"
+chmod +x "$work/solver-bin/sail"
+PATH="$work/bin:$PATH" SAIL_BIN_DIR="$work/bin" Z3_BIN_DIR="$work/solver-bin" \
+  "$fixture/scripts/regen-model.sh" --check
 echo 'test-regen-model: OK — only the generated subtree is replaced'

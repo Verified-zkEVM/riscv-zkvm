@@ -121,14 +121,33 @@ generated files; a digest proves identity, not correctness.
 
 ## Updating Lean or lean-sail
 
-Sail 0.20.3 targets the concurrency-v1 API of official `lean-sail` v5.
-Regeneration normalizes the backend's package/module names and copies
-`sail-import/RuntimeCompat.lean`, whose `export` aliases preserve the public
-names used by existing proofs without introducing semantics or axioms.
+The Lean 4.35.0 candidate uses official `lean-sail` v7. Model 0.13.1 still
+uses concurrency-v1; regeneration normalizes backend package/module names and
+copies `sail-import/RuntimeCompat.lean` to preserve the established proof names.
+The compiler now emits `sail_assert` and correct monadic short-circuit operators.
 
-The candidate retains Sail RISC-V 0.13.1. Model 0.14.1 and runtime v6 are
-pending upstream fixes; see [release review](release-refresh.md). Lean 4.34.1
-is deferred. Validate a newer combination before adopting its pins.
+The required fixes are newer than the Sail 0.20.3 binary release. Build the exact
+upstream compiler commit and recorded PR #1774 type-arithmetic patch using an
+opam switch with OCaml 5.4.1 and Dune >= 3.21:
+
+```bash
+# Supply Z3 from the official 0.20.3 binary bundle.
+export Z3_BIN_DIR=/path/to/sail-binary/bin
+export PATH="$Z3_BIN_DIR:$PATH"
+INSTALL_SAIL_DEPS=1 scripts/build-pinned-sail.sh "$PWD/generated/toolchain/sail"
+export SAIL_BIN_DIR="$PWD/generated/toolchain/sail/bin"
+scripts/regen-model.sh --check
+```
+
+The patch and its checksum are provenance inputs. `build-pinned-sail.sh` always
+checks out a fresh immutable compiler revision and verifies the patch before
+building. `check-model-pin.sh --write` never silently accepts a changed compiler
+patch digest. CI performs the same source build; using the released compiler
+binary instead would miss the assertion, short-circuit, and type-width fixes.
+
+The latest stable model 0.16 was tested separately and still fails in generated
+`MemoryTriggerPayload` definitions, before the concurrency-v2 proof migration.
+See the [release review](release-refresh.md) for actual results and standards gaps.
 
 When changing Lean:
 

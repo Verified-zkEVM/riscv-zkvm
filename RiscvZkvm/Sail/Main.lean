@@ -1,4 +1,3 @@
-import RiscvZkvm.Sail.Regs
 import RiscvZkvm.Sail.Step
 import RiscvZkvm.Sail.Model
 

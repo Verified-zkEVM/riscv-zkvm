@@ -217,9 +217,11 @@ def get_pmm (eff_privilege : Privilege) : SailM PointerMaskingMode := do
       "Hypervisor extension not supported")
 
 def is_pmm_applicable (access : (MemoryAccessType mem_payload)) (eff_privilege : Privilege) : SailM Bool := do
-  (pure ((bne access (InstructionFetch ())) && ((bne access (Load PageTableEntry)) && ((bne access
-            (Store PageTableEntry)) && (((eff_privilege == Machine) || ((_get_Mstatus_MXR
-                  (← readReg mstatus)) == 0#1)) && (xlen == 64))))))
+  (pure (bne access (InstructionFetch ()))) <&&> (do
+    (pure (bne access (Load PageTableEntry))) <&&> (do
+      (pure (bne access (Store PageTableEntry))) <&&> (do
+        (pure ((←((pure (eff_privilege == Machine)) <||> (do
+              (pure ((_get_Mstatus_MXR (← readReg mstatus)) == 0#1))))) && (xlen == 64))))))
 
 def get_pmlen (access : (MemoryAccessType mem_payload)) (eff_privilege : Privilege) : SailM Int := do
   if ((← (is_pmm_applicable access eff_privilege)) : Bool)

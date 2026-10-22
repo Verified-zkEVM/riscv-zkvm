@@ -45,7 +45,7 @@ jobs:
         run: |
           tag='${{ steps.resolve.outputs.tag }}'
           gh release view "$tag" >/dev/null 2>&1 \
-            || gh release create "$tag" --verify-tag --title "$tag" --generate-notes
+            || gh release create "$tag" --verify-tag --title "$tag" --generate-notes --prerelease
 
       # Keep this job uncached, unlike build.yml. A release archive is the one
       # artifact that must be reproducible from source at the tag: restoring
@@ -118,6 +118,8 @@ jobs:
           #check RiscvZkvm.Rv64.SailEquiv.sailStepN_run_sim
           #check RiscvZkvm.Rv64.cpsTripleWithin
           #check RiscvZkvm.Interpreter.decode
+
+          example : flen = 64 := rfl
           EOF
           cd "$consumer"
           {
@@ -145,3 +147,10 @@ jobs:
             echo "- Entries: $(tar tzf "$archive" | wc -l | tr -d ' ')"
             echo "- .olean files: $(tar tzf "$archive" | grep -c '\.olean$')"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # A cold build alone did not catch v0.4.0's warning-induced cache
+      # invalidation. Publish as a prerelease until the real consumer passes.
+      - name: Promote verified release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ steps.resolve.outputs.tag }}" --prerelease=false

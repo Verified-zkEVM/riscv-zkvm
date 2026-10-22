@@ -4,7 +4,6 @@ import RiscvZkvm.Sail.Errors
 import RiscvZkvm.Sail.MemAddrtype
 import RiscvZkvm.Sail.PlatformConfig
 import RiscvZkvm.Sail.Types
-import RiscvZkvm.Sail.Regs
 
 set_option maxHeartbeats 1_000_000_000
 set_option maxRecDepth 1_000_000
@@ -628,8 +627,9 @@ def ext_veto_disable_C (_ : Unit) : Bool :=
 
 def legalize_misa (m : (BitVec 64)) (v : (BitVec 64)) : SailM (BitVec 64) := do
   let v := (Mk_Misa v)
-  if (((not sys_enable_writable_misa) || (((_get_Misa_C v) == 0#1) && (((BitVec.access
-               (← readReg nextPC) 1) == 1#1) || (ext_veto_disable_C ())))) : Bool)
+  if ((←((pure (not sys_enable_writable_misa)) <||> (do
+       (pure ((_get_Misa_C v) == 0#1)) <&&> (do
+         (pure (((BitVec.access (← readReg nextPC) 1) == 1#1) || (ext_veto_disable_C ()))))))) : Bool)
   then (pure m)
   else
     (pure (_update_Misa_V
@@ -1245,7 +1245,7 @@ def _set_Satp64_Mode (r_ref : (RegisterRef (BitVec 64))) (v : (BitVec 4)) : Sail
   let r ← do (reg_deref r_ref)
   writeRegRef r_ref (_update_Satp64_Mode r v)
 
-/-- Type quantifiers: vectored_alignment_exp : Nat, k_ex481975_ : Bool, direct_alignment_exp : Nat, k_ex481973_
+/-- Type quantifiers: vectored_alignment_exp : Nat, k_ex480767_ : Bool, direct_alignment_exp : Nat, k_ex480765_
   : Bool, 2 ≤ direct_alignment_exp ∧ direct_alignment_exp ≤ 24, 2 ≤ vectored_alignment_exp
   ∧ vectored_alignment_exp ≤ 24 -/
 def legalize_tvec (o : (BitVec 64)) (v : (BitVec 64)) (direct_supported : Bool) (direct_alignment_exp : Nat) (vectored_supported : Bool) (vectored_alignment_exp : Nat) : SailM (BitVec 64) := do
@@ -1578,7 +1578,8 @@ def feature_enabled_for_priv (p : Privilege) (machine_enable_bit : (BitVec 1)) (
     else (pure FEATURE_ILLEGAL))
   | .User =>
     (do
-      if (((machine_enable_bit == 1#1) && ((not (← (currentlyEnabled Ext_S))) || (supervisor_enable_bit == 1#1))) : Bool)
+      if ((←((pure (machine_enable_bit == 1#1)) <&&> (do
+           (pure ((not (← (currentlyEnabled Ext_S))) || (supervisor_enable_bit == 1#1)))))) : Bool)
       then (pure FEATURE_ENABLED)
       else (pure FEATURE_ILLEGAL))
   | .VirtualSupervisor =>

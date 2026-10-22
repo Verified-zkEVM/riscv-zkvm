@@ -28,7 +28,7 @@ jobs:
           use-github-cache: false
           use-mathlib-cache: false
 
-      - name: Install official Sail binary and bundled Z3
+      - name: Install official bundled Z3
         run: |
           mkdir -p "$RUNNER_TEMP/sail"
           version=$(python3 -c 'import tomllib; print(tomllib.load(open("sail-import/PROVENANCE.toml", "rb"))["source"]["sail_compiler_version"])')
@@ -38,15 +38,26 @@ jobs:
           tar xzf "$RUNNER_TEMP/sail.tar.gz" -C "$RUNNER_TEMP/sail" --strip-components=1
           echo "$RUNNER_TEMP/sail/bin" >> "$GITHUB_PATH"
 
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.4.1"
+
+      - name: Build pinned Sail compiler and reviewed upstream fix
+        env:
+          INSTALL_SAIL_DEPS: "1"
+        run: |
+          scripts/build-pinned-sail.sh "$RUNNER_TEMP/pinned-sail"
+          echo "$RUNNER_TEMP/pinned-sail/bin" >> "$GITHUB_PATH"
+
       - name: Reproduce checked-in proof extraction
         env:
-          SAIL_BIN_DIR: ${{ runner.temp }}/sail/bin
+          SAIL_BIN_DIR: ${{ runner.temp }}/pinned-sail/bin
           Z3_BIN_DIR: ${{ runner.temp }}/sail/bin
         run: scripts/regen-model.sh --check
 
       - name: Build and test executable Lean emulator
         if: ${{ inputs.run_emulator_tests }}
         env:
-          SAIL_BIN_DIR: ${{ runner.temp }}/sail/bin
+          SAIL_BIN_DIR: ${{ runner.temp }}/pinned-sail/bin
           Z3_BIN_DIR: ${{ runner.temp }}/sail/bin
         run: scripts/validate-lean-emulator.sh --test

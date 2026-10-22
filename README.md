@@ -20,9 +20,11 @@ and [the WP framework notes](docs/agents/wp-framework.md) for the specification
 style.
 
 Everything is scoped to the RV64IM surface needed by the
-[`eth-act/zkvm-standards`](https://github.com/eth-act/zkvm-standards) RISC-V
+[`eth-act/zkevm-standards`](https://github.com/eth-act/zkevm-standards) RISC-V
 target, with the Zicsr, K, Zkr, Zicboz, and Zicbom definitions required by
 Sail's extension gating and model initialization.
+The [current standards review](docs/release-refresh.md#zkevm-standards-review)
+records remaining conformance gaps and pending proposals.
 
 The `RiscvZkvm.Sail` library's source, compiler, runtime, configuration, module
 scope, and content digest are pinned in

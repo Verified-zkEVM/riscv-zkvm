@@ -19,6 +19,15 @@ open Sail
 
 namespace RiscvZkvm.Interpreter
 
+-- The pinned configuration enables D in the Sail register metadata, even
+-- though floating-point instructions are outside our selected module scope.
+-- A backend precedence bug once printed `(if true then 8 else 4 * 8)` here,
+-- silently giving FP registers eight bits instead of sixty-four.
+example : xlen = 64 := rfl
+example : flen_bytes = 8 := rfl
+example : flen = 64 := rfl
+example : flenbits = BitVec 64 := rfl
+
 abbrev SailState := PreSail.SequentialState RegisterType trivialChoiceSource
 
 noncomputable def runSail (m : SailM α) (s : SailState) : Option (α × SailState) :=
@@ -55,6 +64,6 @@ example (s : SailState) :
     sail_estate_modifyGet, PreSail.writeReg, PreSail.readReg, EStateM.get, get, MonadState.get,
     getThe, MonadStateOf.get, currentlyEnabled, hartSupports,
     legalize_xenvcfg_cbie, legalize_senvcfg, legalize_mseccfg, legalize_menvcfg, to_bits_checked,
-    get_slice_int, assert, PreSail.assert, Std.ExtDHashMap.get?_insert]
+    get_slice_int, sail_assert, PreSail.sail_assert, Std.ExtDHashMap.get?_insert]
 
 end RiscvZkvm.Interpreter

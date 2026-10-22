@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.5.0 — Lean 4.35.0 (candidate)
+
+- Update to Lean 4.35.0 and official lean-sail v7. The upstream runtime now
+  includes the finite-choice and namespace-warning fixes needed for source
+  compilation and portable release-cache reuse.
+- Regenerate Sail RISC-V 0.13.1 with pinned upstream Sail development commit
+  `57fd0cef`, including the assertion-name and effectful short-circuit fixes.
+  Record and apply upstream PR #1774 during the compiler build to fix type-level
+  arithmetic precedence and restore the configured 64-bit FP register metadata.
+  Add kernel-checked width regressions. No generated Lean is edited by hand.
+- Migrate proof plumbing to `sail_assert`, lazy monadic Boolean operators, and
+  current core lemma names while preserving instruction/machine semantics and
+  public theorem statements.
+- Build the exact compiler and checked patch in extraction-validation CI. Fix
+  compiler-versus-solver PATH precedence and cover it with a regression check.
+- Evaluate model 0.16 with the same module scope on Lean 4.35.0; retain 0.13.1
+  because generated `MemoryTriggerPayload` definitions still fail. The
+  concurrency-v2 memory-proof migration remains separate. PR #13 stays deferred.
+- Refresh the zkEVM standards review, canonical repository URL, current main
+  snapshot and open proposals; document the remaining model, ELF, alignment,
+  guard-region, IO/accelerator, and verifier obligations.
+- Keep newly created releases as prereleases until the tagged-consumer archive
+  check passes. The held v0.4.0 tag remains unchanged.
+
 ## v0.4.0 — Lean 4.33.1
 
 - Update the toolchain to Lean 4.33.1 and use official lean-sail v5, replacing
