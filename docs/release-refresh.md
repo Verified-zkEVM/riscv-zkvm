@@ -100,6 +100,13 @@ separate candidate copy so parallel Lake builds cannot invalidate the release
 checkout's artifacts. Update the downstream release pin only after the archive
 and tagged-consumer checks pass.
 
+The migration also exposed expensive code-map comparisons in `seqFrame`.
+Composition now checks structural equality and range disjointness before the
+full definitional-equality fallback, restoring speculative state on failure.
+Regressions cover long adjacent blocks, equivalent requirements hidden by
+definitions, and incompatible overlaps. The previously failing MULMOD targets
+pass with their original proof structure and default heartbeat limit.
+
 ## zkEVM standards review
 
 The canonical repository is now
@@ -142,10 +149,12 @@ decode tests, and source pin/forbidden-tactic/reachability gates pass. The
 passes for 3498 declarations against the same seven documented axioms.
 The exact compiler-build script passes locally. [Clean extraction CI](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/39787930429)
 also builds it, reproduces the generated tree byte for byte, and passes all 50
-selected ELF tests. All five interpreter CLI fixtures pass locally. The cold CI
-build compiles all five libraries; its separate width/initializer test exposed
-ambiguous width names and missing lazy-Boolean proof plumbing, now corrected.
+selected ELF tests. [Build CI](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/39801245497)
+passes all five libraries, decode and width/initializer regressions, warning and
+axiom gates, and all five interpreter CLI fixtures. The generated library also
+passed the initial cold CI build; the subsequent retry reuses that unchanged
+model build while checking the final hand-owned sources.
 
-The corrected width/initializer regressions, full downstream build, and
-release-cache checks must pass before publication. This section is updated with
-actual final results; no previous-version pass is counted for this stack.
+The full downstream build and release-cache checks must pass before publication.
+This section is updated with actual final results; no previous-version pass is
+counted for this stack.
