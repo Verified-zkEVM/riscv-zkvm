@@ -12,7 +12,11 @@
   Add kernel-checked width regressions. No generated Lean is edited by hand.
 - Migrate proof plumbing to `sail_assert`, lazy monadic Boolean operators, and
   current core lemma names while preserving instruction/machine semantics and
-  public theorem statements.
+  public theorem statements. Migrate the direct-call compatibility import to
+  Lean's module system, preserving its public exports for downstream modules.
+- Keep large `seqFrame` compositions within the default proof budget by checking
+  code-range disjointness before unfolding code maps. Preserve the full
+  definitional-equality fallback and add composition regressions.
 - Build the exact compiler and checked patch in extraction-validation CI. Fix
   compiler-versus-solver PATH precedence and cover it with a regression check.
 - Evaluate model 0.16 with the same module scope on Lean 4.35.0; retain 0.13.1

@@ -59,7 +59,12 @@ example (s : SailState) :
 
 example (s : SailState) :
     (runSail (sail_model_init ()) s).isSome := by
+  have h_s : (_get_Misa_S (_update_Misa_MXL (Mk_Misa zeros)
+      (architecture_bits_forwards Architecture.RV64)) == 1#1) = false := by decide
+  have h_u : (_get_Misa_U (_update_Misa_MXL (Mk_Misa zeros)
+      (architecture_bits_forwards Architecture.RV64)) == 1#1) = false := by decide
   simp (config := { decide := true }) [andM, orM, toBool, RiscvZkvm.Sail.Functions.xlen,
+    h_s, h_u,
     runSail, sail_model_init, bind, EStateM.bind, pure, EStateM.pure,
     modify, modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
     sail_estate_modifyGet, PreSail.writeReg, PreSail.readReg, EStateM.get, get, MonadState.get,
