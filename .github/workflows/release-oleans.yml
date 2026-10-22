@@ -119,7 +119,7 @@ jobs:
           #check RiscvZkvm.Rv64.cpsTripleWithin
           #check RiscvZkvm.Interpreter.decode
 
-          example : flen = 64 := rfl
+          example : _root_.flen = 64 := rfl
           EOF
           cd "$consumer"
           {

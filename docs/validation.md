@@ -165,7 +165,7 @@ Two CI gates keep it that way:
   `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
   `bv_decide` fails the build rather than silently widening the base.
 * `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
-  environment (3500 declarations today) and fails on any axiom outside the table
+  environment (3498 declarations in the Lean 4.35.0 candidate) and fails on any axiom outside the table
   above, including `sorryAx`.
 
 The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the

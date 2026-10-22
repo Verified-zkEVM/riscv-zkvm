@@ -136,10 +136,14 @@ host-randomness axiom or unreviewed termination ABI is added by this refresh.
 
 ## Validation status
 
-Runtime build, the runtime path-independence experiment, initial hand-model /
-logic / interpreter builds, and source pin/forbidden-tactic/reachability gates
-pass. The deprecated core proof references found by the first build are updated.
-Independent regeneration, the final five-library build, width/initializer
-regressions, axiom and warning sweeps, emulator ELF tests, full downstream build,
-and release-cache checks must pass before publication. This section is updated
-with actual final results; no previous-version pass is counted for this stack.
+Runtime build, the runtime path-independence experiment, all hand-owned libraries,
+decode tests, and source pin/forbidden-tactic/reachability gates pass. The
+185-job warning gate reports zero hand-owned warnings. The kernel axiom sweep
+passes for 3498 declarations against the same seven documented axioms.
+The exact compiler-build script passes locally; clean CI also builds it and
+reproduces the generated tree byte for byte.
+
+The final five-library build, width/initializer regressions, interpreter CLI
+fixtures, emulator ELF tests, full downstream build, and release-cache checks
+must pass before publication. This section is updated with actual final results;
+no previous-version pass is counted for this stack.

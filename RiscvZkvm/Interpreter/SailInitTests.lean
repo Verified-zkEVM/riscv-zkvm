@@ -23,10 +23,10 @@ namespace RiscvZkvm.Interpreter
 -- though floating-point instructions are outside our selected module scope.
 -- A backend precedence bug once printed `(if true then 8 else 4 * 8)` here,
 -- silently giving FP registers eight bits instead of sixty-four.
-example : xlen = 64 := rfl
-example : flen_bytes = 8 := rfl
-example : flen = 64 := rfl
-example : flenbits = BitVec 64 := rfl
+example : _root_.xlen = 64 := rfl
+example : _root_.flen_bytes = 8 := rfl
+example : _root_.flen = 64 := rfl
+example : _root_.flenbits = BitVec 64 := rfl
 
 abbrev SailState := PreSail.SequentialState RegisterType trivialChoiceSource
 
@@ -59,7 +59,8 @@ example (s : SailState) :
 
 example (s : SailState) :
     (runSail (sail_model_init ()) s).isSome := by
-  simp (config := { decide := true }) [runSail, sail_model_init, bind, EStateM.bind, pure, EStateM.pure,
+  simp (config := { decide := true }) [andM, orM, toBool, RiscvZkvm.Sail.Functions.xlen,
+    runSail, sail_model_init, bind, EStateM.bind, pure, EStateM.pure,
     modify, modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
     sail_estate_modifyGet, PreSail.writeReg, PreSail.readReg, EStateM.get, get, MonadState.get,
     getThe, MonadStateOf.get, currentlyEnabled, hartSupports,
