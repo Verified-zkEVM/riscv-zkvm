@@ -69,7 +69,11 @@ RV64D configuration, Lean 4.35.0, official runtime v7, and the patched compiler
 above. Generation succeeds, but `lake build LeanRV64D.Defs` reproduces the
 unresolved `Nat` placeholders in `MemoryTriggerPayload` (lines 1277–1281).
 The old 0.13.1 JSON is not claimed to be the 0.16 trial configuration. No
-generated Lean was edited to work around the failure.
+generated Lean was edited to work around the failure. The reproduction is
+[reported on Sail #1472](https://github.com/rems-project/sail/issues/1472#issuecomment-6341918010),
+the existing missing-existential-width issue. Sail #1768 concerns a distinct
+typechecker multiplication-unification failure, not this accepted-input Lean
+extraction failure.
 
 Retain model 0.13.1 for the release until a newer extraction and its memory-proof
 migration pass without editing generated Lean. The selected modules and JSON

@@ -176,7 +176,7 @@ candidate's Lean sources, package pins, and provenance identical.
 
 1. Merge a green extraction commit.
 2. Create and push an annotated semver tag such as `v0.1.1`.
-3. The `release-oleans.yml` workflow creates the GitHub release if needed,
+3. The `release-oleans.yml` workflow creates a prerelease if needed,
    checks out that exact tag, builds only the five libraries
    (`RiscvZkvm.Sail`, `RiscvZkvm.Rv64`, `RiscvZkvm.Rv64.SailEquiv`,
    `RiscvZkvm.Rv64.Logic`, `RiscvZkvm.Interpreter`) into a wiped build
@@ -188,7 +188,8 @@ candidate's Lean sources, package pins, and provenance identical.
 4. In a clean consumer, pin the tag and run `lake build`. Confirm the log says
    the release archive was downloaded and that no `RiscvZkvm.*` module was
    rebuilt — the workflow's cache smoke test does exactly this for all five
-   libraries, which is what keeps EvmAsm's build from compiling them.
+   libraries, which is what keeps EvmAsm's build from compiling them. The workflow
+   promotes the prerelease only after this check passes.
 5. Only after that update evm-asm's dependency pin.
 
 Lake uses release archives only for tagged dependencies. Pinning `main` or a raw

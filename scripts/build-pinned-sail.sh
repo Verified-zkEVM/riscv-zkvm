@@ -23,6 +23,10 @@ import hashlib, pathlib, sys
 if hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest() != sys.argv[2]:
     sys.exit('build-pinned-sail: compiler patch digest mismatch')
 PY
+# ocaml/setup-ocaml selects a local switch in the checkout. Keep that selection
+# when the fresh compiler source is built outside the checkout directory.
+sail_switch="$(opam switch show)"
+export OPAMSWITCH="$sail_switch"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 git -C "$work" init --quiet

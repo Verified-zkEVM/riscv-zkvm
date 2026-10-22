@@ -34,9 +34,10 @@ need only Lean and Lake; Sail, OCaml, CMake, and Z3 are regeneration tools.
 
 ## Use as a dependency
 
-The Lean 4.33.1 candidate `v0.4.0` is held as a draft while an upstream runtime
-warning blocks release-cache reuse. See the [release review](docs/release-refresh.md).
-Do not bump downstream pins to it yet. The published `v0.3.1` release uses
+The Lean 4.35.0 candidate `v0.5.0` is being validated with official lean-sail v7;
+see the [release review](docs/release-refresh.md). The previous `v0.4.0` tag
+remains held as a draft. Do not bump downstream pins to either candidate yet.
+The published `v0.3.1` release uses
 Lean 4.33.0; match that toolchain when using its prebuilt oleans.
 
 Pin a published release tag so Lake can download the prebuilt oleans:
