@@ -84,9 +84,11 @@ configuration are unchanged.
 PR #9 and the issue #14 alias-register fix remain included. PR #13's thirteen
 word-operation constructors remain deferred as requested. The newly opened
 [PR #18](https://github.com/Verified-zkEVM/riscv-zkvm/pull/18) is a separate
-hint-interface feature, not a standards requirement. At head `f77d4e95` it imports
-`RiscvZkvm.Rv64.HintInterfaceDraft`, which is absent from its tree; its reported
-local checks therefore do not establish a clean-checkout build. It is not
+hint-interface and CLI feature, not a merged standards requirement. Its updated
+head `68b043db` removes the earlier missing `HintInterfaceDraft` import and adds
+interaction-tree/oracle completeness results. The author reports passing local
+checks on the existing stack; there are no published CI check results on that
+head. Its Lean 4.35 integration remains a separate follow-up and it is not
 included in this toolchain candidate. Issue #15's request for the example
 toolchain update is addressed when the new release and downstream pin are ready.
 The instruction,
