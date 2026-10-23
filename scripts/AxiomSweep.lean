@@ -32,12 +32,15 @@ open Lean
 /-- Declarations under these prefixes are audited. -/
 def scanPrefixes : List Name := [`RiscvZkvm.Rv64, `RiscvZkvm.Interpreter]
 
-/-- Modules to import. `RiscvZkvm.Rv64.SailEquiv` transitively pulls
-    `RiscvZkvm.Rv64` and the narrow `RiscvZkvm.Sail.InstsEnd` slice; importing
+/-- Import the base root explicitly: equivalence and logic consumers need not
+    import every optional base module (for example, resumable hint adapters).
+    `RiscvZkvm.Rv64.SailEquiv` pulls the narrow
+    `RiscvZkvm.Sail.InstsEnd` slice; importing
     the full `RiscvZkvm.Sail` root would drag in the very expensive `RvfiDii`
     module for no benefit here. -/
 def scanModules : Array Import :=
-  #[{ module := `RiscvZkvm.Rv64.SailEquiv }, { module := `RiscvZkvm.Rv64.Logic },
+  #[{ module := `RiscvZkvm.Rv64 },
+    { module := `RiscvZkvm.Rv64.SailEquiv }, { module := `RiscvZkvm.Rv64.Logic },
     { module := `RiscvZkvm.Interpreter }]
 
 /-- The axioms this project accepts, and why.

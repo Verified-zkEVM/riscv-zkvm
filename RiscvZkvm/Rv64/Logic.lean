@@ -90,3 +90,5 @@ import RiscvZkvm.Rv64.Logic.Tactics.PerfTrace
 -- someone has to read.
 import RiscvZkvm.Rv64.Logic.Tactics.XPermTests
 import RiscvZkvm.Rv64.Logic.Tactics.RunBlockTests
+import RiscvZkvm.Rv64.Logic.ResumableHints
+import RiscvZkvm.Rv64.Logic.ModInvHints

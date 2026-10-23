@@ -1,0 +1,16 @@
+name = "Op6Pancake"
+version = "0.1.0"
+defaultTargets = ["Op6Pancake"]
+
+# This experimental consumer is deliberately outside the Mathlib-free core.
+[[require]]
+name = "riscv-zkvm"
+path = "../.."
+
+[[require]]
+name = "flapjack"
+git = "https://github.com/flamingoponderado/flapjack"
+rev = "034bb5a1ed0b757082768d5406206bd2f8e31b7c"
+
+[[lean_lib]]
+name = "Op6Pancake"

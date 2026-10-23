@@ -170,6 +170,23 @@ def _wordop():
     ]
 
 
+@fixture("hint")
+def _hint():
+    """Call read_input (t0 = 0xF2), then load the first public byte and first hint byte."""
+    return [
+        *LOAD_DATA_BASE,
+        ADDI("a0", "t1", 0),       # a0 = 0xa0000000 (&buf_ptr)
+        ADDI("a1", "t1", 8),       # a1 = 0xa0000008 (&buf_len)
+        ADDI("t0", "zero", 0xF2),  # t0 = 0xF2 (read_input)
+        ECALL,
+        LD("t2", 0, "a0"),         # t2 = buf_ptr (0x40000000)
+        LD("a2", 0, "a1"),         # a2 = total stream length
+        LBU("a3", 0, "t2"),        # a3 = publicInput[0]
+        LBU("a4", 4, "t2"),        # a4 = hintTape[0] (when publicInput has 4 bytes)
+        *HALT,
+    ]
+
+
 # --- ELF emission ---------------------------------------------------------
 
 def build_elf(words):

@@ -92,6 +92,22 @@ check wordop \
   'stopped   undecodable instruction' \
   '^retired   2$'
 
+# Prover hint stream: 4-byte --input + 4-byte --hint read via read_input (t0=0xF2) + LBU.
+printf '\x11\x22\x33\x44' > "$FIXDIR/pub.bin"
+printf '\xaa\xbb\xcc\xdd' > "$FIXDIR/hint.bin"
+hint_out="$("$RUNNER" "$FIXDIR/hint.elf" --input "$FIXDIR/pub.bin" --hint "$FIXDIR/hint.bin" --regs 2>&1)"
+if grep -Eq 'stopped   halted' <<<"$hint_out" &&
+   grep -Eq '^  x12[[:space:]]+0x8$' <<<"$hint_out" &&
+   grep -Eq '^  x13[[:space:]]+0x11$' <<<"$hint_out" &&
+   grep -Eq '^  x14[[:space:]]+0xaa$' <<<"$hint_out"; then
+  echo "ok   hint"
+  pass=$((pass + 1))
+else
+  echo "FAIL hint"
+  printf '%s\n' "$hint_out" | sed 's/^/     | /'
+  fail=$((fail + 1))
+fi
+
 echo
 echo "run-interpreter-tests: $pass passed, $fail failed"
 (( fail == 0 ))

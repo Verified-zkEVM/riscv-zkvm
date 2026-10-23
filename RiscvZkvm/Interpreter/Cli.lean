@@ -5,6 +5,7 @@
 -/
 
 import RiscvZkvm.Interpreter.Run
+import RiscvZkvm.Rv64.HintInterface
 
 namespace RiscvZkvm.Interpreter
 
@@ -15,6 +16,7 @@ structure Options where
   elf     : String
   fuel    : Nat := 1000000
   input   : Option String := none
+  hint    : Option String := none
   output  : Option String := none
   regs    : Bool := false
 
@@ -22,7 +24,8 @@ def usage : String :=
 "usage: riscv-zkvm-run <elf> [options]
 
   --fuel N        stop after N retired instructions (default 1000000)
-  --input FILE    file contents become the guest's private input stream
+  --input FILE    file contents become the guest's public input prefix
+  --hint FILE     prover hint tape appended after --input in the guest stream
   --output FILE   write the guest's public output bytes to FILE
   --regs          print the final register file
   --help          show this message
@@ -48,6 +51,7 @@ def parseArgs (args : List String) : Except String Options := do
         | some v => o := { o with fuel := v }; r := t
         | none => throw s!"--fuel expects a number, got '{n}'"
       | "--input" :: f :: t => o := { o with input := some f }; r := t
+      | "--hint" :: f :: t => o := { o with hint := some f }; r := t
       | "--output" :: f :: t => o := { o with output := some f }; r := t
       | "--regs" :: t => o := { o with regs := true }; r := t
       | "--help" :: _ | "-h" :: _ => throw usage
@@ -75,12 +79,18 @@ def main (args : List String) : IO UInt32 := do
     match parseElf64 bytes with
     | .error e => IO.eprintln s!"riscv-zkvm-run: {e}"; return 2
     | .ok img =>
-      let privateInput ← match o.input with
+      let publicInput ← match o.input with
         | none => pure []
         | some f => do
           let b ← IO.FS.readBinFile f
           pure (b.toList.map (fun u => BitVec.ofNat 8 u.toNat))
-      let l := load img privateInput
+      let hintTape ← match o.hint with
+        | none => pure []
+        | some f => do
+          let b ← IO.FS.readBinFile f
+          pure (b.toList.map (fun u => BitVec.ofNat 8 u.toNat))
+      let hintedInput : HintedInput := { publicInput, hintTape }
+      let l := load img hintedInput.toStream
       if l.tohost.isSome then
         IO.eprintln "riscv-zkvm-run: warning: this image has a .tohost section, so it is \
           probably a riscv-tests binary. Those do not run under this model -- see \

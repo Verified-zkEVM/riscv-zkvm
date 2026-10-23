@@ -74,6 +74,13 @@ instruction semantics. Guest images must use the zkVM memory map the model
 hard-codes; **the standard `riscv-tests` images do not run here**, for reasons
 recorded in [validation](docs/validation.md) along with three other known gaps.
 
+## Experimental prover hints
+
+The [resumable hint API](docs/resumable-hints.md) supports suspension,
+stateful handlers, all-response guest safety, and non-intercepting CPS/WP
+lifting. An isolated [Pancake modinv example](examples/pancake-modinv/README.md)
+checks real buffer write-back and a concrete RV64 checker execution.
+
 ## Downstream compatibility — read before changing anything
 
 **This repository exists to serve
