@@ -1,5 +1,41 @@
 # Resumable prover hints (experimental)
 
+## Opt-in imports
+
+The ordinary entry points retain the original machine and logic:
+
+```lean
+import RiscvZkvm.Sail
+import RiscvZkvm.Rv64
+import RiscvZkvm.Rv64.SailEquiv
+import RiscvZkvm.Rv64.Logic
+```
+
+They do not transitively import the optional hint modules. Enable those explicitly:
+
+```lean
+import RiscvZkvm.Rv64.Hints
+import RiscvZkvm.Rv64.Logic.Hints
+```
+
+Individual modules remain directly importable, for example
+`RiscvZkvm.Rv64.ResumableHints` for the minimal scheduler. The legacy
+`Logic.HintSpecs` module retains its ordinary `read_input` rule; the optional
+unframed tape lemmas now live in `Logic.HintTape` with their existing theorem names.
+Both optional roots are built and packaged by the existing five library targets,
+and the axiom sweep imports them explicitly. `HintImportTests` checks the actual
+transitive module imports of the ordinary stack in CI.
+
+Importing an interface does not install a handler or change `step`. Executing
+hints requires the caller to select the scheduler and interception/response
+functions. The full interpreter CLI knows the explicit `--hint` transport flag;
+`RiscvZkvm.Interpreter.Run` remains usable without that CLI transport layer.
+
+There is one generated Sail extraction, unchanged by this feature. The optional
+interface currently wraps the computable model; it is not yet a hint-enabled
+Sail interpretation. Any future Sail adapter needs its own explicit import and
+refinement theorem, rather than replacing the ordinary generated model.
+
 The optional operational API is in `RiscvZkvm.Rv64.ResumableHints`; the
 existing finite-tree interface remains available. It does not change RISC-V
 instructions, `MachineState`, `step`, or the existing CPS/WP definitions.

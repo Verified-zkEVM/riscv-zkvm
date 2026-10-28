@@ -2,6 +2,7 @@
 module
 public import RiscvZkvm.Rv64.HintInput
 public import RiscvZkvm.Rv64.Logic.HintSpecs
+public import RiscvZkvm.Rv64.Logic.MemRegion
 @[expose] public section
 namespace RiscvZkvm.Rv64
 

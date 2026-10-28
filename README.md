@@ -84,6 +84,12 @@ stateful handlers, all-response guest safety, and non-intercepting CPS/WP
 lifting. An isolated [Pancake modinv example](examples/pancake-modinv/README.md)
 checks real buffer write-back and a concrete RV64 checker execution.
 
+Hints are opt-in. Ordinary `RiscvZkvm.Sail`, `RiscvZkvm.Rv64`,
+`RiscvZkvm.Rv64.SailEquiv`, and `RiscvZkvm.Rv64.Logic` imports exclude the
+optional hint layer. Import `RiscvZkvm.Rv64.Hints` for its executable interface,
+or `RiscvZkvm.Rv64.Logic.Hints` for the corresponding proof rules. There is one
+unchanged generated Sail extraction; a Sail hint adapter remains separate work.
+
 ## Downstream compatibility — read before changing anything
 
 **This repository exists to serve

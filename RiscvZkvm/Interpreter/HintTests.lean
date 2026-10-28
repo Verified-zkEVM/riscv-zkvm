@@ -1,7 +1,7 @@
 /- Regression checks for static hint framing and input allocation. -/
 import RiscvZkvm.Interpreter.Run
-import RiscvZkvm.Rv64.HintInput
-import RiscvZkvm.Rv64.ModInvHints
+import RiscvZkvm.Rv64.Hints
+import RiscvZkvm.Rv64.Logic.Hints
 
 open RiscvZkvm.Rv64 RiscvZkvm.Interpreter
 

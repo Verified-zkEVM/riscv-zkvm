@@ -31,6 +31,7 @@ moreLeancArgs = ["-fbracket-depth=500"]
 # `step`, `stepN`. Relocated from EvmAsm.Rv64; no Sail and no Mathlib dependency.
 [[lean_lib]]
 name = "RiscvZkvm.Rv64"
+roots = ["RiscvZkvm.Rv64", "RiscvZkvm.Rv64.Hints"]
 platformIndependent = true
 
 # The tie between the two models: 51 per-instruction `*_sail_equiv` theorems and
@@ -49,6 +50,7 @@ platformIndependent = true
 # never carry options of its own.
 [[lean_lib]]
 name = "RiscvZkvm.Rv64.Logic"
+roots = ["RiscvZkvm.Rv64.Logic", "RiscvZkvm.Rv64.Logic.Hints"]
 platformIndependent = true
 
 # Executable interpreter: instruction decode, ELF64 loading, an efficient machine

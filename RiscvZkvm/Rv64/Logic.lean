@@ -15,8 +15,8 @@
   its Sail equivalence should not pay for ~19k lines of proof automation. That
   import graph, not any lakefile setting, is what keeps the two apart.
 
-  Every module of the library is listed, so `scripts/check-unimported.py` can
-  reach all of them from this root.
+  Ordinary logic modules are listed here. Optional hint rules have a separate
+  `RiscvZkvm.Rv64.Logic.Hints` root; importing this root does not load them.
 -/
 
 -- Core-only stand-ins for the Mathlib tactics this layer used.
@@ -30,7 +30,6 @@ import RiscvZkvm.Rv64.Logic.GenericSpecs
 import RiscvZkvm.Rv64.Logic.InstructionSpecs
 import RiscvZkvm.Rv64.Logic.SyscallSpecs
 import RiscvZkvm.Rv64.Logic.HintSpecs
-import RiscvZkvm.Rv64.Logic.HintInput
 
 -- Memory regions, byte-level algebra, and footprint reasoning.
 import RiscvZkvm.Rv64.Logic.MemRegion
@@ -91,5 +90,3 @@ import RiscvZkvm.Rv64.Logic.Tactics.PerfTrace
 -- someone has to read.
 import RiscvZkvm.Rv64.Logic.Tactics.XPermTests
 import RiscvZkvm.Rv64.Logic.Tactics.RunBlockTests
-import RiscvZkvm.Rv64.Logic.ResumableHints
-import RiscvZkvm.Rv64.Logic.ModInvHints
