@@ -6,13 +6,24 @@ and production RISC-V aligned-cell byte access model. Flapjack is pinned to
 dependency stays outside the parent Mathlib-free package.
 The example explicitly selects Mathlib v4.35.0, overriding the older version
 in that Flapjack revision while keeping the reviewed FFI source fixed.
+The recorded two-line patch escapes the static checker's `given` identifier,
+which became a keyword in Lean 4.35. Escaping preserves its name and definition;
+the ordinary FFI and memory-operation definitions are unchanged. Upstream main
+still has the unescaped identifier at `d1f1587`.
 
 From this directory:
 
 ```sh
+lake env true
+python3 prepare-flapjack.py
 lake build Op6Pancake
 lake env lean --run AxiomSweep.lean
 ```
+
+`prepare-flapjack.py` checks the exact pin, is idempotent, and refuses unrecorded
+tracked edits. It applies [the recorded patch](patches/flapjack-lean435-given.patch)
+to the managed dependency checkout. `lake exe cache get` can replace the first
+command when downloading the optional Mathlib build cache.
 
 The consumer audit permits only `propext`, `Classical.choice`, and `Quot.sound`.
 Sail platform assumptions belong to the parent package's separate audit and

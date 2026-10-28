@@ -90,7 +90,7 @@ def oracle {H : Type} (handler : ResumableHints.Handler H ModInvHints.Question (
   have a16 : (ModInvHints.encodeWord q.a).take 16 = ModInvHints.encodeWord q.a :=
     List.take_of_length_le (by simp)
   simp [oracle, ModInvHints.buffer, List.take_append,
-    ModInvHints.encodeWord_length, answer, ModInvHints.replaceBuffer, a16]
+    answer, ModInvHints.replaceBuffer, a16]
 
 /-- The actual CakeML FFI boundary enforces same-length array replacement and
     records an event, retaining the handler's state update. -/
@@ -158,7 +158,7 @@ def Avoid (address : Word) : Nat → Word → Prop
     (h : access.storeByte access.domain memory 8 address value = some updated)
     (outside : current ≠ RiscV.panRiscVByteAlign (8#64) address) : updated current = memory current := by
   simp only [access, panValueMemoryAccessOfModel, RiscV.panRiscVMemoryModel,
-    if_true] at h
+    ite_true] at h
   cases hm : memory (RiscV.panRiscVByteAlign (8#64) address) with
   | none => simp [hm] at h
   | some cell =>
@@ -262,7 +262,8 @@ theorem malformed_call :
       (.extCall "modinv-v1") [] (wire (ModInvHints.buffer ⟨3,17⟩ 0)) =
       .final ⟨.extCall "modinv-v1", [], wire (ModInvHints.buffer ⟨3,17⟩ 0), .failed⟩ := by
   simp [callFfi, oracle, ModInvHints.buffer, ModInvHints.replaceBuffer,
-    ModInvHints.decodeWord, ModInvHints.encodeWord, wire, unwire]
+    ModInvHints.decodeWord, ModInvHints.encodeWord,
+    ByteCodec.decodeWord, ByteCodec.encodeWord, wire, unwire]
 
 /-- Decode operands from the actual returned aligned-cell memory. -/
 def readOperands (memory : Word → Option (PanValue Word)) (base : Word) :

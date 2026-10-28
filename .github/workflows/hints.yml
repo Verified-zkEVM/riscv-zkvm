@@ -44,6 +44,9 @@ jobs:
         run: |
           cmp ../../lean-toolchain lean-toolchain
           lake exe cache get
+      - name: Apply recorded Flapjack compatibility patch
+        working-directory: examples/pancake-modinv
+        run: python3 prepare-flapjack.py
       - name: Build ordinary-FFI consumer
         working-directory: examples/pancake-modinv
         run: lake build Op6Pancake
