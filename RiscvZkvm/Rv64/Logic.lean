@@ -30,6 +30,7 @@ import RiscvZkvm.Rv64.Logic.GenericSpecs
 import RiscvZkvm.Rv64.Logic.InstructionSpecs
 import RiscvZkvm.Rv64.Logic.SyscallSpecs
 import RiscvZkvm.Rv64.Logic.HintSpecs
+import RiscvZkvm.Rv64.Logic.HintInput
 
 -- Memory regions, byte-level algebra, and footprint reasoning.
 import RiscvZkvm.Rv64.Logic.MemRegion
@@ -90,3 +91,5 @@ import RiscvZkvm.Rv64.Logic.Tactics.PerfTrace
 -- someone has to read.
 import RiscvZkvm.Rv64.Logic.Tactics.XPermTests
 import RiscvZkvm.Rv64.Logic.Tactics.RunBlockTests
+import RiscvZkvm.Rv64.Logic.ResumableHints
+import RiscvZkvm.Rv64.Logic.ModInvHints

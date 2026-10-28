@@ -170,6 +170,25 @@ def _wordop():
     ]
 
 
+@fixture("hint")
+def _hint():
+    """Read the static-tape v1 length header and locate a variable-length prefix."""
+    return [
+        *LOAD_DATA_BASE,
+        ADDI("a0", "t1", 0),       # a0 = 0xa0000000 (&buf_ptr)
+        ADDI("a1", "t1", 8),       # a1 = 0xa0000008 (&buf_len)
+        ADDI("t0", "zero", 0xF2),  # t0 = 0xF2 (read_input)
+        ECALL,
+        LD("t2", 0, "a0"),         # t2 = buf_ptr (0x40000000)
+        LD("a2", 0, "a1"),         # a2 = total stream length
+        LD("a5", 0, "t2"),         # a5 = public-input length from the v1 header
+        LBU("a3", 8, "t2"),        # a3 = publicInput[0]
+        ADD("t1", "t2", "a5"),
+        LBU("a4", 8, "t1"),        # a4 = hintTape[0], independent of prefix length
+        *HALT,
+    ]
+
+
 # --- ELF emission ---------------------------------------------------------
 
 def build_elf(words):

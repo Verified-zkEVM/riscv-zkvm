@@ -1,0 +1,50 @@
+name: Hint protocol and Pancake consumer
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  core-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Build hint regressions and runner
+        run: lake build RiscvZkvm.Interpreter.HintTests riscv-zkvm-run
+      - name: Run interpreter fixtures
+        run: scripts/run-interpreter-tests.sh
+
+  pancake-consumer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Fetch isolated Mathlib cache
+        working-directory: examples/pancake-modinv
+        run: lake exe cache get
+      - name: Build ordinary-FFI consumer
+        working-directory: examples/pancake-modinv
+        run: lake build Op6Pancake
+      - name: Audit consumer axioms
+        working-directory: examples/pancake-modinv
+        run: lake env lean --run AxiomSweep.lean
