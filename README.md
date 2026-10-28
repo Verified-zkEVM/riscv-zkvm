@@ -122,7 +122,7 @@ lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv \
 lake build riscv-zkvm-run && scripts/run-interpreter-tests.sh
 ```
 
-The [upstream Sail RISC-V Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator)
+The [upstream Sail RISC-V Lean emulator](https://github.com/riscv/sail-riscv/tree/master/lean_emulator)
 is exposed as a validation path:
 
 ```bash

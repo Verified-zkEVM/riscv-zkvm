@@ -6,7 +6,7 @@ the backend faithful. Executing the independently generated model against
 architecture tests is the practical mitigation.
 
 Sail RISC-V 0.13 added an
-[upstream Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator).
+[upstream Lean emulator](https://github.com/riscv/sail-riscv/tree/master/lean_emulator).
 It:
 
 - generates an executable Lean model from Sail;

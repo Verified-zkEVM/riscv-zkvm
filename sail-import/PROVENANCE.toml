@@ -9,16 +9,16 @@ sail_riscv_rev = "27224ccb2290f022e46213c05b3e72e8a9ea635e"
 sail_compiler_version = "0.20.3"
 sail_compiler_repo = "https://github.com/rems-project/sail.git"
 # Development commit: released 0.20.3 predates the assert and short-circuit fixes.
-sail_compiler_ref = "57fd0cef057bb90ed58208599056439edee22e60"
-sail_compiler_rev = "57fd0cef057bb90ed58208599056439edee22e60"
+sail_compiler_ref = "2ae2199f8890180a8f9653f6ea08e54cd9790220"
+sail_compiler_rev = "2ae2199f8890180a8f9653f6ea08e54cd9790220"
 # Upstream PR #1774: preserve conditional/division precedence in type arithmetic.
 sail_compiler_patch = "sail-import/patches/1774-type-arithmetic.patch"
 sail_compiler_patch_sha256 = "a00368bdc758e9073b7ab08e0d70dc41b815f15d7fcfe9fdc9e501637d09b1a2"
 
 [runtime]
-# Official lean-sail v7 passes Sail and SailTest on Lean 4.35.0 without patches.
+# Official lean-sail v8 passes Sail and SailTest on Lean 4.35.0 without patches.
 lean_sail_repo = "https://github.com/rems-project/lean-sail.git"
-lean_sail_rev = "01bb54c7c8a69e52ba11863c67e7c403a6cd198a"
+lean_sail_rev = "1e5b216bf881ef08da160db63b44ecda430802d6"
 lean_toolchain = "leanprover/lean4:v4.35.0"
 
 [extraction]
@@ -31,8 +31,8 @@ model_sha256 = "4a2cce2842577019cd86827f5cecf35475c8e4b83b4834750c8b611324c67872
 expected_lean_files = 121
 
 [validation]
-lean_emulator_source = "https://github.com/riscv/sail-riscv/tree/main/lean_emulator"
+lean_emulator_source = "https://github.com/riscv/sail-riscv/tree/master/lean_emulator"
 lean_emulator_first_release = "0.13"
 notes = "The executable Lean emulator is a validation artifact and is not included in the proof-model release archive."
 omitted_extension_policy = "Executable validation only: extensions omitted by sail_modules are treated as disabled; the theorem-facing extraction remains unchanged."
-last_elf_validation = "2026-10-22: 50/50 selected rv64ui-p tests passed in clean CI with Lean 4.35.0, official lean-sail v7, and Sail 57fd0cef plus the recorded PR #1774 patch (run 39787930429)"
+last_elf_validation = "Pending new compiler/runtime trial; previous stack 2026-10-22: 50/50 selected rv64ui-p tests passed in clean CI with Lean 4.35.0, official lean-sail v7, and Sail 57fd0cef plus the recorded PR #1774 patch (run 39787930429)"
