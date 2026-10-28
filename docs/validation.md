@@ -6,7 +6,7 @@ the backend faithful. Executing the independently generated model against
 architecture tests is the practical mitigation.
 
 Sail RISC-V 0.13 added an
-[upstream Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator).
+[upstream Lean emulator](https://github.com/riscv/sail-riscv/tree/master/lean_emulator).
 It:
 
 - generates an executable Lean model from Sail;
@@ -53,8 +53,8 @@ honours `SAIL_BIN_DIR` and `Z3_BIN_DIR`. Build the pinned patched compiler with
 `scripts/build-pinned-sail.sh`; the official Sail binary distribution supplies
 the bundled Z3. See [maintenance](maintenance.md#updating-lean-or-lean-sail).
 
-The 0.13.1 model was [validated in clean CI on 2026-10-22](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/39787930429)
-with Lean 4.35.0, official lean-sail v7, and Sail `57fd0cef` plus the recorded
+The 0.13.1 model was [validated in clean CI on 2026-10-28](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/40674826341)
+with Lean 4.35.0, official lean-sail v8, and Sail `2ae2199f` plus the recorded
 upstream PR #1774 patch: all 50 selected `rv64ui-p-*` ELF tests passed. The proof
 extraction independently reproduced byte for byte.
 
@@ -152,12 +152,21 @@ talk about.
 ## The trusted axiom base, and what enforces it
 
 Every declaration under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` rests on
-exactly seven axioms:
+axioms drawn only from this seven-axiom set:
 
 | Axiom | Source |
 |---|---|
 | `propext`, `Classical.choice`, `Quot.sound` | Lean's three classical axioms |
 | `load_reservation`, `match_reservation`, `plat_term_write`, `sys_enable_experimental_extensions` | Sail platform axioms from the generated extraction |
+
+This boundary applies to the hand-owned libraries and their equivalence proofs.
+The full generated Sail dispatcher also contains Zkr seed-CSR handling, which
+depends on `get_16_random_bits`. The equivalence uses
+`RiscvZkvm.Rv64.SailEquiv.executeSupported`: it retains the concrete instruction
+bodies for the mapped instruction domain and rejects generated `CSRReg`/`CSRImm`
+forms outside that domain. Production accelerator words use the hand constructor
+`Instr.CSRS`, which `toSailInstr?` excludes. Downstream copies of the simulation
+must use the same dispatcher to preserve this axiom boundary.
 
 Two CI gates keep it that way:
 

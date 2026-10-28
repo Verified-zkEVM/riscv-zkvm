@@ -34,7 +34,7 @@ need only Lean and Lake; Sail, OCaml, CMake, and Z3 are regeneration tools.
 
 ## Use as a dependency
 
-The Lean 4.35.0 candidate `v0.5.0` is being validated with official lean-sail v7;
+The Lean 4.35.0 candidate `v0.5.0` is being validated with official lean-sail v8;
 see the [release review](docs/release-refresh.md). The previous `v0.4.0` tag
 remains held as a draft. Do not bump downstream pins to either candidate yet.
 The published `v0.3.1` release uses
@@ -122,7 +122,7 @@ lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv \
 lake build riscv-zkvm-run && scripts/run-interpreter-tests.sh
 ```
 
-The [upstream Sail RISC-V Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator)
+The [upstream Sail RISC-V Lean emulator](https://github.com/riscv/sail-riscv/tree/master/lean_emulator)
 is exposed as a validation path:
 
 ```bash

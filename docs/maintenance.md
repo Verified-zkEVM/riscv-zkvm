@@ -121,7 +121,7 @@ generated files; a digest proves identity, not correctness.
 
 ## Updating Lean or lean-sail
 
-The Lean 4.35.0 candidate uses official `lean-sail` v7. Model 0.13.1 still
+The Lean 4.35.0 candidate uses official `lean-sail` v8. Model 0.13.1 still
 uses concurrency-v1; regeneration normalizes backend package/module names and
 copies `sail-import/RuntimeCompat.lean` to preserve the established proof names.
 The compiler now emits `sail_assert` and correct monadic short-circuit operators.

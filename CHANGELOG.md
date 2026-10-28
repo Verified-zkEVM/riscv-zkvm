@@ -2,11 +2,11 @@
 
 ## v0.5.0 — Lean 4.35.0 (candidate)
 
-- Update to Lean 4.35.0 and official lean-sail v7. The upstream runtime now
+- Update to Lean 4.35.0 and official lean-sail v8. The upstream runtime now
   includes the finite-choice and namespace-warning fixes needed for source
   compilation and portable release-cache reuse.
 - Regenerate Sail RISC-V 0.13.1 with pinned upstream Sail development commit
-  `57fd0cef`, including the assertion-name and effectful short-circuit fixes.
+  `2ae2199f`, including the assertion-name, effectful short-circuit and basic dependent-type fixes.
   Record and apply upstream PR #1774 during the compiler build to fix type-level
   arithmetic precedence and restore the configured 64-bit FP register metadata.
   Add kernel-checked width regressions. No generated Lean is edited by hand.
@@ -19,14 +19,19 @@
   definitional-equality fallback and add composition regressions.
 - Build the exact compiler and checked patch in extraction-validation CI. Fix
   compiler-versus-solver PATH precedence and cover it with a regression check.
-- Evaluate model 0.16 with the same module scope on Lean 4.35.0; retain 0.13.1
-  because generated `MemoryTriggerPayload` definitions still fail. The
-  concurrency-v2 memory-proof migration remains separate. PR #13 stays deferred.
+- Recheck model 0.16 with Sail #1804 and official runtime v8. Generation,
+  dependent-width definitions and kernel width checks pass; complete generated
+  compilation reaches a missing `BEq ExecutionResult` instance in AMO handling.
+  Submit [upstream draft PR #2053](https://github.com/riscv/sail-riscv/pull/2053).
+  Retain 0.13.1 pending complete extraction and concurrency-v2 proof migration.
+  PR #13 stays deferred.
 - Refresh the zkEVM standards review, canonical repository URL, current main
   snapshot and open proposals; document the remaining model, ELF, alignment,
   guard-region, IO/accelerator, and verifier obligations.
 - Keep newly created releases as prereleases until the tagged-consumer archive
-  check passes. The held v0.4.0 tag remains unchanged.
+  check passes. Propagate dependency-update and consumer-compilation failures
+  through logging pipelines; add controls for failures, unexpected rebuilds
+  and missing libraries. The held v0.4.0 tag remains unchanged.
 
 ## v0.4.0 — Lean 4.33.1
 
