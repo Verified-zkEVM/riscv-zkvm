@@ -10,16 +10,10 @@ def scanPrefixes : List Name := [`Op6Pancake]
 def scanModules : Array Import :=
   #[{ module := `Op6Pancake }]
 
-/-- The axioms this project accepts, and why.
-
-    Change this list only alongside `docs/validation.md`: it *is* the machine-
-    readable form of that document's trust-boundary section. -/
+/-- This isolated FFI consumer uses only Lean's standard axioms. The parent
+    repository's separate sweep permits documented Sail platform axioms. -/
 def allowedAxioms : List Name :=
-  [ -- Lean's three classical axioms.
-    `propext, `Classical.choice, `Quot.sound,
-    -- Sail platform axioms, introduced by the generated extraction.
-    `load_reservation, `match_reservation, `plat_term_write,
-    `sys_enable_experimental_extensions ]
+  [`propext, `Classical.choice, `Quot.sound]
 
 def isScanned (n : Name) : Bool :=
   scanPrefixes.any (fun p => p.isPrefixOf n) && !n.isInternal
@@ -58,16 +52,13 @@ def main (args : List String) : IO UInt32 := do
 
   if offList.isEmpty then
     IO.println s!"axiomsweep: OK — {audited} declarations rest only on the \
-      {allowedAxioms.length} documented axioms."
+      {allowedAxioms.length} standard axioms."
     return 0
 
   IO.eprintln "axiomsweep FAILED: declaration(s) depend on an undocumented axiom:"
   for (n, axs) in offList do
     IO.eprintln s!"  {n}"
     IO.eprintln s!"    {axs.toList}"
-  IO.eprintln "\nIf this is `sorryAx`, the proof is incomplete. If it is \
-    `Lean.ofReduceBool` / `Lean.trustCompiler`, a TCB-expanding tactic got in \
-    (see scripts/check-forbidden-tactics.sh). If a Sail pin bump introduced a \
-    new platform axiom, add it to `allowedAxioms` AND to the trust-boundary \
-    section of docs/validation.md, in the same change."
+  IO.eprintln "\nThe standalone consumer must not introduce incomplete proofs, \
+    native-computation axioms, or Sail platform assumptions."
   return 1

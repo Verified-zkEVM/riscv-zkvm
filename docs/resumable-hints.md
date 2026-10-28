@@ -3,10 +3,14 @@
 The optional operational API is in `RiscvZkvm.Rv64.ResumableHints`; the
 existing finite-tree interface remains available. It does not change RISC-V
 instructions, `MachineState`, `step`, or the existing CPS/WP definitions.
+The operational module imports `Execution` directly; finite-tree specifications
+and arithmetic examples are separate consumers of that machine interface.
 
 A guest `tick : S → Event S Q A` returns a result, makes ordinary progress,
 requests `q : Q` while saving one `S`, or traps. `run tick fuel s` stops at
 return, trap, pending request, or fuel exhaustion. Exhaustion retains `s`.
+`run_add` proves that replenishing an exhausted fuel slice agrees with the
+unsplit run; an earlier request, return, or trap is preserved exactly.
 `resume accept q s r` supplies `r : R q` and resumes the guest. It establishes
 no mathematical property of that response.
 
@@ -58,11 +62,53 @@ Its Mathlib dependency is isolated from this package. The protocol uses a
 24-byte little-endian `(a,p,w)` array and an eight-byte raw witness reply.
 The guest checks the independent modular-inverse contract with 15 RV64IM
 instructions; range checks prevent multiplication overflow.
+`validBuffer` checks all 24 byte addresses as well as alignment and non-wrapping
+extent. The model's start-address-only doubleword predicate is not sufficient
+for a buffer ending at the upper edge of a data-memory zone.
 
 This is an experimental ordinary-FFI PoC. Compiler/linker simulation, an
 emitted register-loading/interception stub, generic Flapjack-to-RV64 memory
 refinement, and Sail/platform/backend integration remain separate obligations.
 It neither changes nor proves evm.fast's fixed Challenge oracle contract.
+
+## Static hint-tape transport
+
+The optional CLI `--hint FILE` transport is distinct from the resumable
+request/response API. Its version-one stream is:
+
+```text
+u64 little-endian public-input length | public-input bytes | hint bytes
+```
+
+`read_input` returns the complete stream pointer and length. Public bytes begin
+at offset 8; hints begin at offset `8 + publicLength`. A guest can locate hints
+for variable-length inputs without an external split assumption. Even an empty
+`--hint` file selects this framed convention. With no `--hint`, `--input` retains
+its existing raw-byte format.
+
+`HintedInput.toFramedStream` and `ofFramedStream` have a round-trip theorem for
+lengths fitting the header and an injectivity theorem for the partition.
+Short headers and lengths exceeding the payload are rejected. The older
+`toStream`/`ofStream` helpers remain unframed and require the split length as an
+independent argument.
+`Logic/HintInput.lean` supplies the corresponding `read_input` triple, including
+the header in the total length, and a framed-payload `LBU` rule.
+
+The CLI uses `loadChecked`: it reserves a complete doubleword-rounded input
+allocation and rejects overlap with ELF `PT_LOAD` segments or an extent outside
+the existing contiguous data region. The low-level `load` initializer also
+preserves image bytes beyond a partial final input word; callers using it
+directly are responsible for actual input/image overlap.
+
+## Cost annotations and executable bounds
+
+`MeteredExpand.expandCost` is an abstract annotation, not evidence of runtime.
+`MeteredExpand.Realizes` requires a corresponding halting `rv64ExpandRunsIn`
+execution with the exact generated hint and annotated step count.
+`Rv64MeteredCompleteness` combines that evidence with the annotation/verifier
+contract; `rv64MeteredCompleteness_runsWithin` then supplies an actual run within
+the stated bound. The field-operation examples remain counts for the specified
+binary-exponentiation algorithm, not certified guest or prover cycle counts.
 
 ## Existing compiler and FFI bridges
 

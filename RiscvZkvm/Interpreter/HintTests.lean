@@ -1,6 +1,7 @@
 /- Regression checks for static hint framing and input allocation. -/
 import RiscvZkvm.Interpreter.Run
 import RiscvZkvm.Rv64.HintInput
+import RiscvZkvm.Rv64.ModInvHints
 
 open RiscvZkvm.Rv64 RiscvZkvm.Interpreter
 
@@ -46,3 +47,8 @@ private def longPublic : HintedInput :=
 #guard HintedInput.ofFramedStream [0#8] = none
 #guard HintedInput.ofFramedStream
   (ByteCodec.encodeWord 3 ++ [0x11#8, 0xaa#8]) = none
+
+-- Start-address-only doubleword checks used to admit these buffers, even
+-- though their final seven bytes are outside all valid data-memory zones.
+#guard ModInvHints.validBuffer 0x77fffff0#64 = false
+#guard ModInvHints.validBuffer 0xbffffff0#64 = false

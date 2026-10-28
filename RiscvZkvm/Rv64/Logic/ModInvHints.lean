@@ -38,7 +38,7 @@ namespace RiscvZkvm.Rv64.ModInvHints
   · intro i hi _
     have h : i < 8 := by simpa [readBytes_length] using hi
     rw [readBytes_getElem s base 8 i h]
-    simp only [encodeWord, List.getElem_ofFn]
+    simp only [encodeWord, ByteCodec.encodeWord, List.getElem_ofFn]
     unfold MachineState.getByte
     rw [alignToDword_add_ofNat_of_aligned aligned (by omega),
       byteOffset_add_ofNat_of_aligned aligned (by omega),

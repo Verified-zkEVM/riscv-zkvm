@@ -216,7 +216,8 @@ set_option maxHeartbeats 2000000 in
     panValueMemoryAccessOfModel, panValueWordMemory, RiscV.panRiscVMemoryModel,
     panModelReadByte, RiscV.panRiscVByteAlign, RiscV.panRiscVGetByte,
     RiscV.panRiscVByteIndex, RiscV.panRiscVSetByte, demoMemory, demoHandler,
-    wire, unwire, ModInvHints.replaceBuffer, ModInvHints.encodeWord, ModInvHints.decodeWord, packDword, extractByte] <;> decide
+    wire, unwire, ModInvHints.replaceBuffer, ModInvHints.encodeWord, ModInvHints.decodeWord,
+    ByteCodec.encodeWord, ByteCodec.decodeWord, packDword, extractByte] <;> decide
 
 /-- Read back the actual FFI post-memory and execute the authoritative RV64
     checker. Register initialization is the explicit call-boundary operation. -/

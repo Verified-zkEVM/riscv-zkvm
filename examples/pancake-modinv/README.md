@@ -12,6 +12,10 @@ lake build Op6Pancake
 lake env lean --run AxiomSweep.lean
 ```
 
+The consumer audit permits only `propext`, `Classical.choice`, and `Quot.sound`.
+Sail platform assumptions belong to the parent package's separate audit and
+are not admitted by this ordinary-FFI example.
+
 Lake resolves the parent package through `../..`. The checked-in manifest pins
 all transitive dependencies. A cold checkout must download and build those
 packages; local build artifacts are not required source inputs.

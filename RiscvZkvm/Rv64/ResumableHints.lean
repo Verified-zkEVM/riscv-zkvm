@@ -1,7 +1,7 @@
 /- Bounded protocol control: one guest state or one pending request, never a trace.
    Handler storage is external and is deliberately unconstrained. -/
 module
-public import RiscvZkvm.Rv64.HintInterface
+public import RiscvZkvm.Rv64.Execution
 @[expose] public section
 namespace RiscvZkvm.Rv64.ResumableHints
 
@@ -27,6 +27,23 @@ def run {S Q A : Type} (tick : S → Event S Q A) : Nat → S → Control S Q A
     | .progress t => run tick n t
     | .pending q t => .waiting q t
     | .trap => .trap
+
+/-- Replenishing an exhausted slice preserves execution. A slice that already
+    returned, trapped, or requested a response remains at that same boundary. -/
+theorem run_add {S Q A : Type} (tick : S → Event S Q A)
+    (n m : Nat) (s : S) :
+    run tick (n + m) s =
+      match run tick n s with
+      | .exhausted t => run tick m t
+      | boundary => boundary := by
+  induction n generalizing s with
+  | zero => simp only [Nat.zero_add, run]
+  | succ n ih =>
+    cases ht : tick s with
+    | returned a => simp [run, ht, Nat.succ_add]
+    | progress t => simpa [run, ht, Nat.succ_add] using ih t
+    | pending q t => simp [run, ht, Nat.succ_add]
+    | trap => simp [run, ht, Nat.succ_add]
 
 /-- The response type contains data only; no correctness proof is available here. -/
 def resume {S Q A : Type} {R : Q → Type}
