@@ -36,8 +36,8 @@ modules_cmake="$(IFS=';'; echo "${modules[*]}")"
 
 SAIL_BIN_DIR="${SAIL_BIN_DIR:-}"
 Z3_BIN_DIR="${Z3_BIN_DIR:-$SAIL_BIN_DIR}"
-if [[ -n "$SAIL_BIN_DIR" ]]; then PATH="${SAIL_BIN_DIR}:${PATH}"; fi
 if [[ -n "$Z3_BIN_DIR" ]]; then PATH="${Z3_BIN_DIR}:${PATH}"; fi
+if [[ -n "$SAIL_BIN_DIR" ]]; then PATH="${SAIL_BIN_DIR}:${PATH}"; fi
 export PATH
 
 for tool in sail z3 cmake git lake; do
@@ -108,7 +108,7 @@ text = path.read_text()
 start = text.index('def currentlyEnabled (')
 end = text.index('\ntermination_by ', start)
 body = text[start:end]
-fallback = r'(?m)^  \| _ =>\n    \(do\n      assert false "Pattern match failure at [^"\n]+"\n      throw Error\.Exit\)'
+fallback = r'(?m)^  \| _ =>\n    \(do\n      sail_assert false "Pattern match failure at [^"\n]+"\n      throw Error\.Exit\)'
 totalized = '  | _ => (pure false)'
 body, count = re.subn(fallback, totalized, body)
 if count != 1 and not (count == 0 and body.endswith(totalized)):

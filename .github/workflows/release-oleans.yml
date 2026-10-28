@@ -45,7 +45,7 @@ jobs:
         run: |
           tag='${{ steps.resolve.outputs.tag }}'
           gh release view "$tag" >/dev/null 2>&1 \
-            || gh release create "$tag" --verify-tag --title "$tag" --generate-notes
+            || gh release create "$tag" --verify-tag --title "$tag" --generate-notes --prerelease
 
       # Keep this job uncached, unlike build.yml. A release archive is the one
       # artifact that must be reproducible from source at the tag: restoring
@@ -89,6 +89,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ steps.resolve.outputs.tag }}
         run: |
+          set -euo pipefail
           consumer="$RUNNER_TEMP/riscv-zkvm-cache-smoke"
           mkdir -p "$consumer"
           cp lean-toolchain "$consumer/lean-toolchain"
@@ -118,12 +119,12 @@ jobs:
           #check RiscvZkvm.Rv64.SailEquiv.sailStepN_run_sim
           #check RiscvZkvm.Rv64.cpsTripleWithin
           #check RiscvZkvm.Interpreter.decode
+
+          example : _root_.flen = 64 := rfl
           EOF
           cd "$consumer"
-          {
-            lake update
-            lake build CacheSmoke
-          } 2>&1 | tee build.log
+          lake update 2>&1 | tee build.log
+          lake build CacheSmoke 2>&1 | tee -a build.log
           if grep -Eq 'Built RiscvZkvm\.(Sail|Rv64|Interpreter)(\.| )' build.log; then
             echo "::error::tagged consumer rebuilt a library that should have come from the archive"
             grep -E 'Built RiscvZkvm\.' build.log
@@ -145,3 +146,10 @@ jobs:
             echo "- Entries: $(tar tzf "$archive" | wc -l | tr -d ' ')"
             echo "- .olean files: $(tar tzf "$archive" | grep -c '\.olean$')"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # A cold build alone did not catch v0.4.0's warning-induced cache
+      # invalidation. Publish as a prerelease until the real consumer passes.
+      - name: Promote verified release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ steps.resolve.outputs.tag }}" --prerelease=false

@@ -191,7 +191,7 @@ def toSailInstr? : Instr → Option SailInstr
   | .BGEU rs1 rs2 off => some <| instruction.BTYPE (off, regToRegidx rs2, regToRegidx rs1, bop.BGEU)
   | .JAL rd off       => some <| instruction.JAL (off, regToRegidx rd)
   | .JALR rd rs1 off  => some <| instruction.JALR (off, regToRegidx rs1, regToRegidx rd)
-  -- NOTE: Sail `word_width` is in BYTES (execute_LOAD/STORE assert `width ≤ xlen_bytes` = 8
+  -- NOTE: Sail `word_width` is in BYTES (execute_LOAD/STORE sail_assert `width ≤ xlen_bytes` = 8
   -- and pass it to vmem_read/write). LD/SD = 8 bytes, LW/LWU/SW = 4, LH/LHU/SH = 2, LB/LBU/SB = 1.
   | .LD rd rs1 off    => some <| instruction.LOAD (off, regToRegidx rs1, regToRegidx rd, false, 8)
   | .LW rd rs1 off    => some <| instruction.LOAD (off, regToRegidx rs1, regToRegidx rd, false, 4)

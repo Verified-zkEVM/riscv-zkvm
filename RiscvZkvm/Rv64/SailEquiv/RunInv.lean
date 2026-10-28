@@ -296,7 +296,8 @@ theorem currentlyEnabled_Ext_Zicfilp_false {s : SailState} {msec : BitVec 64}
     (h_mlpe : _get_Seccfg_MLPE msec = 0#1) :
     currentlyEnabled extension.Ext_Zicfilp s = .ok false s := by
   rw [currentlyEnabled.eq_def]
-  simp [currentlyEnabled_Ext_Zicsr, get_xLPE_Machine h_sec, h_mlpe, bool_bit_backwards,
+  simp [andM, toBool, currentlyEnabled_Ext_Zicsr, hartSupports,
+    get_xLPE_Machine h_sec, h_mlpe, bool_bit_backwards,
     PreSail.readReg, h_priv, Pure.pure, EStateM.pure, bind, Bind.bind, EStateM.bind,
     EStateM.get, get, MonadState.get, getThe, MonadStateOf.get]
 

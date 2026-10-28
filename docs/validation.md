@@ -6,7 +6,7 @@ the backend faithful. Executing the independently generated model against
 architecture tests is the practical mitigation.
 
 Sail RISC-V 0.13 added an
-[upstream Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator).
+[upstream Lean emulator](https://github.com/riscv/sail-riscv/tree/master/lean_emulator).
 It:
 
 - generates an executable Lean model from Sail;
@@ -49,12 +49,14 @@ scripts/validate-lean-emulator.sh --test
 ```
 
 The script accepts `VALIDATION_DIR` to preserve a build between runs. It also
-honours `SAIL_BIN_DIR` and `Z3_BIN_DIR`. The official Sail binary distribution
-bundles both tools.
+honours `SAIL_BIN_DIR` and `Z3_BIN_DIR`. Build the pinned patched compiler with
+`scripts/build-pinned-sail.sh`; the official Sail binary distribution supplies
+the bundled Z3. See [maintenance](maintenance.md#updating-lean-or-lean-sail).
 
-The 0.13.1 model was validated in clean CI on 2026-10-06 with Lean 4.33.1,
-official lean-sail v5, and Sail 0.20.3: all 50 selected `rv64ui-p-*` ELF tests
-passed. The proof extraction independently reproduced byte for byte.
+The 0.13.1 model was [validated in clean CI on 2026-10-28](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/40674826341)
+with Lean 4.35.0, official lean-sail v8, and Sail `2ae2199f` plus the recorded
+upstream PR #1774 patch: all 50 selected `rv64ui-p-*` ELF tests passed. The proof
+extraction independently reproduced byte for byte.
 
 ## What a pass establishes
 
@@ -121,7 +123,7 @@ closing it has to be a deliberate edit.
 
    ISA-conformance evidence therefore continues to come from
    `scripts/validate-lean-emulator.sh`, which runs those same ELFs against the
-   **Sail** model (50/50 as of 2026-10-06). The interpreter's own tests use
+   **Sail** model (50/50 as of 2026-10-22). The interpreter's own tests use
    hand-assembled fixtures laid out for the zkVM memory map instead.
 
 2. **The RV64 word-op family is absent from `Instr`.** `ADDW SUBW SLLW SRLW SRAW
@@ -150,12 +152,21 @@ talk about.
 ## The trusted axiom base, and what enforces it
 
 Every declaration under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` rests on
-exactly seven axioms:
+axioms drawn only from this seven-axiom set:
 
 | Axiom | Source |
 |---|---|
 | `propext`, `Classical.choice`, `Quot.sound` | Lean's three classical axioms |
 | `load_reservation`, `match_reservation`, `plat_term_write`, `sys_enable_experimental_extensions` | Sail platform axioms from the generated extraction |
+
+This boundary applies to the hand-owned libraries and their equivalence proofs.
+The full generated Sail dispatcher also contains Zkr seed-CSR handling, which
+depends on `get_16_random_bits`. The equivalence uses
+`RiscvZkvm.Rv64.SailEquiv.executeSupported`: it retains the concrete instruction
+bodies for the mapped instruction domain and rejects generated `CSRReg`/`CSRImm`
+forms outside that domain. Production accelerator words use the hand constructor
+`Instr.CSRS`, which `toSailInstr?` excludes. Downstream copies of the simulation
+must use the same dispatcher to preserve this axiom boundary.
 
 Two CI gates keep it that way:
 
@@ -165,7 +176,7 @@ Two CI gates keep it that way:
   `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
   `bv_decide` fails the build rather than silently widening the base.
 * `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
-  environment (3500 declarations today) and fails on any axiom outside the table
+  environment (3498 declarations in the Lean 4.35.0 candidate) and fails on any axiom outside the table
   above, including `sorryAx`.
 
 The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the

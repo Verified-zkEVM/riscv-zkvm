@@ -176,12 +176,12 @@ theorem lw_sail_equiv (sRv : MachineState) (sSail : SailState)
       ((sRv.getWord32 (sRv.getReg rs1 + signExtend12 offset)).signExtend 64),
       ?_, ?_, ?_, ?_⟩
   · unfold execute_LOAD
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (vmem_read (regToRegidx rs1) (signExtend12 offset) 4
           (MemoryAccessType.Load mem_payload.Data) false false false) sSail
         = some (Result.Ok (((b3.append b2).append b1).append b0), sSail) from by
       simp only [runSail, hvr]]
-    simp only [extend_value, Bool.false_eq_true, if_false, sign_extend,
+    simp only [extend_value, Bool.false_eq_true, ite_false, sign_extend,
       Sail.BitVec.signExtend, runSail_bind, runSail_wX_bits_of_reg,
       runSail_pure, hbridge]
   · refine ⟨fun r => ?_, fun a ha => ?_⟩
@@ -275,12 +275,12 @@ theorem lwu_sail_equiv (sRv : MachineState) (sSail : SailState)
       ((sRv.getWord32 (sRv.getReg rs1 + signExtend12 offset)).zeroExtend 64),
       ?_, ?_, ?_, ?_⟩
   · unfold execute_LOAD
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (vmem_read (regToRegidx rs1) (signExtend12 offset) 4
           (MemoryAccessType.Load mem_payload.Data) false false false) sSail
         = some (Result.Ok (((b3.append b2).append b1).append b0), sSail) from by
       simp only [runSail, hvr]]
-    simp only [extend_value, if_true, zero_extend, Sail.BitVec.zeroExtend,
+    simp only [extend_value, ite_true, zero_extend, Sail.BitVec.zeroExtend,
       BitVec.zeroExtend_eq_setWidth, runSail_bind, runSail_wX_bits_of_reg,
       runSail_pure, hbridge]
   · refine ⟨fun r => ?_, fun a ha => ?_⟩
@@ -366,11 +366,11 @@ theorem lh_sail_equiv (sRv : MachineState) (sSail : SailState)
       ((sRv.getHalfword (sRv.getReg rs1 + signExtend12 offset)).signExtend 64),
       ?_, ?_, ?_, ?_⟩
   · unfold execute_LOAD
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (vmem_read (regToRegidx rs1) (signExtend12 offset) 2
           (MemoryAccessType.Load mem_payload.Data) false false false) sSail
         = some (Result.Ok (b1.append b0), sSail) from by simp only [runSail, hvr]]
-    simp only [extend_value, Bool.false_eq_true, if_false, sign_extend,
+    simp only [extend_value, Bool.false_eq_true, ite_false, sign_extend,
       Sail.BitVec.signExtend, runSail_bind, runSail_wX_bits_of_reg,
       runSail_pure, hbridge]
   · refine ⟨fun r => ?_, fun a ha => ?_⟩
@@ -452,11 +452,11 @@ theorem lhu_sail_equiv (sRv : MachineState) (sSail : SailState)
       ((sRv.getHalfword (sRv.getReg rs1 + signExtend12 offset)).zeroExtend 64),
       ?_, ?_, ?_, ?_⟩
   · unfold execute_LOAD
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (vmem_read (regToRegidx rs1) (signExtend12 offset) 2
           (MemoryAccessType.Load mem_payload.Data) false false false) sSail
         = some (Result.Ok (b1.append b0), sSail) from by simp only [runSail, hvr]]
-    simp only [extend_value, if_true, zero_extend, Sail.BitVec.zeroExtend,
+    simp only [extend_value, ite_true, zero_extend, Sail.BitVec.zeroExtend,
       BitVec.zeroExtend_eq_setWidth, runSail_bind, runSail_wX_bits_of_reg,
       runSail_pure, hbridge]
   · refine ⟨fun r => ?_, fun a ha => ?_⟩
@@ -537,11 +537,11 @@ theorem lb_sail_equiv (sRv : MachineState) (sSail : SailState)
       ((sRv.getByte (sRv.getReg rs1 + signExtend12 offset)).signExtend 64),
       ?_, ?_, ?_, ?_⟩
   · unfold execute_LOAD
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (vmem_read (regToRegidx rs1) (signExtend12 offset) 1
           (MemoryAccessType.Load mem_payload.Data) false false false) sSail
         = some (Result.Ok b0, sSail) from by simp only [runSail, hvr]]
-    simp only [extend_value, Bool.false_eq_true, if_false, sign_extend,
+    simp only [extend_value, Bool.false_eq_true, ite_false, sign_extend,
       Sail.BitVec.signExtend, runSail_bind, runSail_wX_bits_of_reg,
       runSail_pure, hbridge]
   · refine ⟨fun r => ?_, fun a ha => ?_⟩
@@ -618,11 +618,11 @@ theorem lbu_sail_equiv (sRv : MachineState) (sSail : SailState)
       ((sRv.getByte (sRv.getReg rs1 + signExtend12 offset)).zeroExtend 64),
       ?_, ?_, ?_, ?_⟩
   · unfold execute_LOAD
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (vmem_read (regToRegidx rs1) (signExtend12 offset) 1
           (MemoryAccessType.Load mem_payload.Data) false false false) sSail
         = some (Result.Ok b0, sSail) from by simp only [runSail, hvr]]
-    simp only [extend_value, if_true, zero_extend, Sail.BitVec.zeroExtend,
+    simp only [extend_value, ite_true, zero_extend, Sail.BitVec.zeroExtend,
       BitVec.zeroExtend_eq_setWidth, runSail_bind, runSail_wX_bits_of_reg,
       runSail_pure, hbridge]
   · refine ⟨fun r => ?_, fun a ha => ?_⟩

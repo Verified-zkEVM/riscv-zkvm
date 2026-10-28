@@ -229,8 +229,8 @@ def num_of_float_class (arg_ : float_class) : Int :=
   | .float_class_snan => 8
   | .float_class_qnan => 9
 
-/-- Type quantifiers: k_ex481015_ : Nat, List.elem k_ex481015_ [16, 32, 64, 128] -/
-def float_classify (f : (BitVec k_ex481015_)) : SailM float_class := do
+/-- Type quantifiers: k_ex479807_ : Nat, List.elem k_ex479807_ [16, 32, 64, 128] -/
+def float_classify (f : (BitVec k_ex479807_)) : SailM float_class := do
   if ((float_is_snan f) : Bool)
   then (pure float_class_snan)
   else
@@ -267,6 +267,6 @@ def float_classify (f : (BitVec k_ex481015_)) : SailM float_class := do
                         else (pure float_class_negative_inf))
                       else
                         (do
-                          assert false "float_classify internal logic error"
+                          sail_assert false "float_classify internal logic error"
                           throw Error.Exit))))))
 

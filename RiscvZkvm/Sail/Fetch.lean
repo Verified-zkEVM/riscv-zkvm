@@ -1,7 +1,6 @@
 import RiscvZkvm.Sail.Flow
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.PlatformConfig
-import RiscvZkvm.Sail.Regs
 import RiscvZkvm.Sail.AddrChecks
 import RiscvZkvm.Sail.SplitAccessUtils
 import RiscvZkvm.Sail.Mem
@@ -218,7 +217,7 @@ def fetch_bytes (fetch_start : (BitVec 64)) (granule_start : (BitVec 64)) (width
   match (← (mem_read (InstructionFetch ()) pbmt paddr width false false false)) with
   | .Err (exc_addr, e) =>
     (do
-      assert (exc_addr == paddr) "postlude/fetch.sail:44.30-44.31"
+      sail_assert (exc_addr == paddr) "postlude/fetch.sail:44.30-44.31"
       (pure (FetchBytes_Exception e)))
   | .Ok bytes => (pure (FetchBytes_Success bytes))
 
@@ -230,12 +229,14 @@ def fetch (_ : Unit) : SailM FetchResult := SailME.run do
       match (ext_fetch_check_pc (← readReg PC) (← readReg PC)) with
       | .some e => SailME.throw ((F_Ext_Error e) : FetchResult)
       | none => (pure ())
-      if ((((BitVec.access (← readReg PC) 0) != 0#1) || (((BitVec.access (← readReg PC) 1) != 0#1) && (not
-               (← (currentlyEnabled Ext_Zca))))) : Bool)
+      if ((←((pure ((BitVec.access (← readReg PC) 0) != 0#1)) <||> (do
+           (pure ((BitVec.access (← readReg PC) 1) != 0#1)) <&&> (do
+             (pure (not (← (currentlyEnabled Ext_Zca)))))))) : Bool)
       then (pure (F_Error ((E_Fetch_Addr_Align ()), (← readReg PC))))
       else
         (do
-          if (((is_aligned_vaddr (Virtaddr (← readReg PC)) 4) && (← (currentlyEnabled Ext_Ziccif))) : Bool)
+          if ((←((pure (is_aligned_vaddr (Virtaddr (← readReg PC)) 4)) <&&> (do
+               (currentlyEnabled Ext_Ziccif)))) : Bool)
           then
             (do
               match (← (fetch_bytes (← readReg PC) (← readReg PC) 4)) with

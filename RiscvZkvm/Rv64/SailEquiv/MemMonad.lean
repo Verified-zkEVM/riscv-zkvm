@@ -132,11 +132,11 @@ theorem runSail_checked_mem_write_bare (paddr : physaddr) (data : BitVec 64) (s 
     simp +decide only [SailME.run, PreSail.PreSailME.run,
       hcheck, alignedAccessInfo, hsplit, misaligned_order_one,
       Int.toNat_one, Int.toNat_zero, untilFuelM_one,
-      Sail.assert, PreSail.assert, if_true,
+      Sail.sail_assert, PreSail.sail_assert, ite_true,
       BitVec.addInt, Int.natCast_zero, Int.zero_mul, Int.zero_add,
       ofInt_zero_bv, BitVec.add_zero,
       Int.toNat_natCast, bits_of_physaddr_mk,
-      hpmp, hmmio, if_false, write_kind_of_flags,
+      hpmp, hmmio, ite_false, write_kind_of_flags,
       EStateM.map, Bind.bind, bind, EStateM.bind, Pure.pure, EStateM.pure,
       ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure,
       MonadLift.monadLift, monadLift, liftM, Functor.map]

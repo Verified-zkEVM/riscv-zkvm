@@ -1,11 +1,9 @@
 import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.Regs
-import RiscvZkvm.Sail.SysRegs
 import RiscvZkvm.Sail.ZicfilpRegs
 import RiscvZkvm.Sail.SysControl
 import RiscvZkvm.Sail.Vmem
 import RiscvZkvm.Sail.StepExt
-import RiscvZkvm.Sail.Step
 import RiscvZkvm.Sail.ValidateConfig
 
 set_option maxHeartbeats 1_000_000_000
@@ -210,7 +208,7 @@ def reset (_ : Unit) : SailM Unit := do
   (pure (ext_reset ()))
 
 def init_model (config_filename : String) : SailM Unit := do
-  assert (← (config_is_valid ())) (HAppend.hAppend
+  sail_assert (← (config_is_valid ())) (HAppend.hAppend
     (if ((config_filename == "") : Bool)
     then "Default config"
     else (HAppend.hAppend "Config in " config_filename)) " is invalid.")

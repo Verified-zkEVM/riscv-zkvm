@@ -1,6 +1,4 @@
 import RiscvZkvm.Sail.MemAddrtype
-import RiscvZkvm.Sail.PlatformConfig
-import RiscvZkvm.Sail.Regs
 import RiscvZkvm.Sail.SysControl
 
 set_option maxHeartbeats 1_000_000_000
