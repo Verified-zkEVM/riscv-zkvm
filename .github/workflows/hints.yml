@@ -1,0 +1,27 @@
+name: Hint protocol regressions
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  core-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Build hint regressions and runner
+        run: lake build RiscvZkvm.Interpreter.HintTests riscv-zkvm-run
+      - name: Run interpreter fixtures
+        run: scripts/run-interpreter-tests.sh

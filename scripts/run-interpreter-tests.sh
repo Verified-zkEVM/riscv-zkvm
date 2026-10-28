@@ -92,14 +92,16 @@ check wordop \
   'stopped   undecodable instruction' \
   '^retired   2$'
 
-# Prover hint stream: 4-byte --input + 4-byte --hint read via read_input (t0=0xF2) + LBU.
+# Static tape v1: u64 public length, public bytes, then hint bytes. The same
+# guest locates hints for different input lengths, including a word boundary.
 printf '\x11\x22\x33\x44' > "$FIXDIR/pub.bin"
 printf '\xaa\xbb\xcc\xdd' > "$FIXDIR/hint.bin"
 hint_out="$("$RUNNER" "$FIXDIR/hint.elf" --input "$FIXDIR/pub.bin" --hint "$FIXDIR/hint.bin" --regs 2>&1)"
 if grep -Eq 'stopped   halted' <<<"$hint_out" &&
-   grep -Eq '^  x12[[:space:]]+0x8$' <<<"$hint_out" &&
+   grep -Eq '^  x12[[:space:]]+0x10$' <<<"$hint_out" &&
    grep -Eq '^  x13[[:space:]]+0x11$' <<<"$hint_out" &&
-   grep -Eq '^  x14[[:space:]]+0xaa$' <<<"$hint_out"; then
+   grep -Eq '^  x14[[:space:]]+0xaa$' <<<"$hint_out" &&
+   grep -Eq '^  x15[[:space:]]+0x4$' <<<"$hint_out"; then
   echo "ok   hint"
   pass=$((pass + 1))
 else
@@ -107,6 +109,25 @@ else
   printf '%s\n' "$hint_out" | sed 's/^/     | /'
   fail=$((fail + 1))
 fi
+
+for public_len in 1 9; do
+  python3 - "$FIXDIR/pub-variable.bin" "$public_len" <<'PY'
+import sys
+from pathlib import Path
+Path(sys.argv[1]).write_bytes(bytes([0x11]) * int(sys.argv[2]))
+PY
+  hint_out="$("$RUNNER" "$FIXDIR/hint.elf" --input "$FIXDIR/pub-variable.bin" --hint "$FIXDIR/hint.bin" --regs 2>&1)"
+  if grep -Eq 'stopped   halted' <<<"$hint_out" &&
+     grep -Eq '^  x13[[:space:]]+0x11$' <<<"$hint_out" &&
+     grep -Eq '^  x14[[:space:]]+0xaa$' <<<"$hint_out"; then
+    echo "ok   hint-prefix-$public_len"
+    pass=$((pass + 1))
+  else
+    echo "FAIL hint-prefix-$public_len"
+    printf '%s\n' "$hint_out" | sed 's/^/     | /'
+    fail=$((fail + 1))
+  fi
+done
 
 echo
 echo "run-interpreter-tests: $pass passed, $fail failed"

@@ -47,6 +47,8 @@ ALLOWED_ORPHANS = {
     # Scoped Sail-initializer regression checks. Kept out of the published
     # library; CI builds this module by name alongside the decoder guards.
     "RiscvZkvm.Interpreter.SailInitTests",
+    # Static hint transport/loader regressions, built by the hint workflow.
+    "RiscvZkvm.Interpreter.HintTests",
 }
 
 SCAN_DIRS = ["RiscvZkvm/Rv64", "RiscvZkvm/Interpreter"]

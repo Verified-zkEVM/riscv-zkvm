@@ -5,7 +5,7 @@
 -/
 
 import RiscvZkvm.Interpreter.Run
-import RiscvZkvm.Rv64.HintInterface
+import RiscvZkvm.Rv64.HintInput
 
 namespace RiscvZkvm.Interpreter
 
@@ -24,8 +24,8 @@ def usage : String :=
 "usage: riscv-zkvm-run <elf> [options]
 
   --fuel N        stop after N retired instructions (default 1000000)
-  --input FILE    file contents become the guest's public input prefix
-  --hint FILE     prover hint tape appended after --input in the guest stream
+  --input FILE    guest input bytes (public prefix when --hint is present)
+  --hint FILE     static tape v1: u64-LE public length, then input and hint bytes
   --output FILE   write the guest's public output bytes to FILE
   --regs          print the final register file
   --help          show this message
@@ -90,7 +90,10 @@ def main (args : List String) : IO UInt32 := do
           let b ← IO.FS.readBinFile f
           pure (b.toList.map (fun u => BitVec.ofNat 8 u.toNat))
       let hintedInput : HintedInput := { publicInput, hintTape }
-      let l := load img hintedInput.toStream
+      let stream := if o.hint.isSome then hintedInput.toFramedStream else hintedInput.toStream
+      let l ← match loadChecked img stream with
+        | .ok loaded => pure loaded
+        | .error error => IO.eprintln s!"riscv-zkvm-run: {error}"; return 2
       if l.tohost.isSome then
         IO.eprintln "riscv-zkvm-run: warning: this image has a .tohost section, so it is \
           probably a riscv-tests binary. Those do not run under this model -- see \

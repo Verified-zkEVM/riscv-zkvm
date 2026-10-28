@@ -120,7 +120,7 @@ def load (img : Elf64Image) (privateInput : List (BitVec 8) := []) : Loaded := I
       (fun acc k =>
         let b : Nat := match inputArr[idx + k]? with
           | some bv => bv.toNat
-          | none => 0
+          | none => ((mem.getD (BitVec.ofNat 64 (inputBase + idx)) 0).toNat >>> (8 * k)) &&& 255
         acc ||| (b <<< (8 * k))) 0
     mem := mem.insert (BitVec.ofNat 64 (inputBase + idx)) (BitVec.ofNat 64 v)
     idx := idx + 8
@@ -133,6 +133,26 @@ def load (img : Elf64Image) (privateInput : List (BitVec 8) := []) : Loaded := I
       privateInput := privateInput
       inputBufBase := BitVec.ofNat 64 inputBase }
   return { state, rawCode, tohost := img.tohost }
+
+/-- Validate the input allocation before materializing it. The allocation is
+    rounded to doublewords, because byte-region assertions own whole cells.
+    The input window is contained in the existing contiguous legacy data zone. -/
+def checkInputAllocation (img : Elf64Image) (inputLen : Nat) : Except String Unit := do
+  let allocated := (inputLen + 7) / 8 * 8
+  if INPUT_MEM_START + allocated > MEM_END + 1 then
+    throw "input buffer exceeds the valid data-memory region"
+  if allocated > 0 then
+    for seg in img.segments do
+      if seg.memsz > 0 && seg.vaddr < INPUT_MEM_START + allocated &&
+          INPUT_MEM_START < seg.vaddr + seg.memsz then
+        throw "input buffer overlaps an ELF PT_LOAD segment"
+
+/-- Checked CLI loader. Reject overlapping image/input allocations instead of
+    silently replacing program data. `load` remains the low-level initializer. -/
+def loadChecked (img : Elf64Image) (privateInput : List (BitVec 8) := []) :
+    Except String Loaded := do
+  checkInputAllocation img privateInput.length
+  pure (load img privateInput)
 
 /-- Explain why `stepExec` returned `none` at the current `pc`. -/
 def classifyStop (l : Loaded) (e : ExecState) : Stop :=

@@ -172,7 +172,7 @@ def _wordop():
 
 @fixture("hint")
 def _hint():
-    """Call read_input (t0 = 0xF2), then load the first public byte and first hint byte."""
+    """Read the static-tape v1 length header and locate a variable-length prefix."""
     return [
         *LOAD_DATA_BASE,
         ADDI("a0", "t1", 0),       # a0 = 0xa0000000 (&buf_ptr)
@@ -181,8 +181,10 @@ def _hint():
         ECALL,
         LD("t2", 0, "a0"),         # t2 = buf_ptr (0x40000000)
         LD("a2", 0, "a1"),         # a2 = total stream length
-        LBU("a3", 0, "t2"),        # a3 = publicInput[0]
-        LBU("a4", 4, "t2"),        # a4 = hintTape[0] (when publicInput has 4 bytes)
+        LD("a5", 0, "t2"),         # a5 = public-input length from the v1 header
+        LBU("a3", 8, "t2"),        # a3 = publicInput[0]
+        ADD("t1", "t2", "a5"),
+        LBU("a4", 8, "t1"),        # a4 = hintTape[0], independent of prefix length
         *HALT,
     ]
 

@@ -30,6 +30,7 @@ import RiscvZkvm.Rv64.Logic.GenericSpecs
 import RiscvZkvm.Rv64.Logic.InstructionSpecs
 import RiscvZkvm.Rv64.Logic.SyscallSpecs
 import RiscvZkvm.Rv64.Logic.HintSpecs
+import RiscvZkvm.Rv64.Logic.HintInput
 
 -- Memory regions, byte-level algebra, and footprint reasoning.
 import RiscvZkvm.Rv64.Logic.MemRegion

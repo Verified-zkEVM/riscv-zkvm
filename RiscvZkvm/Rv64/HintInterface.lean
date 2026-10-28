@@ -239,18 +239,42 @@ theorem rv64Verify_sound_with_rv64Expand
 -- Section 4: Computable Hint Cost vs "Magic Discrete-Log" Oracle Hints
 -- ============================================================================
 
-/-- A metered hint generator pairs an `expand` function with the cycle cost
-    `expandCost x` required to compute the hint on input `x`. -/
+/-- A hint generator with a proposed cost annotation. `Realizes` connects that
+    annotation to an actual RV64 execution; this record alone certifies no cost. -/
 structure MeteredExpand where
   expand     : ExpandProgram
   expandCost : List (BitVec 8) → Nat
 
-/-- Completeness of `(expand, verify)` within a prover hint-generation budget `B`:
+/-- Completeness under an abstract hint-cost annotation `B`:
     for every valid `(x, out)` satisfying `Spec x out`, `expand` produces a hint
-    in `≤ B x` steps that causes `verify` to accept. -/
+    with annotation `≤ B x` that causes `verify` to accept. Use
+    `Rv64MeteredCompleteness` to certify an actual execution-step bound. -/
 def MeteredCompleteness (M : MeteredExpand) (verify : VerifyProgram)
     (Spec : InputOutputSpec) (B : List (BitVec 8) → Nat) : Prop :=
   ∀ x out, Spec x out → M.expandCost x ≤ B x ∧ verify x (M.expand x) out
+
+/-- Every annotated cost is realized by a halting RV64 expander producing
+    the annotated generator's exact hint bytes. -/
+def MeteredExpand.Realizes (M : MeteredExpand)
+    (initExpand : List (BitVec 8) → MachineState) : Prop :=
+  ∀ x, rv64ExpandRunsIn initExpand x (M.expandCost x) (M.expand x)
+
+/-- Operational budgeted completeness requires both a realized expander and
+    the abstract verifier/completeness contract. -/
+def Rv64MeteredCompleteness (M : MeteredExpand)
+    (initExpand : List (BitVec 8) → MachineState) (verify : VerifyProgram)
+    (Spec : InputOutputSpec) (B : List (BitVec 8) → Nat) : Prop :=
+  M.Realizes initExpand ∧ MeteredCompleteness M verify Spec B
+
+theorem rv64MeteredCompleteness_runsWithin {M : MeteredExpand}
+    {initExpand : List (BitVec 8) → MachineState} {verify : VerifyProgram}
+    {Spec : InputOutputSpec} {B : List (BitVec 8) → Nat}
+    (h : Rv64MeteredCompleteness M initExpand verify Spec B)
+    (x out : List (BitVec 8)) (valid : Spec x out) :
+    ∃ fuel hBytes, fuel ≤ B x ∧ rv64ExpandRunsIn initExpand x fuel hBytes ∧
+      verify x hBytes out := by
+  obtain ⟨bound, accepted⟩ := h.2 x out valid
+  exact ⟨M.expandCost x, M.expand x, bound, h.1 x, accepted⟩
 
 /-- **Soundness Independence from Hint Generation Complexity**:
     Even if a hint `h` is produced by a "magic discrete-log" oracle with unbounded
