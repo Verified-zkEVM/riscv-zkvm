@@ -2,8 +2,10 @@
 
 This isolated consumer uses Flapjack's actual `panValueFfiExtCall`, `callFfi`,
 and production RISC-V aligned-cell byte access model. Flapjack is pinned to
-`034bb5a1ed0b757082768d5406206bd2f8e31b7c`; Lean is 4.33.1. Its Mathlib
+`034bb5a1ed0b757082768d5406206bd2f8e31b7c`; Lean is 4.35.0. Its Mathlib
 dependency stays outside the parent Mathlib-free package.
+The example explicitly selects Mathlib v4.35.0, overriding the older version
+in that Flapjack revision while keeping the reviewed FFI source fixed.
 
 From this directory:
 

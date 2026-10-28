@@ -41,7 +41,9 @@ jobs:
           use-mathlib-cache: false
       - name: Fetch isolated Mathlib cache
         working-directory: examples/pancake-modinv
-        run: lake exe cache get
+        run: |
+          cmp ../../lean-toolchain lean-toolchain
+          lake exe cache get
       - name: Build ordinary-FFI consumer
         working-directory: examples/pancake-modinv
         run: lake build Op6Pancake

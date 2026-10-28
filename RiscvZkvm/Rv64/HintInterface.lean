@@ -588,7 +588,7 @@ theorem exists_honestHintOracle {Q : Type} {R : Q → Type} [∀ q, Inhabited (R
   refine ⟨fun q => if h : ∃ r : R q, H q r then Classical.choose h else default, ?_⟩
   intro q hq
   dsimp
-  rw [dif_pos hq]
+  rw [dite_eq_left hq]
   exact Classical.choose_spec hq
 
 /-- All-paths soundness of a finite interaction tree `t`: regardless of what answers an
@@ -669,11 +669,11 @@ theorem askAndVerifyHint_sound_and_locally_complete {Q : Type} {R : Q → Type}
   constructor
   · intro r r' hr'
     by_cases hc : check q r = true
-    · rw [if_pos hc] at hr'
+    · rw [ite_eq_left hc] at hr'
       injection hr' with h_eq
       subst h_eq
       exact hcheck_sound q r hc
-    · rw [if_neg hc] at hr'
+    · rw [ite_eq_right hc] at hr'
       cases hr'
   · refine ⟨hq, fun r hr => ?_⟩
     have hc : check q r = true := hcheck_complete q r hr
