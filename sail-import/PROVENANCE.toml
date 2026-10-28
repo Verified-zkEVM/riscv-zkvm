@@ -16,9 +16,9 @@ sail_compiler_patch = "sail-import/patches/1774-type-arithmetic.patch"
 sail_compiler_patch_sha256 = "a00368bdc758e9073b7ab08e0d70dc41b815f15d7fcfe9fdc9e501637d09b1a2"
 
 [runtime]
-# Official lean-sail v8 passes Sail and SailTest on Lean 4.35.0 without patches.
+# Official lean-sail v7 passes Sail and SailTest on Lean 4.35.0 without patches.
 lean_sail_repo = "https://github.com/rems-project/lean-sail.git"
-lean_sail_rev = "1e5b216bf881ef08da160db63b44ecda430802d6"
+lean_sail_rev = "01bb54c7c8a69e52ba11863c67e7c403a6cd198a"
 lean_toolchain = "leanprover/lean4:v4.35.0"
 
 [extraction]
