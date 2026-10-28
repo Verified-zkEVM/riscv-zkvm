@@ -200,7 +200,8 @@ theorem noHintMakesInvalidPass_iff_forall_relational_expand_sound
 
 /-- Concrete RV64IM guest verifier execution: starting from initial machine state
     `init x h` (which loads `HintedInput.mk x h` into `privateInput`), running `fuel`
-    steps of `stepN` halts with `ECALL` (`t0 = 0`, `a0 = 0`) and `publicValues = out`. -/
+    steps of `stepN` reaches a halting `ECALL` (`t0 = 0`, `a0 = 0`) with
+    `publicValues = out`. -/
 def rv64VerifyProgram (init : HintedInput → MachineState) : VerifyProgram :=
   fun x h out =>
     ∃ (fuel : Nat) (s' : MachineState),
@@ -210,9 +211,10 @@ def rv64VerifyProgram (init : HintedInput → MachineState) : VerifyProgram :=
       s'.getReg .x10 = 0#64 ∧
       s'.publicValues = out
 
-/-- Concrete RV64IM `expand` execution with explicit cycle count `fuel`:
-    running the `expand` ELF for `fuel` steps on public input `x` halts and writes
-    the generated `HintTape` to `s'.publicValues`. -/
+/-- Concrete RV64IM `expand` execution with explicit instruction-step count `fuel`:
+    running the `expand` ELF for `fuel` steps on public input `x` reaches a halting
+    `ECALL` with the generated `HintTape` in `s'.publicValues`. This does not count
+    backend cycles or initialization work. -/
 def rv64ExpandRunsIn (initExpand : List (BitVec 8) → MachineState)
     (x : List (BitVec 8)) (fuel : Nat) (h : HintTape) : Prop :=
   ∃ (s' : MachineState),
@@ -223,7 +225,7 @@ def rv64ExpandRunsIn (initExpand : List (BitVec 8) → MachineState)
     s'.publicValues = h
 
 /-- Any RV64IM verifier satisfying `NoHintMakesInvalidPass` is automatically sound
-    when composed with any RV64IM `expand` execution of arbitrary cycle count `fuel`. -/
+    when composed with any RV64IM `expand` execution of arbitrary step count `fuel`. -/
 theorem rv64Verify_sound_with_rv64Expand
     (initVerify : HintedInput → MachineState)
     (initExpand : List (BitVec 8) → MachineState)

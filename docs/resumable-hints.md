@@ -71,6 +71,21 @@ emitted register-loading/interception stub, generic Flapjack-to-RV64 memory
 refinement, and Sail/platform/backend integration remain separate obligations.
 It neither changes nor proves evm.fast's fixed Challenge oracle contract.
 
+## Sail boundary on the refreshed toolchain
+
+The Lean 4.35 / official lean-sail v8 stack still extracts RISC-V 0.13.1.
+Its generated `SailM` uses the concurrency-v1 `PreSailM`, through the existing
+compatibility exports. The runtime also provides the newer free-effect
+`Sail.ArchSem` interface, but this extraction does not use that interface.
+Upgrading the runtime alone does not make architectural execution resumable
+at hint requests.
+
+The present `rvTick` adapter intercepts at a machine instruction boundary.
+A Sail interpretation still needs a chosen platform call protocol and a proof
+relating the request, saved architectural state, response writes, and resumed
+execution. An eventual ArchSem extraction needs its own handler/refinement
+adapter. Neither path treats Sail's undefined-value choices as hint responses.
+
 ## Static hint-tape transport
 
 The optional CLI `--hint FILE` transport is distinct from the resumable
