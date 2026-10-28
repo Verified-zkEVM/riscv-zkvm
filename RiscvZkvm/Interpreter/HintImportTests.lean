@@ -12,7 +12,8 @@ run_cmd do
     `RiscvZkvm.Rv64.Hints, `RiscvZkvm.Rv64.HintInterface,
     `RiscvZkvm.Rv64.HintInput, `RiscvZkvm.Rv64.ByteCodec,
     `RiscvZkvm.Rv64.ResumableHints, `RiscvZkvm.Rv64.HintHandlers,
-    `RiscvZkvm.Rv64.ModInvHints, `RiscvZkvm.Rv64.Logic.Hints,
+    `RiscvZkvm.Rv64.ModInvHints, `RiscvZkvm.Rv64.Div256Hints,
+    `RiscvZkvm.Rv64.Logic.Hints,
     `RiscvZkvm.Rv64.Logic.HintTape, `RiscvZkvm.Rv64.Logic.HintInput,
     `RiscvZkvm.Rv64.Logic.ResumableHints, `RiscvZkvm.Rv64.Logic.ModInvHints]
   for imported in (← getEnv).header.moduleNames do
