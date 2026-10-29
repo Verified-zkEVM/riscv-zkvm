@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply the recorded identifier-only patch to the exact reviewed Flapjack pin."""
+"""Apply the recorded compatibility patch to the exact reviewed Flapjack pin."""
 
 import json
 from pathlib import Path
@@ -15,7 +15,7 @@ DIFF = ("diff", "--no-ext-diff", "--no-textconv", "--binary", "--full-index",
 
 def main():
     package = ROOT / ".lake/packages/flapjack"
-    patch = ROOT / "patches/flapjack-lean435-given.patch"
+    patch = ROOT / "patches/flapjack-lean435-compat.patch"
     if not package.is_dir():
         sys.exit("Materialize dependencies first: run 'lake env true' or 'lake exe cache get'.")
     manifest = json.loads((ROOT / "lake-manifest.json").read_text())
@@ -30,7 +30,7 @@ def main():
     expected = patch.read_bytes()
     diff = git(*DIFF, check=True, capture_output=True).stdout
     if diff == expected:
-        print("Flapjack identifier compatibility patch already applied.")
+        print("Flapjack compatibility patch already applied.")
         return
     if diff:
         sys.exit("Flapjack has unrecorded tracked changes; leaving them untouched.")
@@ -39,7 +39,7 @@ def main():
     actual = git(*DIFF, check=True, capture_output=True).stdout
     if actual != expected:
         sys.exit("Applied diff differs from the recorded compatibility patch.")
-    print("Applied Flapjack's identifier-only Lean 4.35 compatibility patch.")
+    print("Applied Flapjack's recorded Lean 4.35 compatibility patch.")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,226 @@
+diff --git a/Flapjack/Compiler/Backend/Semantics/TargetProps/EvaluateAddClockIoEventsMono.lean b/Flapjack/Compiler/Backend/Semantics/TargetProps/EvaluateAddClockIoEventsMono.lean
+index dd37d57b6d996b467f292afe280c5cef68772c4a..416c6000457bd9ceb2b313015a5fa8b005509d5a 100644
+--- a/Flapjack/Compiler/Backend/Semantics/TargetProps/EvaluateAddClockIoEventsMono.lean
++++ b/Flapjack/Compiler/Backend/Semantics/TargetProps/EvaluateAddClockIoEventsMono.lean
+@@ -1,4 +1,3 @@
+-import Mathlib.Logic.Basic
+ import Mathlib.Tactic.CasesM
+ import Flapjack.Compiler.Backend.Semantics.TargetProps.EvaluateIoEventsMono
+ 
+@@ -14,6 +13,7 @@ theorem evaluateTargetAddClockIoEventsMono {width : Nat} [NeZero width]
+     (ffi : HolFfiState σ) (k : Nat) (ms : state) (k' : Nat) (hle : k ≤ k') :
+     (evaluateTargetHOL mc ffi k ms).2.2.ioEvents <+:
+       (evaluateTargetHOL mc ffi k' ms).2.2.ioEvents := by
++  classical
+   induction k generalizing mc ffi ms k' with
+   | zero => simpa only [evaluateTargetHOL] using evaluateTargetIoEventsMono mc ffi k' ms
+   | succ k ih =>
+@@ -21,17 +21,11 @@ theorem evaluateTargetAddClockIoEventsMono {width : Nat} [NeZero width]
+     | zero => exact False.elim (Nat.not_succ_le_zero k hle)
+     | succ n =>
+       have hkn : k ≤ n := Nat.le_of_succ_le_succ hle
+-      generalize hsmall : evaluateTargetHOL mc ffi (k + 1) ms = small
+-      generalize hlarge : evaluateTargetHOL mc ffi (n + 1) ms = large
+-      simp only [evaluateTargetHOL] at hsmall hlarge
+-      repeat' (first
++      simp only [evaluateTargetHOL]
++      repeat' first
+         | exact List.prefix_refl _
+-        | (rw [← hlarge]; exact List.prefix_refl _)
+-        | (rw [← hsmall, ← hlarge]; exact ih _ _ _ _ hkn)
+-        | (rename_i hguard; rw [if_pos hguard] at hlarge)
+-        | (simp_all only [not_not])
+-        | cases_type Compiler.Encoders.Asm.HolAddr
+-        | (simp only [ite_and] at hsmall hlarge)
+-        | split at hsmall <;> (try simp_all only [↓reduceIte]))
++        | exact ih _ _ _ _ hkn
++        | split
++
+ 
+ end Flapjack
+diff --git a/Flapjack/Compiler/Backend/Semantics/TargetProps/EvaluateIoEventsMono.lean b/Flapjack/Compiler/Backend/Semantics/TargetProps/EvaluateIoEventsMono.lean
+index 39af7379b932d6e69997548fb01607684f31d288..6b01d8602edd56dd47d3a9cfa28e16474310c957 100644
+--- a/Flapjack/Compiler/Backend/Semantics/TargetProps/EvaluateIoEventsMono.lean
++++ b/Flapjack/Compiler/Backend/Semantics/TargetProps/EvaluateIoEventsMono.lean
+@@ -1,4 +1,3 @@
+-import Mathlib.Logic.Basic
+ import Mathlib.Tactic.SplitIfs
+ import Mathlib.Tactic.CasesM
+ import Flapjack.Compiler.Backend.Semantics.TargetSem.Evaluate
+@@ -13,20 +12,16 @@ theorem evaluateTargetIoEventsMono {width : Nat} [NeZero width]
+     {state projection : Type} {σ : Type} (mc : MachineConfig width state projection)
+     (ffi : HolFfiState σ) (k : Nat) (ms : state) :
+     ffi.ioEvents <+: (evaluateTargetHOL mc ffi k ms).2.2.ioEvents := by
++  classical
+   induction k generalizing mc ffi ms with
+   | zero => simp [evaluateTargetHOL]
+   | succ k ih =>
+-    generalize hout : evaluateTargetHOL mc ffi (k + 1) ms = out
+-    simp only [evaluateTargetHOL] at hout
+-    repeat' (first
+-      | (rw [← hout]; exact ih _ _ _)
+-      | (rw [← hout]; exact List.prefix_refl _)
+-      | (rename_i nf nb hcall
+-         rw [← hout]
+-         exact (callFFIHOL_return_ioEvents_prefix ffi _ _ _ nf nb hcall).trans (ih _ _ _))
+-      | cases_type Compiler.Encoders.Asm.HolAddr
+-      | (simp only [ite_and] at hout)
+-      | split at hout <;> (try simp_all only [↓reduceIte]))
+-
++    simp only [evaluateTargetHOL]
++    repeat' first
++      | exact ih _ _ _
++      | exact List.prefix_refl _
++      | (apply (callFFIHOL_return_ioEvents_prefix ffi _ _ _ _ _ (by assumption)).trans
++         exact ih _ _ _)
++      | split
+ 
+ end Flapjack
+diff --git a/Flapjack/Compiler/Backend/StackRemove/Proofs/InitCodeCorrect.lean b/Flapjack/Compiler/Backend/StackRemove/Proofs/InitCodeCorrect.lean
+index 8129448ca216d96b66bbaf2e57f2173afcb87b04..0831dbaebc369cf6fb512715eff5df3f4592078f 100644
+--- a/Flapjack/Compiler/Backend/StackRemove/Proofs/InitCodeCorrect.lean
++++ b/Flapjack/Compiler/Backend/StackRemove/Proofs/InitCodeCorrect.lean
+@@ -226,6 +226,7 @@ theorem holFmapAsFiniteSupportWitness {width : Nat} [NeZero width] {C F : Type}
+       StackSemStateBroad.ofBroad state.toBroad state.toBroad_finiteSupport = state) :=
+   Flapjack.StackSemStateOps.holFmapAsFiniteSupportWitness
+ 
++set_option maxRecDepth 4096 in
+ open Classical in
+ /-- Complete original initializer correctness theorem. From the original
+ `init_code_pre`, code relation, compile-oracle equation and register bounds,
+diff --git a/Flapjack/Compiler/Backend/StackRemove/Proofs/WordListMemory.lean b/Flapjack/Compiler/Backend/StackRemove/Proofs/WordListMemory.lean
+index 304b3d0c5567411003c33c261fc8c4186817ddf6..058d447000c2420348be147a337f5be803f8f01c 100644
+--- a/Flapjack/Compiler/Backend/StackRemove/Proofs/WordListMemory.lean
++++ b/Flapjack/Compiler/Backend/StackRemove/Proofs/WordListMemory.lean
+@@ -1,3 +1,4 @@
++import Mathlib.Tactic.Set
+ import Flapjack.Compiler.Backend.StackRemove.Proofs.StackHeap
+ import Flapjack.Compiler.Backend.StackRemove.Proofs.Memory
+ import Flapjack.Compiler.Backend.StackRemove.Proofs.WordListExists
+diff --git a/Flapjack/Compiler/Backend/WordAlloc/Proofs/EvaluateApplyColour/MoveStoreConsts.lean b/Flapjack/Compiler/Backend/WordAlloc/Proofs/EvaluateApplyColour/MoveStoreConsts.lean
+index be2abd677fbcae05d97bbbcf13447cf62bd9a950..9ba7735d3c9a858cf75e22ba143cdc29a251074d 100644
+--- a/Flapjack/Compiler/Backend/WordAlloc/Proofs/EvaluateApplyColour/MoveStoreConsts.lean
++++ b/Flapjack/Compiler/Backend/WordAlloc/Proofs/EvaluateApplyColour/MoveStoreConsts.lean
+@@ -122,7 +122,7 @@ theorem sptLookup_sptAlistInsert_get? {α : Type} :
+               · exact absurd h hnx
+               · exact h
+             rw [sptLookup_sptInsert_ne x n v _ hnx, ih vs t n hnd' hlen' hnxs, List.idxOf_cons]
+-            simp only [beq_eq_false_iff_ne.mpr (Ne.symm hnx), cond_false,
++            simp only [beq_eq_false_iff_ne.mpr (Ne.symm hnx), Bool.false_eq_true, ite_false,
+               List.getElem?_cons_succ]
+ 
+ /-- The first-occurrence index of a mapped element is the first-occurrence
+diff --git a/Flapjack/Compiler/Backend/WordAlloc/Proofs/SSAReconcile.lean b/Flapjack/Compiler/Backend/WordAlloc/Proofs/SSAReconcile.lean
+index 553ff2997ff385a8f06d11936f0ba09a4b71e487..2402a891e99df88bb4e0a9aab40fcfdf1611813f 100644
+--- a/Flapjack/Compiler/Backend/WordAlloc/Proofs/SSAReconcile.lean
++++ b/Flapjack/Compiler/Backend/WordAlloc/Proofs/SSAReconcile.lean
+@@ -106,7 +106,6 @@ theorem evaluateSSAReconcile {width : Nat} [NeZero width] {C F β : Type}
+       exfalso
+       apply empty
+       convert hempty using 1
+-      congr 2
+     · congr 1
+   refine ⟨after, ?_, ?_, ?_⟩
+   · rw [compiled]
+diff --git a/Flapjack/Compiler/Backend/WordAlloc/Proofs/SSAReconcileEmpty.lean b/Flapjack/Compiler/Backend/WordAlloc/Proofs/SSAReconcileEmpty.lean
+index 4a4f852d153b552f19f71158d1639c995c84ac61..57116b93767902dbb974ddffd197d07f1153ee28 100644
+--- a/Flapjack/Compiler/Backend/WordAlloc/Proofs/SSAReconcileEmpty.lean
++++ b/Flapjack/Compiler/Backend/WordAlloc/Proofs/SSAReconcileEmpty.lean
+@@ -70,7 +70,6 @@ theorem evaluateSSAReconcileEmpty {width : Nat} [NeZero width] {C F β : Type}
+       exfalso
+       apply notEmpty
+       convert empty using 1
+-      congr 2
+   · simp [Flapjack.WordAlloc.wordStateEqRel]
+   · intro n value hn
+     obtain ⟨domain, lookup, _⟩ := related.2 n value hn.2
+diff --git a/Flapjack/Compiler/Backend/WordToStack/Proofs/EvaluateWLive.lean b/Flapjack/Compiler/Backend/WordToStack/Proofs/EvaluateWLive.lean
+index 61a13b657e3b9f0ea11cb0f9aaf896f333fc96e1..9e63c14cc7286a1abf64eabfc32da462aff668dc 100644
+--- a/Flapjack/Compiler/Backend/WordToStack/Proofs/EvaluateWLive.lean
++++ b/Flapjack/Compiler/Backend/WordToStack/Proofs/EvaluateWLive.lean
+@@ -1,3 +1,4 @@
++import Mathlib.Data.List.Chain
+ import Mathlib.Order.Basic
+ import Flapjack.Compiler.Backend.WordToStack.Proofs.AllocStateRel
+ import Flapjack.Compiler.Backend.WordToStack.NativeLive
+@@ -79,7 +80,7 @@ theorem sortEnv_pairwise {width : Nat} [NeZero width] (env : Spt (WordLocW width
+       (fun a b => wordSemKeyValCompare a b = true)
+       (fun a b => wordSemKeyValCompare a b = true) :=
+     ⟨fun hab hbc => transitiveKeyValCompare _ _ _ hab hbc⟩
+-  have hp := hc.pairwise
++  have hp := List.isChain_iff_pairwise.mp hc
+   have hperm := (holPerm_iff _ _).mp (Basis.Pure.MlList.sortPerm wordSemKeyValCompare
+     (sptToAList env))
+   have hnd : ((Basis.Pure.MlList.sort wordSemKeyValCompare (sptToAList env)).map
+@@ -153,7 +154,7 @@ theorem wLiveFilterBitmap {width : Nat} [NeZero width] (k f' : Nat) (names2 : Sp
+     rw [List.pairwise_map]
+     apply List.Pairwise.sublist List.filter_sublist
+     have hz : ((indexList frame k).zip bits).map Prod.fst = indexList frame k :=
+-      List.map_fst_zip (by rw [hbl, hil]; exact Nat.le_refl _)
++      List.map_fst_zip (by rw [hbl, hil])
+     have := indexList_pairwise k frame
+     rw [← hz, List.pairwise_map] at this
+     exact this
+diff --git a/Flapjack/Compiler/Backend/WordToStack/Proofs/ProgramCodeLabels.lean b/Flapjack/Compiler/Backend/WordToStack/Proofs/ProgramCodeLabels.lean
+index ae404f40a5f996e88b9a7e230bc1bf63d20f50f0..201a6aa469b63ff4cd87b07f702c3119622ae8af 100644
+--- a/Flapjack/Compiler/Backend/WordToStack/Proofs/ProgramCodeLabels.lean
++++ b/Flapjack/Compiler/Backend/WordToStack/Proofs/ProgramCodeLabels.lean
+@@ -17,11 +17,11 @@ private theorem compileProgLabelBound {width : Nat} [NeZero width]
+       insert (raiseStubLocation,0) (insert (storeConstsStubLocation,0)
+         ((fun label => (label,0)) '' getCodeLabelsHOL program ∪
+           stackGetHandlerLabels owner (compileProgNative conf perf program arguments registers bs).1)) := by
+-  let variables := max ((maxVarHOL program / 2 + 1) - registers) (arguments - registers)
+-  let frame := if variables = 0 then 0 else variables + 1
+-  have bound := wordToStackCompCodeLabels conf perf program bs (registers,frame,variables)
++  let «variables» := max ((maxVarHOL program / 2 + 1) - registers) (arguments - registers)
++  let frame := if «variables» = 0 then 0 else «variables» + 1
++  have bound := wordToStackCompCodeLabels conf perf program bs (registers,frame,«variables»)
+     owner good noPerf
+-  simpa only [compileProgNative, variables, frame, getCodeLabels,
++  simpa only [compileProgNative, «variables», frame, getCodeLabels,
+     stackGetHandlerLabels, Set.empty_union] using bound
+ 
+ /-- Flapjack-specific list-to-set notation for the row induction; no named
+diff --git a/Flapjack/Pancake/PanStatic.lean b/Flapjack/Pancake/PanStatic.lean
+index 4f32133f0c1e7b13070042e0b79c0b6e497207dd..a3efd111f9eed1ed3850c7f2b7e560d0ce6974f3 100644
+--- a/Flapjack/Pancake/PanStatic.lean
++++ b/Flapjack/Pancake/PanStatic.lean
+@@ -694,11 +694,11 @@ def getMemopMessage (isLocal isLoad isUntrusted : Bool)
+ 
+ /-! Source-shaped port of CakeML's `get_oparg_msg_def`
+     (`cakeml/pancake/panStaticScript.sml:517-527`). -/
+-def getOpargMessage (isExact : Bool) (expected given location operation : String)
++def getOpargMessage (isExact : Bool) (expected «given» location operation : String)
+     (scope : Scope) : String :=
+   location ++ "operation " ++ operation ++
+     (if isExact then " only accepts " else " requires at least ") ++
+-    expected ++ " operands, " ++ given ++ " provided in " ++
++    expected ++ " operands, " ++ «given» ++ " provided in " ++
+     staticScopeDescription scope ++ "\n"
+ 
+ /-! Cake's memory-operation diagnostics distinguish local addresses, which
+diff --git a/Flapjack/RiscV/CorrectnessEncoding/BinopImmediate.lean b/Flapjack/RiscV/CorrectnessEncoding/BinopImmediate.lean
+index 6afa55f23b7c3b86315d4bb1a02d01544be4accb..aa55168f71049be14605dfc8210034a4f2d3c1df 100644
+--- a/Flapjack/RiscV/CorrectnessEncoding/BinopImmediate.lean
++++ b/Flapjack/RiscV/CorrectnessEncoding/BinopImmediate.lean
+@@ -91,12 +91,14 @@ signed12 guard. This discharges the exception without narrowing asmOk. -/
+ private theorem imm_valid_of_ok (op : HolBinop) (c : BitVec 64)
+     (h : asmRegImmOkExact (.inl op) (.imm c) riscvConfig = true) :
+     riscvConfig.validImm (.inl op) c = true := by
+-  cases op <;> simp [asmRegImmOkExact] at h
+-  all_goals
+-    rcases h with h | h
+-    · rw [h.2]
+-      decide
+-    · exact h
++  simp only [asmRegImmOkExact, Bool.or_eq_true, Bool.and_eq_true,
++    beq_iff_eq] at h
++  rcases h with ⟨hop, hc⟩ | h
++  · have heq : op = .xor := Sum.inl.inj hop
++    subst op
++    rw [hc]
++    decide
++  · exact h
+ 
+ private theorem imm_reg_nonzero (r : Nat) (guard : asmRegOkExact r riscvConfig = true) :
+     BitVec.ofNat 5 r ≠ 0#5 := by
