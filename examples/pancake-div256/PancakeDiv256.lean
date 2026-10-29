@@ -34,3 +34,10 @@ import PancakeDiv256.Source.U256Comparison
 import PancakeDiv256.Source.U256FallbackClosure
 import PancakeDiv256.Source.WideGuards
 import PancakeDiv256.Source.WideFallback
+import PancakeDiv256.Source.U256FastPaths
+import PancakeDiv256.Source.WordTermination
+import PancakeDiv256.Source.OracleLift
+import PancakeDiv256.Source.LocalWord
+import PancakeDiv256.Source.TraceRebase
+import PancakeDiv256.Source.SourceSafety
+import PancakeDiv256.Source.CodeMaps
