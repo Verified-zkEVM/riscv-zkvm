@@ -97,6 +97,16 @@ are preserved across response installation.
 Actual-machine and protocol regressions accompany the proofs. Its deployment,
 compiler, and emitted EVM-opcode boundaries remain explicit.
 
+A separate compiler-compatible 427-instruction checker has complete actual-machine
+arithmetic proofs. Its isolated [Pancake DIV256 consumer](examples/pancake-div256/README.md)
+proves encoding correspondence, every-position ROM suffix admission, and a
+fixed-image decoder roundtrip for the pinned encoder. Import
+`RiscvZkvm.Rv64.Div256Hints.Pancake` explicitly; the generic `Hints` root
+excludes it. The [private hint-channel proposal](docs/private-hint-channel-proposal.md)
+keeps the remaining oracle/certificate and compiler integration work explicit.
+No evm.fast deployment or speedup is claimed. Reproduce the compiler-shaped
+actual-machine regression with `python3 scripts/test-div256.py --backend pancake`.
+
 ## Downstream compatibility — read before changing anything
 
 **This repository exists to serve
