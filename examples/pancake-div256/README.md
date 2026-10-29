@@ -56,8 +56,11 @@ from runtime execution:
   and the original `u256_divmod`/`u256_div` word-sized paths. The fresh helper's
   complete literal word-path proof handles arbitrary providers, with the original
   source fallback after rejected candidates. Wide fallback proofs preserve all
-  original status, memory and global effects. Whole-guest contextual replacement
-  remains separate work.
+  original status, memory and global effects. `Source/InitialBehaviour` proves
+  whole-guest termination refinement from the original `InitE.sourceBehaviour`
+  to the exact main-first declaration list consumed by the compiler. For every
+  finite adaptive provider, it preserves the outcome and the complete original
+  public trace, without a hint-honesty, caller-typing or initialization premise.
 - `Target` supplies high-stack memory and instruction lemmas without changing
   the parent machine's address map. These do not establish a complete target
   execution or compiler call-site ABI.
@@ -66,8 +69,9 @@ The original challenge statement, original guest dependency and reference
 checker remain unchanged. The ordinary compiler produces a linked whole-guest
 ELF whose code and bitmap bytes are checked against its actual result. That
 guest passes eight DIV EEST fixtures across nine provider modes on pinned
-Spike. These are execution checks; a complete source/compiler/installation
-certificate and full-width acceleration remain deployment obligations.
+Spike. The source refinement has a separate kernel proof; connecting it to the
+concrete compiler result, resources, installed image and bootstrap remains a
+deployment obligation. Full-width acceleration remains separate work.
 Acceleration currently covers zero-extended 64-bit operands. Other operands
 use the original division implementation.
 

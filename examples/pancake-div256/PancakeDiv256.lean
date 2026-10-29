@@ -41,3 +41,4 @@ import PancakeDiv256.Source.LocalWord
 import PancakeDiv256.Source.TraceRebase
 import PancakeDiv256.Source.SourceSafety
 import PancakeDiv256.Source.CodeMaps
+import PancakeDiv256.Source.InitialBehaviour
