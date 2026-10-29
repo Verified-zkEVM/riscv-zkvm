@@ -25,6 +25,77 @@ def fixture (question : Question) (answer : Answer) (base pc : Word) : MachineSt
     privateInput := [0x12, 0x34, 0x56]
     inputBufBase := 0x200 }
 
+def operationRegressions : IO Unit := do
+  let cases : List (Question × List (BitVec 8) × Option Answer × Nat) := [
+    (⟨17, 0⟩, [0x42], some ⟨0, 0⟩, 0),
+    (⟨5, 7⟩, [0x42], some ⟨0, 5⟩, 0),
+    (⟨17, 3⟩, encodeAnswer ⟨5, 2⟩, some ⟨5, 2⟩, 1),
+    (⟨17, 3⟩, encodeAnswer ⟨6, 2⟩, none, 1),
+    (⟨17, 3⟩, [0x42], none, 1)]
+  for (question, reply, expected, calls) in cases do
+    let before := fixture question ⟨42, 9⟩ 0x100 0x80001000
+    let handler : ResumableHints.Handler Nat Question (fun _ => Protocol.Reply) :=
+      fun _ host => (host+1, reply)
+    let execution := ResumableHints.execute (Pancake.Operation.tick 0x100)
+      (Pancake.Operation.accept 0x100) handler 1 5 (Pancake.Operation.Initial before, 13)
+    require (execution.2 == 13+calls) "operation handler count/commit policy"
+    match expected, execution.1 with
+    | some answer, .returned result =>
+      require (result.answer == answer) "operation returned wrong answer"
+      require (memoryQuestion result.state 0x100 == question) "operation changed request"
+      require (result.state.pc == before.pc + BitVec.ofNat 64 (1708*calls))
+        "operation checker/fast-path PC"
+    | none, .trap => pure ()
+    | _, _ => throw (IO.userError "operation returned unexpected control state")
+
+def callerRegressions : IO Unit := do
+  let maximum : U256 := BitVec.ofNat 256 (2^256-1)
+  let cases : List (Question × Answer × Nat) := [
+    (⟨17, 3⟩, ⟨5, 2⟩, 1), (⟨maximum, 1⟩, ⟨maximum, 0⟩, 1),
+    (⟨5, 7⟩, ⟨0, 5⟩, 1), (⟨17, 3⟩, ⟨6, 2⟩, 0),
+    (⟨0, 2⟩, ⟨BitVec.ofNat 256 (2^255), 0⟩, 0), (⟨maximum, 0⟩, ⟨0, 0⟩, 0)]
+  let saved := (List.range 12).map Caller.savedReg
+  require (Pancake.Caller.callerCode.length == 455) "caller budget changed"
+  let mut index := 0
+  for (question, answer, expected) in cases do
+    let base : Word := if index%2 == 0 then 0x100 else 0xa0000100
+    let pc := 0x80001000#64 + BitVec.ofNat 64 (0x1000*index)
+    let stack : Word := if index%3 == 0 then 0xa0003000 else 0x3000
+    let returnPc := 0x80020000#64 + BitVec.ofNat 64 (4*index)
+    let before := { fixture question answer base pc with
+      regs := fun reg => if reg == .x1 then returnPc else if reg == .x2 then stack
+        else if reg == .x10 then base else BitVec.ofNat 64 (0xdecafbad00000000+0x101*reg.toNat)
+      code := loadProgram pc Pancake.Caller.callerCode }
+    let stackBase := stack-96
+    require (validBuffer base && validBuffer stackBase && stack.toNat%16 == 0 &&
+      (stackBase.toNat+96 ≤ base.toNat || base.toNat+128 ≤ stackBase.toNat))
+      "invalid caller fixture"
+    match stepN 455 before with
+    | none => throw (IO.userError "caller trapped")
+    | some after =>
+      require (after.getReg .x10 == BitVec.ofNat 64 expected && after.pc == returnPc)
+        "caller result/return PC"
+      for reg in [Reg.x0, .x1, .x2, .x3, .x4] ++ saved do
+        require (after.getReg reg == before.getReg reg) s!"caller register {repr reg}"
+      require (after.committed == before.committed && after.publicValues == before.publicValues &&
+        after.privateInput == before.privateInput && after.inputBufBase == before.inputBufBase)
+        "caller observable frame"
+      for offset in List.range 128 do
+        let address := base+BitVec.ofNat 64 offset
+        require (after.getByte address == before.getByte address) "caller buffer byte frame"
+      for offset in List.range 160 do
+        let address := stackBase-16+BitVec.ofNat 64 offset
+        let expectedByte := if 16 ≤ offset && offset < 112 then
+            extractByte (before.getReg (saved[(offset-16)/8]?.getD .x0)) ((offset-16)%8)
+          else before.getByte address
+        require (after.getByte address == expectedByte) "caller exact stack byte frame"
+      for address in [0#64, 0x20, 0x78000000, 0xa1000000, 0xbfffffff] do
+        require (after.getMem address == before.getMem address) "caller distant frame"
+      for offset in [0, 4, 1816, 1820] do
+        let address := pc+BitVec.ofNat 64 offset
+        require (decide (after.code address = before.code address)) "caller code frame"
+    index := index+1
+
 def checkVector (index : Nat) (line : String) : IO Unit := do
   let fields := (line.splitOn " ").filter (· != "")
   unless fields.length == 6 do throw (IO.userError s!"line {index}: expected six fields")
@@ -66,6 +137,8 @@ def main (arguments : List String) : IO UInt32 := do
   try
     let [path] := arguments | throw (IO.userError "expected vector file")
     require (Pancake.checkerCode.length == 427) "checker budget changed"
+    operationRegressions
+    callerRegressions
     let contents ← IO.FS.readFile path
     let mut count := 0
     for line in contents.splitOn "\n" do
@@ -74,7 +147,7 @@ def main (arguments : List String) : IO UInt32 := do
         checkVector count line
         if count%256 == 0 then IO.println s!"Pancake DIV256: checked {count} vectors."
     require (count > 0) "empty vector file"
-    IO.println s!"Pancake DIV256: {count} actual 427-step executions and frames passed."
+    IO.println s!"Pancake DIV256: {count} raw 427-step executions, six 455-step callers, and five scheduler cases passed."
     return 0
   catch error =>
     IO.eprintln s!"Pancake DIV256 regression failed: {error}"
