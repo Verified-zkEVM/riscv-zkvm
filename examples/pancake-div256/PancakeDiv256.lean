@@ -2,6 +2,7 @@ import PancakeDiv256.Encoded
 import PancakeDiv256.CallerEncoded
 import PancakeDiv256.PrivateHints.Oracle
 import PancakeDiv256.PrivateHints.Fallback
+import PancakeDiv256.PrivateHints.EvmFast
 import PancakeDiv256.Source.WordDivision
 import PancakeDiv256.Source.WordContract
 import PancakeDiv256.Source.Ast
