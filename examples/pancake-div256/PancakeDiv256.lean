@@ -33,3 +33,4 @@ import PancakeDiv256.Source.HintHelperSemantics
 import PancakeDiv256.Source.U256Comparison
 import PancakeDiv256.Source.U256FallbackClosure
 import PancakeDiv256.Source.WideGuards
+import PancakeDiv256.Source.WideFallback
