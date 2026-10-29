@@ -54,6 +54,8 @@ ALLOWED_ORPHANS = {
     "RiscvZkvm.Interpreter.HintTests",
     # Ordinary import isolation, checked explicitly after the Sail build in CI.
     "RiscvZkvm.Interpreter.HintImportTests",
+    # Generic hint imports stay independent of compiler-specific adapters.
+    "RiscvZkvm.Interpreter.HintAdapterImportTests",
 }
 
 SCAN_DIRS = ["RiscvZkvm/Rv64", "RiscvZkvm/Interpreter"]

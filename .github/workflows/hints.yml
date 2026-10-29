@@ -22,7 +22,9 @@ jobs:
           use-github-cache: false
           use-mathlib-cache: false
       - name: Build hint regressions and runner
-        run: lake build RiscvZkvm.Interpreter.HintTests riscv-zkvm-run
+        run: |
+          lake build RiscvZkvm.Interpreter.HintTests \
+            RiscvZkvm.Interpreter.HintAdapterImportTests riscv-zkvm-run
       - name: Run interpreter fixtures
         run: scripts/run-interpreter-tests.sh
       - name: DIV256 actual-machine differential regressions
