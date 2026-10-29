@@ -181,3 +181,10 @@ source helper. These tests do not claim compiler or whole-guest correctness.
 ```sh
 python3 -m unittest discover -s runtime/spike -p test_real_hook.py -v
 ```
+
+For an unmodified-source baseline ELF, `DIV256_ACCOUNT_RETIREMENT=1` enables
+these same checked retirement/safety-budget rules without enabling a private
+channel. The baseline has no hint symbol or trampoline. `test-whole-guest.py`
+sets this switch for its optional baseline runs; both images therefore use the
+same accounting checks. With neither the channel nor this switch, the original
+driver path remains available.

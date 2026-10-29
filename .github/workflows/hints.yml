@@ -76,6 +76,10 @@ jobs:
       - name: Audit consumer axioms
         working-directory: examples/${{ matrix.directory }}
         run: lake env lean --run AxiomSweep.lean
+      - name: Reject unused private axiom dependencies
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        run: lake env python3 test-axiom-sweep.py
       - name: Exercise private oracle framing and replay
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256

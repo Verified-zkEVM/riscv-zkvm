@@ -94,3 +94,8 @@ methods and custom raw wrappers are rejected before invocation; a post-hoc time
 check cannot bound such user code. Records remain byte-bounded and deadline
 checks surround supported file I/O, which still depends on the OS/storage
 returning rather than being hard-preemptible.
+
+The adapter and Spike CLI entry points handle SIGTERM through their existing
+cleanup paths, then exit 130. Importing either module leaves the application's
+signal handlers unchanged. Process-group cleanup tests include a provider
+worker that ignores TERM.
