@@ -9,35 +9,38 @@
  
  extern extension_t* make_zisk_accel_extension();
  
-@@ -523,6 +525,9 @@
+@@ -523,6 +525,12 @@
    reg_t entry = 0;
    load_elf(argv[1], &sim.memif(), &entry, 0, 64);
    p->get_state()->pc = entry;
 +  Div256Hook div256_hint(&sim, p);
++  const char* retirement_option = std::getenv("DIV256_ACCOUNT_RETIREMENT");
++  const bool account_retirement = div256_hint.enabled() ||
++    (retirement_option && retirement_option[0] == '1' && retirement_option[1] == '\0');
 +  Div256Accounting div256_accounting;
 +  uint64_t div256_boundaries = 0;
  
    // preload input: 8-byte zero meta + input file ([8B len][blob][pad])
    std::ifstream f(argv[2], std::ios::binary);
-@@ -602,6 +607,11 @@
+@@ -602,6 +610,11 @@
      const bool fine = have_watch || have_break_pc;
      const size_t batch = fine ? 1 : STEP_BATCH;
      while (steps_left > 0) {
 +      if (div256_hint.service_if_waiting()) { ++div256_boundaries; continue; }
-+      if (div256_hint.enabled() && p->is_waiting_for_interrupt()) {
++      if (account_retirement && p->is_waiting_for_interrupt()) {
 +        fprintf(stderr, "spike_run: unexpected WFI outside private hint/clean halt\n");
 +        return 2;
 +      }
        size_t n = batch;
        if ((uint64_t)n > steps_left) n = (size_t)steps_left;
        if (have_break_pc && !break_hit && p->get_state()->pc == break_pc) {
-@@ -610,8 +620,26 @@
+@@ -610,8 +623,26 @@
          print_regs(p);
          // fall through: execute the insn at break_pc, then continue
        }
 -      p->step(n);
 -      steps_left -= n;
-+      if (div256_hint.enabled()) {
++      if (account_retirement) {
 +        const auto sample = [&]() -> Div256CounterSample {
 +          auto* state = p->get_state();
 +          return {state->minstret->read(), state->mcycle->read(),
@@ -60,17 +63,17 @@
        if (have_watch) {
          uint64_t cur = rd_u64(&sim, watch_addr);
          if (cur != watch_prev) {
-@@ -642,9 +670,17 @@
+@@ -642,9 +673,17 @@
    } else if (flagv == 0) {
      fprintf(stderr, "spike_run: step cap reached without halt (or watch-stop)\n");
    } else if (flagv == 1) {
 -    const uint64_t steps_used = p->get_state()->minstret->read() - minstret_start;
-+    const uint64_t steps_used = div256_hint.enabled()
++    const uint64_t steps_used = account_retirement
 +      ? div256_accounting.physical_retired()
 +      : p->get_state()->minstret->read() - minstret_start;
      fprintf(stderr, "spike_run: halted cleanly steps=%llu\n",
              (unsigned long long)steps_used);
-+    if (div256_hint.enabled()) {
++    if (account_retirement) {
 +      fprintf(stderr, "spike_run: physical-retired=%llu hint-boundaries=%llu nonretiring-batches=%llu\n",
 +              (unsigned long long)div256_accounting.physical_retired(),
 +              (unsigned long long)div256_boundaries,
