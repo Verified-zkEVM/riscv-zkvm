@@ -20,5 +20,12 @@ scope = "leanprover-community"
 git = "https://github.com/leanprover-community/mathlib4"
 rev = "v4.35.0"
 
+# The exact authoritative software AST and challenge observations. This
+# dependency remains confined to the isolated compiler integration package.
+[[require]]
+name = "Guest"
+git = "https://github.com/Layr-Labs/evm.fast-dev.git"
+rev = "6957805e26f4bb44ef756406a2bd14d56cf89b92"
+
 [[lean_lib]]
 name = "PancakeDiv256"

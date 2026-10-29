@@ -1,0 +1,98 @@
+/* Optional private-hints overlay for evm.fast 6957805.
+   Parse this file directly: shapes are literal and no preprocessing is needed.
+   Existing u256_div, u256_lt and mul64x64 remain ordinary compiled callees.
+   Only zero-extended 64-bit operands use the hint. Full-width operands and
+   rejected candidates call the unchanged original u256_div.
+   The borrowed source cells are saved and restored as scalar word values.
+   Restore completes before checker calls or fallback; no nested guest entry
+   is permitted during the private external call. */
+fun {1,1,1,1} hinted_u256_div({1,1,1,1} a, {1,1,1,1} b) {
+  if (b.0 | b.1 | b.2 | b.3) == 0 { return <0,0,0,0>; }
+  var 1 lt = u256_lt(a,b);
+  if lt == 1 { return <0,0,0,0>; }
+  if (a.1 | a.2 | a.3 | b.1 | b.2 | b.3) != 0 {
+    var {1,1,1,1} fallback = u256_div(a,b);
+    return fallback;
+  }
+  var 1 buf = @base + 128;
+  var 1 saved0 = lds 1 (buf + 0);
+  var 1 saved1 = lds 1 (buf + 8);
+  var 1 saved2 = lds 1 (buf + 16);
+  var 1 saved3 = lds 1 (buf + 24);
+  var 1 saved4 = lds 1 (buf + 32);
+  var 1 saved5 = lds 1 (buf + 40);
+  var 1 saved6 = lds 1 (buf + 48);
+  var 1 saved7 = lds 1 (buf + 56);
+  var 1 saved8 = lds 1 (buf + 64);
+  var 1 saved9 = lds 1 (buf + 72);
+  var 1 saved10 = lds 1 (buf + 80);
+  var 1 saved11 = lds 1 (buf + 88);
+  var 1 saved12 = lds 1 (buf + 96);
+  var 1 saved13 = lds 1 (buf + 104);
+  var 1 saved14 = lds 1 (buf + 112);
+  var 1 saved15 = lds 1 (buf + 120);
+  st buf + 0, a.0;
+  st buf + 8, a.1;
+  st buf + 16, a.2;
+  st buf + 24, a.3;
+  st buf + 32, b.0;
+  st buf + 40, b.1;
+  st buf + 48, b.2;
+  st buf + 56, b.3;
+  st buf + 64, 0;
+  st buf + 72, 0;
+  st buf + 80, 0;
+  st buf + 88, 0;
+  st buf + 96, 0;
+  st buf + 104, 0;
+  st buf + 112, 0;
+  st buf + 120, 0;
+  @divmod256_fallback_v1(@base, 0, buf, 128);
+  var 1 q0 = lds 1 (buf + 64);
+  var 1 q1 = lds 1 (buf + 72);
+  var 1 q2 = lds 1 (buf + 80);
+  var 1 q3 = lds 1 (buf + 88);
+  var 1 r0 = lds 1 (buf + 96);
+  var 1 r1 = lds 1 (buf + 104);
+  var 1 r2 = lds 1 (buf + 112);
+  var 1 r3 = lds 1 (buf + 120);
+  st buf + 0, saved0;
+  st buf + 8, saved1;
+  st buf + 16, saved2;
+  st buf + 24, saved3;
+  st buf + 32, saved4;
+  st buf + 40, saved5;
+  st buf + 48, saved6;
+  st buf + 56, saved7;
+  st buf + 64, saved8;
+  st buf + 72, saved9;
+  st buf + 80, saved10;
+  st buf + 88, saved11;
+  st buf + 96, saved12;
+  st buf + 104, saved13;
+  st buf + 112, saved14;
+  st buf + 120, saved15;
+  if (q1 | q2 | q3 | r1 | r2 | r3) != 0 {
+    var {1,1,1,1} fallback = u256_div(a,b);
+    return fallback;
+  }
+  if r0 >=+ b.0 {
+    var {1,1,1,1} fallback = u256_div(a,b);
+    return fallback;
+  }
+  var {1,1} product = mul64x64(b.0,q0);
+  var {1,1} sum = __add_with_carry__(product.0,r0,0);
+  if product.1 != 0 {
+    var {1,1,1,1} fallback = u256_div(a,b);
+    return fallback;
+  }
+  if sum.1 != 0 {
+    var {1,1,1,1} fallback = u256_div(a,b);
+    return fallback;
+  }
+  if sum.0 != a.0 {
+    var {1,1,1,1} fallback = u256_div(a,b);
+    return fallback;
+  }
+  return <q0,0,0,0>;
+}
