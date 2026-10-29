@@ -156,8 +156,12 @@ The optional `Deployment.Proofs` import exposes the reviewed compiler-stage
 composition, fresh-function metadata lemmas, exact declaration translation and
 startup-header adapter. Its source preamble restores the original specification's
 five header words after compiler startup has consumed the new image's pointers.
-The adapter core is proved; whole-program initialization and concrete image
-installation remain explicit obligations. CI builds and audits this front door.
+The complete adapted-source theorem transports actual optional initialization
+and proves termination of the compiler's main-first declarations, preserving
+the original outcome and public trace for every finite adaptive provider and
+arbitrary initial header words. Its only behavioral premise is termination of
+the original source. Concrete compiler-image equality and machine installation
+remain explicit obligations. CI builds and audits this front door.
 
 ```sh
 lake build PancakeDiv256.Deployment.Proofs
