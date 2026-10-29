@@ -7,15 +7,51 @@ RISC-V interpreter or specification checker supplies the observed result.
 """
 
 import argparse
+import os
 import random
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 WIDTH = 256
 LIMIT = 1 << WIDTH
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def terminate_execution_group(process: subprocess.Popen, grace: float = 1.0):
+    """Stop this invocation's process group, then reap its owned parent.
+
+    The parent must remain unreaped during the grace period: Lake can exit on
+    TERM while its Lean child is still running (or ignores TERM). Always send
+    the final KILL to the original group, even if the parent has already exited.
+    Keeping its PID reserved until then also prevents signaling a reused group.
+    """
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    try:
+        time.sleep(grace)
+    finally:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        finally:
+            process.wait()
+
+
+def run_execution(command, *, cwd, timeout):
+    """Run Lean in an isolated group so a timeout cannot orphan its worker."""
+    process = subprocess.Popen(command, cwd=cwd, start_new_session=True)
+    try:
+        return subprocess.CompletedProcess(command, process.wait(timeout=timeout))
+    except BaseException:
+        terminate_execution_group(process)
+        raise
 
 
 def vectors(random_cases: int, seed: int):
@@ -88,7 +124,7 @@ def main():
         vector_file.write_text(payload, encoding="utf-8")
         print(f"Checking {len(cases)} vectors, seed={args.seed}; Python integer divmod is the oracle.", flush=True)
         try:
-            result = subprocess.run(
+            result = run_execution(
                 ["lake", "env", "lean", "--run", "scripts/Div256Regression.lean", str(vector_file)],
                 cwd=ROOT, timeout=args.timeout,
             )
