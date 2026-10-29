@@ -102,3 +102,24 @@ def checkProblem (input : Problem) (color : Option (Spt Nat)) :=
 
 theorem checkProblem_eq (entry : WordProgram) (color : Option (Spt Nat)) :
     checkProblem (problem entry) color = check entry color := rfl
+
+
+def candidateOrder (count index : Nat) : List Nat :=
+  let nearby := ((List.range 27).filterMap fun offset =>
+    if offset % 2 == 0 then
+      let candidate := index+offset/2
+      if candidate < count then some candidate else none
+    else
+      let distance := (offset+1)/2
+      if distance ≤ index then some (index-distance) else none).eraseDups
+  (nearby ++ (List.range count).filter (fun candidate => !nearby.contains candidate)).filter
+    (fun candidate => candidate < count)
+
+/-- A short candidate pool never indexes beyond its actual array. -/
+theorem candidateOrder_lt (count index candidate : Nat)
+    (member : candidate ∈ candidateOrder count index) : candidate < count := by
+  exact of_decide_eq_true (List.mem_filter.mp member).2
+
+example : candidateOrder 1 3 = [0] := by decide
+example : candidateOrder 0 100 = [] := by decide
+example : (candidateOrder 2 500).length = 2 := by decide

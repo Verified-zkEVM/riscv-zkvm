@@ -81,7 +81,7 @@ def elf_bytes(image: bytes, address: int, size: int) -> bytes:
 
 def input_files(guest: Path, proposals: Path | None = None) -> list[Path]:
     paths = [HERE / name for name in ["CompileHintedGuest.lean", "build-hinted-guest.py",
-        "import-allocation-proposals.py", "PancakeDiv256/Compiler/Allocation.lean",
+        "import-allocation-proposals.py", "PancakeDiv256/Compiler/Allocation.lean", "PancakeDiv256/Compiler/DepthShape.lean",
         "PancakeDiv256/Source/HintedWordProgram.lean", "PancakeDiv256/Source/Ast.lean",
         "PancakeDiv256/Source/hinted_u256_div.pnk", "lake-manifest.json", "lean-toolchain",
         "runtime/spike/hint_stub.S", "runtime/spike/elf_metadata.py"]]
@@ -131,6 +131,7 @@ def verify_launch(snapshot: dict[str, str], pins: dict[str, str], guest: Path, f
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, help="new output directory (must not exist)")
+    parser.add_argument("--baseline-source", action="store_true", help="compile the unchanged pinned Guest AST, without a private hint symbol or trampoline")
     proposals = parser.add_mutually_exclusive_group()
     proposals.add_argument("--allocation-proposals", type=Path, help="untrusted coloring JSON input")
     proposals.add_argument("--baseline-allocation-proposals", action="store_true", help="import the pinned Guest's current baseline's untrusted coloring pool; current-program compiler validation is mandatory")
@@ -178,8 +179,14 @@ def main() -> int:
         verify_launch(launched, pins, guest, flapjack)
         allocation_olean = HERE / ".lake/build/lib/lean/PancakeDiv256/Compiler/Allocation.olean"
         allocation_olean.parent.mkdir(parents=True, exist_ok=True)
-        run(["lake", "env", "lean", "-o", str(allocation_olean),
-             "PancakeDiv256/Compiler/Allocation.lean"], output / "compiler-preflight.log", args.tool_timeout)
+        # Refresh all imported compiler/source modules before executing the
+        # immutable launch driver; a source hash alone cannot detect stale oleans.
+        run(["lake", "build", "PancakeDiv256.Compiler.Allocation", "PancakeDiv256.Compiler.DepthShape",
+             "PancakeDiv256.Source.HintedWordProgram", "Flapjack.Pancake.PanStatic",
+             "Flapjack.Pancake.Proofs.PanToTarget.ExecutableCompileProgMaxDepth",
+             "Flapjack.Compiler.Backend.RiscVConfig.Executable",
+             "Flapjack.Compiler.Encoders.RiscV.Target.Configuration",
+             "Flapjack.RiscV.NativeCLIAdapter"], output / "compiler-preflight.log", args.compile_timeout)
         launched.update(snapshot_inputs([allocation_olean]))
         (output / "inputs-at-launch.json").write_text(json.dumps(
             {"pins": pins, "inputs_sha256": launched}, indent=2, sort_keys=True) + "\n")
@@ -191,6 +198,8 @@ def main() -> int:
             {"pins": pins, "inputs_sha256": launched}, indent=2, sort_keys=True) + "\n")
         verify_launch(launched, pins, guest, flapjack)
         driver_args = (["--defer-depth"] if args.defer_depth else [])
+        if args.baseline_source:
+            driver_args += ["--baseline-source"]
         if proposal_path:
             driver_args += ["--allocation-proposals", str(proposal_path)]
         driver_args += [str(output)]
@@ -203,7 +212,10 @@ def main() -> int:
         (output / "compiler-metadata.json").write_text(json.dumps(compiler_metadata, indent=2, sort_keys=True) + "\n")
         rendered = output / "guest.cake.S"
         text = rendered.read_text()
-        if f"cake_ffi{SERVICE}:" not in text or f"tail cdecl(ffi{SERVICE})" not in text:
+        if args.baseline_source:
+            if f"cake_ffi{SERVICE}:" in text or f"tail cdecl(ffi{SERVICE})" in text:
+                raise ValueError("baseline renderer unexpectedly includes a private FFI target")
+        elif f"cake_ffi{SERVICE}:" not in text or f"tail cdecl(ffi{SERVICE})" not in text:
             raise ValueError("ordinary renderer omits the expected private FFI target")
         cpp = shlex.split(os.environ.get("CPP", "cpp"))
         assembler = os.environ.get("RISCV_AS", "riscv64-unknown-elf-as")
@@ -217,12 +229,14 @@ def main() -> int:
              str(output / "guest.cake.s")], output / "link.log", args.tool_timeout)
         run([assembler, "-march=rv64ima_zicsr", "-mno-relax", "-o", str(output / "guest.start.o"),
              str(guest / "guest/runtime/start.S")], output / "link.log", args.tool_timeout)
-        run([assembler, "-march=rv64ima", "-mno-relax", "-o", str(output / "guest.hint.o"),
-             str(HERE / "runtime/spike/hint_stub.S")], output / "link.log", args.tool_timeout)
+        objects = [str(output / "guest.start.o"), str(output / "guest.cake.o")]
+        if not args.baseline_source:
+            run([assembler, "-march=rv64ima", "-mno-relax", "-o", str(output / "guest.hint.o"),
+                 str(HERE / "runtime/spike/hint_stub.S")], output / "link.log", args.tool_timeout)
+            objects.append(str(output / "guest.hint.o"))
         elf = output / "guest.elf"
         run([linker, "-T", str(guest / "guest/runtime/guest.ld"), "-nostdlib", "--no-relax", "-e", "_start",
-             "-o", str(elf), str(output / "guest.start.o"), str(output / "guest.cake.o"),
-             str(output / "guest.hint.o")], output / "link.log", args.tool_timeout)
+             "-o", str(elf), *objects], output / "link.log", args.tool_timeout)
         run([nm, "--defined-only", "--format=posix", str(elf)], output / "link.log",
             args.tool_timeout, stdout=output / "guest.nm")
         defined = symbols(output / "guest.nm")
@@ -231,17 +245,24 @@ def main() -> int:
             payload = (output / filename).read_bytes()
             if elf_bytes(image, defined[name], len(payload)) != payload:
                 raise ValueError(f"linked {name} bytes differ from the actual compiler tuple")
-        run(["python3", str(HERE / "runtime/spike/elf_metadata.py"), str(elf)],
-            output / "link.log", args.tool_timeout, stdout=output / "runtime-metadata.json")
+        if args.baseline_source:
+            (output / "runtime-metadata.json").write_text(json.dumps({
+                "source_profile": "original-baseline", "private_hook": False,
+                "elf_sha256": digest(elf), "entry": hex(struct.unpack_from("<Q", image, 24)[0])},
+                indent=2, sort_keys=True) + "\n")
+        else:
+            run(["python3", str(HERE / "runtime/spike/elf_metadata.py"), str(elf)],
+                output / "link.log", args.tool_timeout, stdout=output / "runtime-metadata.json")
         verify_launch(launched, pins, guest, flapjack)
         manifest = {"version": 1, **pins,
+                    "source_profile": "original-baseline" if args.baseline_source else "private-hint-v1",
                     "certificate": False,
                     "linked_compiler_code_equal": True, "linked_bitmap_data_equal": True,
                     "inputs_sha256": launched,
                     "outputs_sha256": {name: digest(output / name) for name in
                         ["guest.code.bin", "guest.bitmaps.bin", "guest.cake.S", "guest.elf",
                          "compiler-metadata.json", "runtime-metadata.json", "inputs-at-launch.json", "CompileHintedGuest.launch.lean"] +
-                        ["selected-allocation-proposals.json", "allocation-alignment.json", "allocation-signatures.json"] +
+                        ["selected-allocation-proposals.json", "allocation-alignment.json", "allocation-signatures.json", "stack-analysis-input.json"] +
                         (["allocation-proposals.json"] if proposal_path else [])}}
         (output / "artifact-manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
         incomplete.unlink()

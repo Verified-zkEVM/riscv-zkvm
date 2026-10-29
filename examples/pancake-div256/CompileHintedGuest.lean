@@ -6,6 +6,7 @@ import Flapjack.Compiler.Encoders.RiscV.Target.Configuration
 import Flapjack.RiscV.NativeCLIAdapter
 import Lean.Data.Json.FromToJson
 import PancakeDiv256.Compiler.Allocation
+import PancakeDiv256.Compiler.DepthShape
 
 /-! Compute the unchanged whole compiler once and serialize that same result.
 The files are executable artifacts. They do not establish source equivalence,
@@ -81,6 +82,16 @@ private def bitmapBytes (words : List (BitVec 64)) : ByteArray :=
   byteArray (words.flatMap (fun word =>
     (List.range 8).map (fun index => BitVec.ofNat 8 (word.toNat / 2^(index*8)))))
 
+private def depthJson : PancakeDiv256.Compiler.Depth.Shape → Json
+  | .skip => toJson "skip"
+  | .alloc => toJson "alloc"
+  | .install => toJson "install"
+  | .seq first second => Json.mkObj [("seq",toJson [depthJson first,depthJson second])]
+  | .call returns target handler => Json.mkObj [("call",Json.mkObj [
+      ("target",toJson target),
+      ("returns",match returns with | none => Json.null | some p => depthJson p),
+      ("handler",match handler with | none => Json.null | some p => depthJson p)])]
+
 private def timed (label : String) (compute : Unit → α) : IO α := do
   let started ← IO.monoMsNow
   IO.eprintln s!"Starting {label}…"
@@ -90,6 +101,7 @@ private def timed (label : String) (compute : Unit → α) : IO α := do
 
 private structure DriverOptions where
   deferDepth : Bool := false
+  baselineSource : Bool := false
   proposals : Option String := none
   inspectOnly : Bool := false
   output : String := ""
@@ -98,19 +110,10 @@ private def options (arguments : List String) (current : DriverOptions := {}) : 
   match arguments with
   | [path] => .ok {current with output := path}
   | "--defer-depth"::rest => options rest {current with deferDepth := true}
+  | "--baseline-source"::rest => options rest {current with baselineSource := true}
   | "--inspect-allocation"::rest => options rest {current with inspectOnly := true}
   | "--allocation-proposals"::path::rest => options rest {current with proposals := some path}
-  | _ => .error "usage: CompileHintedGuest.lean [--defer-depth] [--allocation-proposals JSON] [--inspect-allocation] OUTPUT_DIRECTORY"
-
-private def candidateOrder (count index : Nat) : List Nat :=
-  let nearby := ((List.range 27).filterMap fun offset =>
-    if offset % 2 == 0 then
-      let candidate := index+offset/2
-      if candidate < count then some candidate else none
-    else
-      let distance := (offset+1)/2
-      if distance ≤ index then some (index-distance) else none).eraseDups
-  nearby ++ (List.range count).filter (fun candidate => !nearby.contains candidate)
+  | _ => .error "usage: CompileHintedGuest.lean [--baseline-source] [--defer-depth] [--allocation-proposals JSON] [--inspect-allocation] OUTPUT_DIRECTORY"
 
 private def preparePool (program : List PancakeDiv256.Compiler.Allocation.WordProgram)
     (names : Spt MlString) (pool : List (Option (Spt Nat))) :
@@ -127,7 +130,7 @@ private def preparePool (program : List PancakeDiv256.Compiler.Allocation.WordPr
     let mut attempts := 0
     if !pool.isEmpty && name != some "hinted_u256_div" then
       let input ← timed s!"function {index} clash/forced conditions" (fun _ => PancakeDiv256.Compiler.Allocation.problem prepared)
-      for candidate in candidateOrder pool.length index do
+      for candidate in PancakeDiv256.Compiler.Allocation.candidateOrder pool.length index do
         attempts := attempts+1
         if attempts % 32 == 0 then
           IO.eprintln s!"Function {index}: checked {attempts}/{pool.length} candidate colors…"
@@ -163,12 +166,13 @@ def main (args : List String) : IO Unit := do
   let output : System.FilePath := path
   IO.FS.createDirAll output
   let baseline := staticCheck Guest.Software.guestAst
-  let checked := staticCheck hintedGuestAst
+  let source := if chosen.baselineSource then Guest.Software.guestAst else hintedGuestAst
+  let checked := staticCheck source
   let .ok _ := checked.1
     | throw (IO.userError s!"source static check failed: {repr checked.1}")
   unless reprStr baseline.2 == reprStr checked.2 do
     throw (IO.userError "overlay changes the baseline static warning list")
-  let declarations := PancakeDiv256.Artifact.declarations
+  let declarations := Flapjack.Pancake.PanToTarget.mainFirstHOL (source.map declToHOL)
   IO.eprintln s!"Compiling {declarations.length} ordinary source declarations…"
   let wordProgram ← timed "source-to-word compilation" (fun _ => PancakeDiv256.Artifact.frontend declarations)
   let (pool,proposalSource) ← match chosen.proposals with
@@ -208,13 +212,26 @@ def main (args : List String) : IO Unit := do
   let allocated ← finishProgress cfg preparedProgram tape
   let (bitmapData, wordConfig, _, stackProgram) ← timed "word-to-stack compilation"
     (fun _ => PancakeDiv256.Artifact.stack allocated)
+  -- Canonical analysis data is projected from the very same allocated program
+  -- and exact frame map passed to the original depth computation below.
+  IO.FS.writeFile (output / "stack-analysis-input.json")
+    ((Json.mkObj [("version",toJson (1 : Nat)),
+      ("entry_label",toJson BvlToBvi.initGlobalsLocation),
+      ("frames_words",toJson (sptToAList wordConfig.stackFrameSize)),
+      ("program",toJson (allocated.map fun entry =>
+        (entry.1,entry.2.1,depthJson (PancakeDiv256.Compiler.Depth.shape entry.2.2)))),
+      ("certificate",toJson false)]).pretty ++ "\n")
   let image ← timed "stack-to-native encoding"
     (fun _ => PancakeDiv256.Artifact.backend cfg stackProgram bitmapData)
   let some (bytes, bitmaps, config) := image
     | throw (IO.userError "ordinary compiler returned none")
   let names := (Backend.ffinamesToStringList (config.labConf.ffiNames.getD [])).map toStringOfBytes
-  unless names.contains "divmod256_fallback_v1" do
-    throw (IO.userError "compiled image omits the private fallback FFI symbol")
+  if chosen.baselineSource then
+    if names.contains "divmod256_fallback_v1" then
+      throw (IO.userError "baseline image unexpectedly contains the private fallback FFI symbol")
+  else
+    unless names.contains "divmod256_fallback_v1" do
+      throw (IO.userError "compiled image omits the private fallback FFI symbol")
   IO.FS.writeBinFile (output / "guest.code.bin") (byteArray bytes)
   IO.FS.writeBinFile (output / "guest.bitmaps.bin") (bitmapBytes bitmaps)
   IO.FS.writeFile (output / "guest.cake.S")
@@ -227,6 +244,7 @@ def main (args : List String) : IO Unit := do
   let metadata := Json.mkObj [
     ("version", toJson (1 : Nat)),
     ("source_declarations", toJson declarations.length),
+    ("source_profile", toJson (if chosen.baselineSource then "original-baseline" else "private-hint-v1")),
     ("code_bytes", toJson bytes.length),
     ("bitmap_words", toJson bitmaps.length),
     ("static_stack_bound_words", toJson maximum),
