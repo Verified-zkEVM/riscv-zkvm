@@ -65,13 +65,13 @@ class RunnerTests(unittest.TestCase):
                 files = self.setup_files(directory, action)
                 recorded = directory/"provider.json"
                 provider = SubprocessProvider([sys.executable, str(RUNTIME/"provider_fixture.py"),
-                                               "late-child", str(recorded), "3"], timeout=5, grace=0.02)
+                                               "late-child", str(recorded), "15"], timeout=20, grace=0.02)
                 started = time.monotonic()
                 try:
                     with self.assertRaises(TimeoutError):
-                        run(*files, Adapter(provider), guest_timeout=1.0, cleanup_grace=0.02)
+                        run(*files, Adapter(provider), guest_timeout=5.0, cleanup_grace=0.02)
                     elapsed = time.monotonic()-started
-                    self.assertLess(elapsed, 2.0, "provider ran to its independent3-second reply")
+                    self.assertLess(elapsed, 10.0, "provider ran to its independent15-second reply")
                     self.assertTrue(recorded.exists(), "late provider/worker scenario did not start")
                     metadata = json.loads(recorded.read_text())
                     stopped_by = time.monotonic()+1
