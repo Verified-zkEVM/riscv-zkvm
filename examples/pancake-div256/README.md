@@ -124,6 +124,26 @@ selected tape are recorded. Only `wordToWordConf.colOracle` changes. The
 baseline profile compiles the unchanged pinned source with no private FFI
 symbol or trampoline. Both profiles use the unchanged bootstrap and linker.
 
+The optional header-restoring profile supplies the source used by the deployment
+proofs. For the pinned source, the ordinary baseline pool has 814 entries. These
+commands append separately checked proposals for the private helper (label 878)
+and adapted main (label 65), then compile with their explicit pool indices:
+
+```sh
+python3 import-allocation-proposals.py /tmp/div-base-colors.json
+python3 propose-function-colors.py --restore-source-headers --append-pool /tmp/div-base-colors.json 878 /tmp/div-helper-color
+python3 propose-function-colors.py --restore-source-headers --append-pool /tmp/div-helper-color/allocation-proposals.json 65 /tmp/div-main-color
+python3 build-hinted-guest.py --restore-source-headers --allocation-proposals /tmp/div-main-color/allocation-proposals.json --helper-color-index 814 --function-color-index 65:815 --proof-inputs --defer-depth /tmp/div-adapted
+python3 test-producer-controls.py --lean
+```
+
+The compiler rechecks both proposals against its current functions. Wrong
+labels, missing proposals and rejected explicit colors fail. `--proof-inputs`
+serializes typed proposals from the already computed allocation and image tuple;
+it does not establish their equality to a kernel compiler computation. The new
+profile records header restoration in both manifests. The baseline and original
+hinted profiles retain their original source ASTs.
+
 `--defer-depth` deliberately leaves the static stack bound and certificate
 pending. It permits runtime validation of exact compiler images without
 asserting the original compiler's depth calculation or installed resource
@@ -166,6 +186,16 @@ remain explicit obligations. CI builds and audits this front door.
 ```sh
 lake build PancakeDiv256.Deployment.Proofs
 lake env lean --run AxiomSweep.lean --compiler
+```
+
+The serializer and Native composition regressions use small synthetic programs.
+They kernel-check emitted tuples and per-function/chunk equations, reject wrong
+results and refuse existing outputs. Passing them does not certify a guest image:
+
+```sh
+lake build PancakeDiv256.Compiler.BackendArtifactGenerator PancakeDiv256.Compiler.BackendNativeProposalGenerator PancakeDiv256.Compiler.BackendComputation
+lake env python3 test-backend-proposals.py
+lake env python3 test-backend-native-proposals.py
 ```
 
 The optional stack checker proves a conservative bound against the original
