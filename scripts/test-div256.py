@@ -116,7 +116,7 @@ def main():
         args.vectors_only.write_text(payload, encoding="utf-8")
         print(f"Wrote {len(cases)} deterministic vectors to {args.vectors_only}")
         return 0
-    build = subprocess.run(["lake", "build", "RiscvZkvm.Rv64.Div256Hints.Checker"], cwd=ROOT)
+    build = subprocess.run(["lake", "build", "RiscvZkvm.Rv64.Div256Hints.Caller"], cwd=ROOT)
     if build.returncode:
         return build.returncode
     with tempfile.TemporaryDirectory(prefix="div256-regression-") as directory:

@@ -92,7 +92,8 @@ unchanged generated Sail extraction; a Sail hint adapter remains separate work.
 
 The experimental [DIV256 pilot](docs/div256-hints.md) verifies untrusted
 quotient/remainder hints with a proved 233-instruction checker and resumable
-stateful protocol, preserving the original operands across response installation.
+stateful protocol, plus a callee-save validation function. Original operands
+are preserved across response installation.
 Actual-machine and protocol regressions accompany the proofs. Its deployment,
 compiler, and emitted EVM-opcode boundaries remain explicit.
 

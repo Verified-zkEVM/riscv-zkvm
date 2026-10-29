@@ -1,7 +1,7 @@
 /- Runtime regressions for the raw DIV256 instruction checker. Expected
    answers are supplied by the independent Python integer oracle. These
    executions supplement the kernel proofs; they are not proof certificates. -/
-import RiscvZkvm.Rv64.Div256Hints.Checker
+import RiscvZkvm.Rv64.Div256Hints.Caller
 
 open RiscvZkvm.Rv64
 open RiscvZkvm.Rv64.Div256Hints
@@ -165,6 +165,76 @@ def protocolRegressions : IO Unit := do
   | .trap => require (failed.2 == 14) "malformed reply: failure changed committed host state"
   | _ => throw (IO.userError "malformed reply: protocol failed to reject")
 
+/-- A test fixture for the emitted validation function, with distinct dirty
+    saved registers and an existing return address, stack, buffer and code. -/
+def callerFixture (question : Question) (answer : Answer)
+    (base pc stack returnPc : Word) : MachineState :=
+  { fixture question answer base pc with
+    regs := fun r =>
+      if r == .x1 then returnPc
+      else if r == .x2 then stack
+      else if r == .x10 then base
+      else BitVec.ofNat 64 (0xdecafbad00000000 + 0x101 * r.toNat)
+    code := loadProgram pc Caller.callerCode }
+
+/-- These are caller-function executions, distinct from the larger raw-body
+    corpus and from a compiled EVM/Pancake call site. -/
+def callerRegressions : IO Unit := do
+  require (Caller.callerCode.length == 261) "caller instruction count changed"
+  let maximum : U256 := BitVec.ofNat 256 (2^256-1)
+  let cases : List (Question × Answer × Nat × String) := [
+    (⟨17, 3⟩, ⟨5, 2⟩, 1, "caller honest"),
+    (⟨maximum, 1⟩, ⟨maximum, 0⟩, 1, "caller maximal honest"),
+    (⟨5, 7⟩, ⟨0, 5⟩, 1, "caller smaller dividend"),
+    (⟨17, 3⟩, ⟨6, 2⟩, 0, "caller wrong witness"),
+    (⟨0, 2⟩, ⟨BitVec.ofNat 256 (2^255), 0⟩, 0, "caller truncation attack"),
+    (⟨maximum, 0⟩, ⟨0, 0⟩, 0, "caller zero divisor")]
+  let saved : List Reg := [.x8, .x9, .x18, .x19, .x20, .x21,
+    .x22, .x23, .x24, .x25, .x26, .x27]
+  let mut index := 0
+  for (question, answer, expected, label) in cases do
+    let base : Word := if index % 2 == 0 then 0x100 else 0xa0000100
+    let stack : Word := if index % 3 == 0 then 0xa0003000 else 0x3000
+    let pc := 0x80001000#64 + BitVec.ofNat 64 (0x1000 * index)
+    let returnPc := 0x80020000#64 + BitVec.ofNat 64 (4 * index)
+    let state := callerFixture question answer base pc stack returnPc
+    let stackBase := stack - 96
+    require (validBuffer base && validBuffer stackBase && stack.toNat % 16 == 0)
+      s!"{label}: invalid fixture footprint"
+    require (stackBase.toNat + 96 ≤ base.toNat || base.toNat + 128 ≤ stackBase.toNat)
+      s!"{label}: fixture stack/buffer overlap"
+    match stepN 261 state with
+    | none => throw (IO.userError s!"{label}: actual caller execution trapped")
+    | some post =>
+      require (post.getReg .x10 == BitVec.ofNat 64 expected) s!"{label}: wrong a0 result"
+      require (post.pc == returnPc) s!"{label}: wrong return PC"
+      for r in [Reg.x0, .x1, .x2, .x3, .x4] ++ saved do
+        require (post.getReg r == state.getReg r) s!"{label}: register {repr r} not restored"
+      require (post.privateInput == state.privateInput && post.publicValues == state.publicValues &&
+        post.committed == state.committed && post.inputBufBase == state.inputBufBase)
+        s!"{label}: caller changed observable channels"
+      for i in List.range 263 do
+        let address := pc - 4 + BitVec.ofNat 64 (4*i)
+        require (decide (post.code address = state.code address)) s!"{label}: caller changed code"
+      for offset in List.range 128 do
+        let address := base + BitVec.ofNat 64 offset
+        require (post.getByte address == state.getByte address)
+          s!"{label}: caller changed buffer byte {offset}"
+      -- All 96 frame bytes contain the saved words; nearby bytes, including
+      -- the 32 extra bytes in the conservative stack check, are unchanged.
+      for offset in List.range 160 do
+        let address := stackBase - 16 + BitVec.ofNat 64 offset
+        let expectedByte :=
+          if 16 ≤ offset && offset < 112 then
+            extractByte (state.getReg (saved[(offset-16)/8]?.getD .x0)) ((offset-16)%8)
+          else state.getByte address
+        require (post.getByte address == expectedByte)
+          s!"{label}: wrong stack/frame byte {offset}"
+      for address in [0#64, 0x20, 0x78000000, 0xa1000000, 0xbfffffff, pc, returnPc] do
+        require (post.getByte address == state.getByte address)
+          s!"{label}: caller changed distant memory"
+    index := index + 1
+
 def checkVector (index : Nat) (line : String) : IO Unit := do
   let fields := (line.splitOn " ").filter (· != "")
   unless fields.length == 6 do throw (IO.userError s!"line {index}: expected six fields")
@@ -201,6 +271,7 @@ def main (arguments : List String) : IO UInt32 := do
     require (Program.checkerCode.length == 233) "checker instruction count changed; update explicit budget"
     transportRegressions
     protocolRegressions
+    callerRegressions
     let contents ← IO.FS.readFile path
     let mut count := 0
     for line in contents.splitOn "\n" do
@@ -209,7 +280,7 @@ def main (arguments : List String) : IO UInt32 := do
         checkVector count line
         if count % 256 == 0 then IO.println s!"DIV256: checked {count} vectors."
     require (count > 0) "empty vector file"
-    IO.println s!"DIV256: {count} actual stepN executions, transport regressions, and protocol integration passed (233 instructions per checker body)."
+    IO.println s!"DIV256: {count} raw checker executions (233 steps each), six caller executions (261 steps each), transport regressions, and protocol integration passed."
     pure 0
   catch error =>
     IO.eprintln s!"DIV256 regression failed: {error}"
