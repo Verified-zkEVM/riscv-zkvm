@@ -8,6 +8,15 @@ permissions:
   contents: read
 
 jobs:
+  runtime-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exercise finite providers, process cleanup, and replay
+        working-directory: examples/pancake-div256
+        run: python3 -m unittest discover -s runtime -p 'test_*.py' -v
+
   core-regressions:
     runs-on: ubuntu-latest
     timeout-minutes: 30
