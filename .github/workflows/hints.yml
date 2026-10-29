@@ -67,3 +67,7 @@ jobs:
       - name: Audit consumer axioms
         working-directory: examples/${{ matrix.directory }}
         run: lake env lean --run AxiomSweep.lean
+      - name: Exercise private oracle framing and replay
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        run: lake env lean --run OracleRegression.lean

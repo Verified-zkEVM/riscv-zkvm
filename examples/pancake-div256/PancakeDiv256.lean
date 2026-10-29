@@ -1,2 +1,3 @@
 import PancakeDiv256.Encoded
 import PancakeDiv256.CallerEncoded
+import PancakeDiv256.PrivateHints.Oracle
