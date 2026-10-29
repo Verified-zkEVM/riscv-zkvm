@@ -1,7 +1,7 @@
 /- Runtime regressions for the raw DIV256 instruction checker. Expected
    answers are supplied by the independent Python integer oracle. These
    executions supplement the kernel proofs; they are not proof certificates. -/
-import RiscvZkvm.Rv64.Div256Hints.Program
+import RiscvZkvm.Rv64.Div256Hints.Checker
 
 open RiscvZkvm.Rv64
 open RiscvZkvm.Rv64.Div256Hints
@@ -83,6 +83,88 @@ def transportRegressions : IO Unit := do
     "misaligned response installation"
   require ((checkedCompleteResponse state 0x100 [0]).isNone) "malformed response installation"
 
+abbrev ProtocolControl :=
+  ResumableHints.Control Protocol.Phase Question Protocol.Result
+
+def protocolReturned (control : ProtocolControl) (label : String) : IO Protocol.Result :=
+  match control with
+  | .returned result => pure result
+  | _ => throw (IO.userError s!"{label}: protocol did not return")
+
+def fastPathFrame (before after : MachineState) : Bool :=
+  let registers : List Reg := [.x0, .x1, .x2, .x3, .x4, .x5, .x6, .x7,
+    .x8, .x9, .x10, .x11, .x12, .x13, .x14, .x15, .x16, .x17,
+    .x18, .x19, .x20, .x21, .x22, .x23, .x24, .x25, .x26, .x27,
+    .x28, .x29, .x30, .x31]
+  registers.all (fun r => after.getReg r == before.getReg r) && after.pc == before.pc &&
+    memoryQuestion after (before.getReg .x10) == memoryQuestion before (before.getReg .x10) &&
+    memoryAnswer after (before.getReg .x10) == memoryAnswer before (before.getReg .x10) &&
+    after.privateInput == before.privateInput && after.publicValues == before.publicValues &&
+    after.committed == before.committed && after.inputBufBase == before.inputBufBase
+
+/-- Exercise the actual scheduler, raw response delivery, and machine checker.
+    Host state counts response deliveries, including malformed responses. -/
+def protocolRegressions : IO Unit := do
+  let badHandler : ResumableHints.Handler Nat Question (fun _ => Protocol.Reply) :=
+    fun _ host => (host + 1, [0x42])
+  let fastPaths : List (Question × Answer × String) := [
+    (⟨BitVec.ofNat 256 (2^256-1), 0⟩, ⟨0, 0⟩, "zero divisor"),
+    (⟨5, 7⟩, ⟨0, 5⟩, "smaller dividend")]
+  for (question, expected, label) in fastPaths do
+    let state := fixture question ⟨42, 9⟩ 0x100 0x80001000
+    let execution := ResumableHints.execute (Protocol.tick 0x100) (Protocol.accept 0x100)
+      badHandler 1 5 (Protocol.Initial state, 13)
+    require (execution.2 == 13) s!"{label}: fast path invoked handler"
+    let result ← protocolReturned execution.1 label
+    require (result.answer == expected) s!"{label}: wrong fast-path result"
+    require (fastPathFrame state result.state) s!"{label}: fast path changed guest state"
+
+  let question : Question := ⟨17, 3⟩
+  let expected : Answer := ⟨5, 2⟩
+  let base : Word := 0xa0000100
+  let state := fixture question ⟨0, 0⟩ base 0x80001000
+  let honest : ResumableHints.Handler Nat Question (fun _ => Protocol.Reply) :=
+    fun requested host => (host + 1, encodeAnswer (canonical requested))
+  let execution := ResumableHints.execute (Protocol.tick base) (Protocol.accept base)
+    honest 1 5 (Protocol.Initial state, 13)
+  require (execution.2 == 14) "honest protocol: expected exactly one response delivery"
+  let result ← protocolReturned execution.1 "honest protocol"
+  require (result.answer == expected) "honest protocol: wrong quotient/remainder"
+  require (memoryQuestion result.state base == question) "honest protocol: original request changed"
+  require (checkFrames (install state base expected) result.state)
+    "honest protocol: checker state/frame mismatch"
+
+  let wrongAnswer : Answer := ⟨6, 2⟩
+  let wrong : ResumableHints.Handler Nat Question (fun _ => Protocol.Reply) :=
+    fun _ host => (host + 1, encodeAnswer wrongAnswer)
+  let delivered := ResumableHints.execute (Protocol.tick base) (Protocol.accept base)
+    wrong 1 2 (Protocol.Initial state, 13)
+  require (delivered.2 == 14) "wrong witness: response host state was not committed"
+  match delivered.1 with
+  | .running (.checking post saved) =>
+    require (saved == question && memoryQuestion post base == question)
+      "wrong witness: original request binding changed"
+    require (memoryAnswer post base == wrongAnswer) "wrong witness: raw delivery was not installed"
+  | _ => throw (IO.userError "wrong witness: unexpected post-response phase")
+  let rejected := ResumableHints.execute (Protocol.tick base) (Protocol.accept base)
+    wrong 1 3 delivered
+  match rejected.1 with
+  | .trap => require (rejected.2 == 14) "wrong witness: rejection changed committed host state"
+  | _ => throw (IO.userError "wrong witness: protocol failed to reject")
+
+  let malformed := ResumableHints.execute (Protocol.tick base) (Protocol.accept base)
+    badHandler 1 2 (Protocol.Initial state, 13)
+  require (malformed.2 == 14) "malformed reply: response host state was not committed"
+  match malformed.1 with
+  | .running (.failed retained) =>
+    require (fastPathFrame state retained) "malformed reply: guest failure was not atomic"
+  | _ => throw (IO.userError "malformed reply: unexpected post-response phase")
+  let failed := ResumableHints.execute (Protocol.tick base) (Protocol.accept base)
+    badHandler 1 3 malformed
+  match failed.1 with
+  | .trap => require (failed.2 == 14) "malformed reply: failure changed committed host state"
+  | _ => throw (IO.userError "malformed reply: protocol failed to reject")
+
 def checkVector (index : Nat) (line : String) : IO Unit := do
   let fields := (line.splitOn " ").filter (· != "")
   unless fields.length == 6 do throw (IO.userError s!"line {index}: expected six fields")
@@ -118,6 +200,7 @@ def main (arguments : List String) : IO UInt32 := do
     let [path] := arguments | throw (IO.userError "usage: Div256Regression.lean VECTOR_FILE")
     require (Program.checkerCode.length == 233) "checker instruction count changed; update explicit budget"
     transportRegressions
+    protocolRegressions
     let contents ← IO.FS.readFile path
     let mut count := 0
     for line in contents.splitOn "\n" do
@@ -126,7 +209,7 @@ def main (arguments : List String) : IO UInt32 := do
         checkVector count line
         if count % 256 == 0 then IO.println s!"DIV256: checked {count} vectors."
     require (count > 0) "empty vector file"
-    IO.println s!"DIV256: {count} actual stepN executions and transport regressions passed (233 instructions each)."
+    IO.println s!"DIV256: {count} actual stepN executions, transport regressions, and protocol integration passed (233 instructions per checker body)."
     pure 0
   catch error =>
     IO.eprintln s!"DIV256 regression failed: {error}"

@@ -25,14 +25,15 @@ honest handler when checking an arbitrary supplied answer.
 
 The total specification defines both outputs as zero when `b = 0`, matching
 the guest's unsigned DIV/MOD convention. `checkNonzero` and the raw instruction
-body reject zero divisors. A complete EVM caller must handle zero locally,
-without requesting a hint; the raw body alone is not that caller.
+body reject zero divisors. The effect-level protocol handles zero and `a < b`
+locally, without invoking its handler. These fast paths are protocol
+operations; they are not an emitted EVM opcode implementation.
 
 The specification widens operands to 512 bits before multiplication and
 addition. Acceptance proves that the sum has not wrapped. Checking only its
 low 256 bits would be unsound: `a=0, b=2, quotient=2^255, remainder=0` is a
-counterexample. The limb implementation must retain all high limbs and carry
-bits for the same reason.
+counterexample. The proved limb implementation retains all high limbs and
+carry bits for the same reason.
 
 ## Version-one byte protocol
 
@@ -85,10 +86,48 @@ bound, and no performance improvement is claimed.
 
 `LimbArithmetic.lean` proves exact multiply-accumulate arithmetic and high-carry
 bounds for arbitrary word inputs. `Product.lean` proves the generic schoolbook
-product identity. These arithmetic results and execution/frame results are
-distinct from a theorem identifying the final machine flag with the DIV
-contract; that complete refinement must be present before claiming a verified
-guest arithmetic checker.
+product identity. The refinement modules connect these results to the actual
+register operations, buffer loads, remainder addition, full-width equality,
+and unsigned ordering decisions.
+
+`Checker.lean` completes that chain. `Program.checker_accept_iff_checkNonzero`
+identifies the final machine acceptance flag with the independent specification
+check for arbitrary buffer operands and candidates. `checker_sound` derives
+the original DIV contract from acceptance, and `checker_complete` proves
+acceptance of every valid nonzero witness. Combining these results with
+`checker_stepN` establishes soundness and completeness of the actual
+233-instruction execution under the stated code-placement and load-safety
+preconditions. There is no remaining arithmetic callback premise in that
+conclusion.
+
+## Resumable protocol
+
+`Protocol.tick` validates the buffer and pointer, handles local fast paths,
+or exposes the immutable original question as a pending request. Supplying a
+raw reply installs only its decoded quotient/remainder into the response
+region. The next checking tick runs `stepN 233` on the existing guest state;
+it returns the observed answer only if the actual machine flag is one.
+One checking tick is therefore a macrostep, not one RISC-V instruction.
+
+`Protocol.verified_adversarial_stateful_sound` instantiates the general
+stateful-handler safety theorem using the proved concrete checker. Given
+`Protocol.Entry` (valid buffer, correct pointer, and existing checker code), every
+returned answer satisfies the contract for the original pre-response operands,
+for arbitrary handler state and raw reply bytes. This is partial correctness:
+incorrect or malformed responses may trap, and an insufficient fuel slice may
+remain exhausted. `verified_honest_path` supplies the separate canonical
+request/resume/actual-checker success path for nonzero inputs outside the local
+fast paths. Neither theorem requires an
+unproved arithmetic-checker callback.
+
+`zero_execute` and `smaller_execute` prove that valid-buffer fast paths return
+with the original guest and host states, for any handler and subsequent
+scheduling rounds. For a delivered response, the scheduler commits the
+handler's updated host state even if the response is malformed. Malformed
+responses retain the original guest in a failed phase before trapping;
+structurally valid but incorrect answers are installed and then rejected by
+the machine checker. This commit policy is explicit and is not a claim of
+equivalence with Flapjack's foreign-call failure observations.
 
 ## Reproducible regressions
 
@@ -110,8 +149,12 @@ malformed response, original-operand preservation, and buffer-edge cases run
 in the same driver.
 
 The raw nonzero checker must reject `b=0`; the total specification is tested
-against its explicit zero convention separately. These regressions supplement
-kernel proofs and do not supply any new theorem or axiom.
+against its explicit zero convention separately. The driver also executes the
+actual protocol scheduler: zero and `a < b` preserve the handler count, an
+honest nonzero response returns the canonical answer after machine execution,
+and wrong or malformed replies reject with the specified host-state commit
+policy. These regressions supplement kernel proofs and do not supply any new
+theorem or axiom.
 
 Use `--seed N` and `--random-cases N` to vary the corpus. To reproduce vector
 ordering without running Lean:
@@ -135,11 +178,13 @@ admitted channel or a versioned environment extension. The existing public
 input layout must be preserved through a specific adapter. The CLI's static
 hint-tape framing is a different transport.
 
-Remaining deployment obligations include the complete machine arithmetic
-refinement, an ABI-correct emitted caller, source-helper and compiler/FFI
-agreement, byte-memory correspondence at that boundary, the chosen error and
-host-state commit observations, Sail/platform and backend integration, and
-the full target execution budget. Replacing the shared source `u256_divmod`
-would also affect MOD and signed operations, so initial integration must keep
-the advertised DIV scope explicit. No full evm.fast build, challenge
-certificate, ROM-decoder refinement, or backend proof follows from this pilot.
+Remaining deployment obligations include an emitted EVM-stack/Pancake hint-call
+integration, its register/stack ABI, source-helper and compiler/FFI agreement,
+byte-memory correspondence at that boundary, matching error and host-state
+commit observations, Sail/platform and backend integration, and the full target
+execution budget. The protocol's local fast paths do not yet supply emitted
+guest instructions or EVM stack, gas, and opcode-PC effects. Replacing the
+shared source `u256_divmod` would also affect MOD and signed operations, so
+initial integration must keep the advertised DIV scope explicit. No full
+evm.fast build, challenge certificate, ROM-decoder refinement, or backend proof
+follows from this pilot.
