@@ -152,6 +152,18 @@ matrix commands acquire the shared heavy-build lock.
 
 ## Check resource data and proof dependencies
 
+The optional `Deployment.Proofs` import exposes the reviewed compiler-stage
+composition, fresh-function metadata lemmas, exact declaration translation and
+startup-header adapter. Its source preamble restores the original specification's
+five header words after compiler startup has consumed the new image's pointers.
+The adapter core is proved; whole-program initialization and concrete image
+installation remain explicit obligations. CI builds and audits this front door.
+
+```sh
+lake build PancakeDiv256.Deployment.Proofs
+lake env lean --run AxiomSweep.lean --compiler
+```
+
 The optional stack checker proves a conservative bound against the original
 compiler's call-graph analysis. Its checked 815-function table admits a 538-word
 cap; the unchanged installation arithmetic supplies 2,097,104 stack words.

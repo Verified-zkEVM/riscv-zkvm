@@ -73,9 +73,18 @@ jobs:
       - name: Build isolated consumer
         working-directory: examples/${{ matrix.directory }}
         run: lake build ${{ matrix.target }}
+      - name: Build reviewed compiler and initialization proofs
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        run: lake build PancakeDiv256.Deployment.Proofs
       - name: Audit consumer axioms
         working-directory: examples/${{ matrix.directory }}
-        run: lake env lean --run AxiomSweep.lean
+        run: |
+          if [ '${{ matrix.directory }}' = pancake-div256 ]; then
+            lake env lean --run AxiomSweep.lean --compiler
+          else
+            lake env lean --run AxiomSweep.lean
+          fi
       - name: Reject unused private axiom dependencies
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256

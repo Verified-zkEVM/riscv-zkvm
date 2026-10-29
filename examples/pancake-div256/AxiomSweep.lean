@@ -24,9 +24,9 @@ def isScanned (env : Environment) (n : Name) : Bool :=
         scope.isPrefixOf env.header.moduleNames[index.toNat]!)
   owned || scanPrefixes.any (fun scope => scope.isPrefixOf n)
 
-def main (args : List String) : IO UInt32 := do
-  unless args.all (fun arg => ["--report", "--deployment", "--artifacts", "--resource-data"].contains arg) do
-    IO.eprintln "usage: AxiomSweep.lean [--report] [--deployment] [--artifacts] [--resource-data]"
+unsafe def main (args : List String) : IO UInt32 := do
+  unless args.all (fun arg => ["--report", "--deployment", "--artifacts", "--resource-data", "--compiler"].contains arg) do
+    IO.eprintln "usage: AxiomSweep.lean [--report] [--deployment] [--artifacts] [--resource-data] [--compiler]"
     return 2
   let report := args.contains "--report"
   initSearchPath (← findSysroot)
@@ -40,7 +40,13 @@ def main (args : List String) : IO UInt32 := do
   let modules := if args.contains "--resource-data" then
       modules.push { module := `PancakeDiv256.Compiler.DepthCompiler }
     else modules
-  let env ← importModules modules {} (trustLevel := 1024)
+  let modules := if args.contains "--compiler" then
+      modules.push { module := `PancakeDiv256.Deployment.Proofs }
+    else modules
+  -- collectAxioms uses kernel-exported dependency metadata. importModules
+  -- otherwise leaves extensions empty and repeatedly walks imported bodies.
+  enableInitializersExecution
+  let env ← importModules modules {} (trustLevel := 1024) (loadExts := true)
   let ctx : Core.Context := { fileName := "<axiomsweep>", fileMap := default }
   let state : Core.State := { env }
 
