@@ -6,3 +6,4 @@ import RiscvZkvm.Rv64.Div256Hints.Pancake.Carry
 import RiscvZkvm.Rv64.Div256Hints.Pancake.Arithmetic
 import RiscvZkvm.Rv64.Div256Hints.Pancake.Decision
 import RiscvZkvm.Rv64.Div256Hints.Pancake.Checker
+import RiscvZkvm.Rv64.Div256Hints.Pancake.Operation
