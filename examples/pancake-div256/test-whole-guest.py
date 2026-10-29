@@ -61,8 +61,18 @@ def artifact(directory: Path, *, baseline: bool) -> Path:
             "compiler metadata hash mismatch")
     private = "divmod256_fallback_v1" in metadata["ffi_names"]
     require(private != baseline, "wrong source profile for artifact")
+    profile = manifest.get("source_profile")
+    require(metadata.get("source_profile") == profile, "source profile metadata mismatch")
     if baseline:
-        require(manifest.get("source_profile") == "original-baseline", "baseline source provenance missing")
+        require(profile == "original-baseline", "baseline source provenance missing")
+    else:
+        # The first pinned artifact predates explicit source-profile fields.
+        require(profile in (None, "private-hint-v1", "private-hint-v1-header-restore"),
+                "unsupported private source profile")
+    restores_headers = profile == "private-hint-v1-header-restore"
+    require(manifest.get("restore_source_headers", False) is restores_headers and
+            metadata.get("restore_source_headers", False) is restores_headers,
+            "source header restoration metadata mismatch")
     return elf
 
 
