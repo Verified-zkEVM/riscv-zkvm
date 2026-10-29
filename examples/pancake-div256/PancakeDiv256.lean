@@ -6,3 +6,8 @@ import PancakeDiv256.PrivateHints.EvmFast
 import PancakeDiv256.Source.WordDivision
 import PancakeDiv256.Source.WordContract
 import PancakeDiv256.Source.Ast
+import PancakeDiv256.Target.Footprint
+import PancakeDiv256.Target.CallerAlgebra
+import PancakeDiv256.Target.Memory
+import PancakeDiv256.Target.State
+import PancakeDiv256.Target.Alu
