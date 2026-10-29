@@ -15,3 +15,6 @@ import PancakeDiv256.Target.CallerAlgebra
 import PancakeDiv256.Target.Memory
 import PancakeDiv256.Target.State
 import PancakeDiv256.Target.Alu
+import PancakeDiv256.Source.SourceMul64
+import PancakeDiv256.Source.WordCheck
+import PancakeDiv256.Source.Mul64Semantics
