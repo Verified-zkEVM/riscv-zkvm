@@ -56,7 +56,8 @@ def StackBufferDisjoint (s : MachineState) : Prop :=
     (s.getReg .x10).toNat + 128 ≤ (stackBase s).toNat
 
 /-- The conservative stack validity check covers 128 bytes, but the function
-    owns and writes only 96. The extra 32 bytes are never accessed. -/
+    owns and writes only 96. The extra 32 bytes are not save/restore slots;
+    the input buffer may overlap them. -/
 structure Preconditions (s : MachineState) : Prop where
   located : ProgramAt s.code s.pc callerCode
   buffer_valid : validBuffer (s.getReg .x10) = true
