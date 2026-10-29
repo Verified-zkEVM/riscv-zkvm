@@ -6,6 +6,9 @@ import PancakeDiv256.PrivateHints.EvmFast
 import PancakeDiv256.Source.WordDivision
 import PancakeDiv256.Source.WordContract
 import PancakeDiv256.Source.Ast
+import PancakeDiv256.Source.LoopSemantics
+import PancakeDiv256.Source.WordLoop
+import PancakeDiv256.Source.WordHelper
 import PancakeDiv256.Target.Footprint
 import PancakeDiv256.Target.CallerAlgebra
 import PancakeDiv256.Target.Memory
