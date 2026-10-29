@@ -129,6 +129,16 @@ class TransportTests(unittest.TestCase):
             self.assertEqual(provider.invoke(request()).outcome, "oversized")
         self.assertIn(65, sizes)
 
+    def test_outer_deadline_prevents_launch_and_bounds_actual_provider(self):
+        provider = self.provider("late", "2")
+        with patch("divmod256_adapter.subprocess.Popen", side_effect=AssertionError("must not launch")):
+            with self.assertRaises(TimeoutError):
+                provider.invoke(request(), deadline=time.monotonic()-1)
+        start = time.monotonic()
+        with self.assertRaises(TimeoutError):
+            Adapter(provider).call(request()+bytes(64), None, PrivateState(), deadline=start+0.2)
+        self.assertLess(time.monotonic()-start, 1.0)
+
     def test_configuration_validation(self):
         for timeout in (0, -1, float("nan"), float("inf")):
             with self.assertRaises(ValueError):
@@ -239,6 +249,32 @@ class ReplayAndCliTests(unittest.TestCase):
         self.assertEqual(Adapter(replay).call(original, None, PrivateState(9)), exchange)
         self.assertEqual(exchange.array[64:], ZERO_RESPONSE)
         replay.finish()
+
+    def test_deadline_replay_regular_file_and_arbitrary_stream_rejection(self):
+        recording = io.StringIO()
+        array = request()+bytes(64)
+        exchange = Adapter(SubprocessProvider([]), recorder=TranscriptWriter(recording)).call(
+            array, None, PrivateState(), deadline=time.monotonic()+2)
+        with tempfile.TemporaryFile() as stream:
+            stream.write(recording.getvalue().encode("ascii"))
+            stream.seek(0)
+            replay = TranscriptReplay(stream)
+            self.assertEqual(Adapter(replay).call(array, None, PrivateState(), deadline=time.monotonic()+2), exchange)
+            replay.finish(deadline=time.monotonic()+2)
+        class ArbitraryStream:
+            def readline(self, size):
+                raise AssertionError("unbounded user stream method must not run")
+        with self.assertRaises(ProtocolError):
+            TranscriptReplay(ArbitraryStream()).invoke(array, 0, deadline=time.monotonic()+2)
+        with tempfile.TemporaryFile() as real_file:
+            class ArbitraryRaw(io.RawIOBase):
+                def readable(self): return True
+                def fileno(self): return real_file.fileno()
+                def readinto(self, buffer):
+                    raise AssertionError("arbitrary wrapped raw reader must not run")
+            with io.BufferedReader(ArbitraryRaw()) as wrapped:
+                with self.assertRaises(ProtocolError):
+                    TranscriptReplay(wrapped).invoke(array, 0, deadline=time.monotonic()+2)
 
     def test_malformed_replay_is_rejected(self):
         good = {"version": 1, "service": SERVICE_NAME, "call": 0, "array": (request() + bytes(64)).hex(),

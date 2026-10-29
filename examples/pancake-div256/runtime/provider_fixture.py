@@ -26,6 +26,9 @@ def main() -> None:
     if mode == "honest":
         from divmod256_reference import answer
         response = answer(request)
+    elif mode == "late":
+        time.sleep(float(sys.argv[2]))
+        response = bytes([0xA5]) * 64
     elif mode == "wrong":
         response = bytes([0xA5]) * 64
     elif mode == "short":
@@ -44,7 +47,7 @@ def main() -> None:
     elif mode == "stalled-output":
         while True:
             time.sleep(60)
-    elif mode in ("parent-exit", "timeout-child", "parent-exit-held-stdout"):
+    elif mode in ("parent-exit", "timeout-child", "parent-exit-held-stdout", "late-child"):
         recorded = Path(sys.argv[2])
         ready = recorded.with_suffix(".ready")
         # The worker remains in this invocation's group and ignores TERM.
@@ -65,6 +68,8 @@ def main() -> None:
         if mode == "timeout-child":
             while True:
                 time.sleep(60)
+        if mode == "late-child":
+            time.sleep(float(sys.argv[3]))
         response = bytes([0xA5]) * 64
     else:
         raise SystemExit("unknown fixture mode")
