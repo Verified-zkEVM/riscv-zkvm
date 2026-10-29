@@ -82,6 +82,8 @@ def elf_bytes(image: bytes, address: int, size: int) -> bytes:
 def input_files(guest: Path, proposals: Path | None = None) -> list[Path]:
     paths = [HERE / name for name in ["CompileHintedGuest.lean", "build-hinted-guest.py",
         "import-allocation-proposals.py", "PancakeDiv256/Compiler/Allocation.lean", "PancakeDiv256/Compiler/DepthShape.lean",
+        "PancakeDiv256/Compiler/DepthCertificate.lean", "PancakeDiv256/Compiler/DepthCheck.lean",
+        "PancakeDiv256/Compiler/DepthCompress.lean",
         "PancakeDiv256/Source/HintedWordProgram.lean", "PancakeDiv256/Source/Ast.lean",
         "PancakeDiv256/Source/hinted_u256_div.pnk", "lake-manifest.json", "lean-toolchain",
         "runtime/spike/hint_stub.S", "runtime/spike/elf_metadata.py"]]
@@ -181,7 +183,7 @@ def main() -> int:
         allocation_olean.parent.mkdir(parents=True, exist_ok=True)
         # Refresh all imported compiler/source modules before executing the
         # immutable launch driver; a source hash alone cannot detect stale oleans.
-        run(["lake", "build", "PancakeDiv256.Compiler.Allocation", "PancakeDiv256.Compiler.DepthShape",
+        run(["lake", "build", "PancakeDiv256.Compiler.Allocation", "PancakeDiv256.Compiler.DepthCompress",
              "PancakeDiv256.Source.HintedWordProgram", "Flapjack.Pancake.PanStatic",
              "Flapjack.Pancake.Proofs.PanToTarget.ExecutableCompileProgMaxDepth",
              "Flapjack.Compiler.Backend.RiscVConfig.Executable",

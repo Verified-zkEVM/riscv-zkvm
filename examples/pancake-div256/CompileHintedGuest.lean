@@ -6,7 +6,7 @@ import Flapjack.Compiler.Encoders.RiscV.Target.Configuration
 import Flapjack.RiscV.NativeCLIAdapter
 import Lean.Data.Json.FromToJson
 import PancakeDiv256.Compiler.Allocation
-import PancakeDiv256.Compiler.DepthShape
+import PancakeDiv256.Compiler.DepthCompress
 
 /-! Compute the unchanged whole compiler once and serialize that same result.
 The files are executable artifacts. They do not establish source equivalence,
@@ -219,8 +219,9 @@ def main (args : List String) : IO Unit := do
       ("entry_label",toJson BvlToBvi.initGlobalsLocation),
       ("frames_words",toJson (sptToAList wordConfig.stackFrameSize)),
       ("program",toJson (allocated.map fun entry =>
-        (entry.1,entry.2.1,depthJson (PancakeDiv256.Compiler.Depth.shape entry.2.2)))),
-      ("certificate",toJson false)]).pretty ++ "\n")
+        (entry.1,entry.2.1,depthJson (PancakeDiv256.Compiler.Depth.compact (PancakeDiv256.Compiler.Depth.shape entry.2.2))))),
+      ("shape_projection",toJson "compact(shape(actual allocated program))"),
+      ("certificate",toJson false)]).compress ++ "\n")
   let image ← timed "stack-to-native encoding"
     (fun _ => PancakeDiv256.Artifact.backend cfg stackProgram bitmapData)
   let some (bytes, bitmaps, config) := image
