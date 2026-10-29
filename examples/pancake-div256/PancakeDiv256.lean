@@ -18,3 +18,4 @@ import PancakeDiv256.Target.Alu
 import PancakeDiv256.Source.SourceMul64
 import PancakeDiv256.Source.WordCheck
 import PancakeDiv256.Source.Mul64Semantics
+import PancakeDiv256.Source.HintedWordProgram
