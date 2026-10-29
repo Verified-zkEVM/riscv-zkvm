@@ -41,6 +41,7 @@ def scanPrefixes : List Name := [`RiscvZkvm.Rv64, `RiscvZkvm.Interpreter]
     module for no benefit here. -/
 def scanModules : Array Import :=
   #[{ module := `RiscvZkvm.Rv64 }, { module := `RiscvZkvm.Rv64.Hints },
+    { module := `RiscvZkvm.Rv64.Div256Hints.Pancake },
     { module := `RiscvZkvm.Rv64.SailEquiv }, { module := `RiscvZkvm.Rv64.Logic },
     { module := `RiscvZkvm.Rv64.Logic.Hints },
     { module := `RiscvZkvm.Interpreter }]

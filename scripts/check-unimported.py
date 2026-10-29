@@ -34,6 +34,7 @@ import sys
 ROOTS = [
     "RiscvZkvm.Rv64",
     "RiscvZkvm.Rv64.Hints",
+    "RiscvZkvm.Rv64.Div256Hints.Pancake",
     "RiscvZkvm.Rv64.SailEquiv",
     "RiscvZkvm.Rv64.Logic",
     "RiscvZkvm.Rv64.Logic.Hints",
