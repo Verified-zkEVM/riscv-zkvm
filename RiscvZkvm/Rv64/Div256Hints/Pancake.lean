@@ -3,3 +3,4 @@
 import RiscvZkvm.Rv64.Div256Hints.Pancake.Blocks
 import RiscvZkvm.Rv64.Div256Hints.Pancake.Program
 import RiscvZkvm.Rv64.Div256Hints.Pancake.Carry
+import RiscvZkvm.Rv64.Div256Hints.Pancake.Arithmetic
