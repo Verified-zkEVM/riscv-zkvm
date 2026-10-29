@@ -1,10 +1,11 @@
 # Opt-in Spike runtime overlay
 
-This unit prepares the actual runtime boundary and executable host transport for
-`divmod256_fallback_v1`. It leaves the pinned Guest checkout unchanged. Full
-Spike compilation, the authored real processor batching regression, and execution of the compiled
-whole-guest ELF are the next validation stage; the static tests below do not
-claim those results.
+This unit supplies the opt-in runtime boundary and executable host transport for
+`divmod256_fallback_v1`, leaving the pinned Guest checkout unchanged. The exact
+Spike build, real processor batching regression and ABI tests pass. The compiled
+whole-guest ELF also passes eight DIV fixtures across nine provider modes.
+These execution checks accompany the formal development; a complete
+source-to-machine certificate remains pending.
 
 ## Artifacts and ABI
 
@@ -120,8 +121,8 @@ wall deadline also remains active.
 executes `wfi_batch_test.cc` against the real processor. That regression checks
 early batch termination, the actual symbol/resume PC, the need to clear WFI,
 waiting-poll behavior, counter wrap and inhibition rejection. It uses a small
-processor fixture, not a replacement guest. Its source is ready; it has not yet
-been run at this checkpoint.
+processor fixture, not a replacement guest. It passes against the pinned
+processor and its recorded, hash-verified archive cache.
 
 With the heavy-build slot assigned, the prepared local dependency cache can be
 used without installing system packages:
@@ -166,7 +167,8 @@ The script retains its internal nonblocking heavy-build flock and make timeout.
 The expanded tests reject actual staged/unstaged ISA edits in an isolated exact
 Spike checkout, stale provenance and modified archive/configuration bytes before
 any expensive compilation. Those refusal/hash tests do not certify marker files
-as valid libraries or substitute for the pending real processor regression.
+as valid libraries or substitute for the separately executed real processor
+regression.
 
 `test_real_hook.py` uses the built driver and a small assembled processor
 fixture. It verifies an actual hint pause/resume, all 32 integer registers,
