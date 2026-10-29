@@ -34,6 +34,7 @@ import sys
 ROOTS = [
     "RiscvZkvm.Rv64",
     "RiscvZkvm.Rv64.Hints",
+    "RiscvZkvm.Rv64.Div256Hints.Pancake",
     "RiscvZkvm.Rv64.SailEquiv",
     "RiscvZkvm.Rv64.Logic",
     "RiscvZkvm.Rv64.Logic.Hints",
@@ -53,6 +54,8 @@ ALLOWED_ORPHANS = {
     "RiscvZkvm.Interpreter.HintTests",
     # Ordinary import isolation, checked explicitly after the Sail build in CI.
     "RiscvZkvm.Interpreter.HintImportTests",
+    # Generic hint imports stay independent of compiler-specific adapters.
+    "RiscvZkvm.Interpreter.HintAdapterImportTests",
 }
 
 SCAN_DIRS = ["RiscvZkvm/Rv64", "RiscvZkvm/Interpreter"]

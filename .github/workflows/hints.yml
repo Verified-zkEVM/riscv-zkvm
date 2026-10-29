@@ -22,17 +22,27 @@ jobs:
           use-github-cache: false
           use-mathlib-cache: false
       - name: Build hint regressions and runner
-        run: lake build RiscvZkvm.Interpreter.HintTests riscv-zkvm-run
+        run: |
+          lake build RiscvZkvm.Interpreter.HintTests \
+            RiscvZkvm.Interpreter.HintAdapterImportTests riscv-zkvm-run
       - name: Run interpreter fixtures
         run: scripts/run-interpreter-tests.sh
       - name: DIV256 actual-machine differential regressions
         run: |
           python3 scripts/test-div256-timeout.py
           python3 scripts/test-div256.py --timeout 900
+          python3 scripts/test-div256.py --backend pancake --timeout 900
 
   pancake-consumer:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      matrix:
+        include:
+          - directory: pancake-modinv
+            target: Op6Pancake
+          - directory: pancake-div256
+            target: PancakeDiv256
     steps:
       - uses: actions/checkout@v4
       - uses: leanprover/lean-action@v1
@@ -44,16 +54,16 @@ jobs:
           use-github-cache: false
           use-mathlib-cache: false
       - name: Fetch isolated Mathlib cache
-        working-directory: examples/pancake-modinv
+        working-directory: examples/${{ matrix.directory }}
         run: |
           cmp ../../lean-toolchain lean-toolchain
           lake exe cache get
       - name: Apply recorded Flapjack compatibility patch
-        working-directory: examples/pancake-modinv
+        working-directory: examples/${{ matrix.directory }}
         run: python3 prepare-flapjack.py
-      - name: Build ordinary-FFI consumer
-        working-directory: examples/pancake-modinv
-        run: lake build Op6Pancake
+      - name: Build isolated consumer
+        working-directory: examples/${{ matrix.directory }}
+        run: lake build ${{ matrix.target }}
       - name: Audit consumer axioms
-        working-directory: examples/pancake-modinv
+        working-directory: examples/${{ matrix.directory }}
         run: lake env lean --run AxiomSweep.lean

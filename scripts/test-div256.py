@@ -106,6 +106,8 @@ def main():
     parser.add_argument("--random-cases", type=int, default=128)
     parser.add_argument("--seed", type=int, default=0xD1F256)
     parser.add_argument("--timeout", type=int, default=900, help="Lean execution timeout in seconds")
+    parser.add_argument("--backend", choices=("reference", "pancake"), default="reference",
+                        help="execute the reference body or compiler-shaped lowering")
     parser.add_argument("--vectors-only", type=Path, help="write vectors without building or executing Lean")
     args = parser.parse_args()
     if args.random_cases < 0 or args.timeout <= 0:
@@ -116,7 +118,12 @@ def main():
         args.vectors_only.write_text(payload, encoding="utf-8")
         print(f"Wrote {len(cases)} deterministic vectors to {args.vectors_only}")
         return 0
-    build = subprocess.run(["lake", "build", "RiscvZkvm.Rv64.Div256Hints.Caller"], cwd=ROOT)
+    target, driver = (
+        ("RiscvZkvm.Rv64.Div256Hints.Caller", "scripts/Div256Regression.lean")
+        if args.backend == "reference" else
+        ("RiscvZkvm.Rv64.Div256Hints.Pancake", "scripts/PancakeDiv256Regression.lean")
+    )
+    build = subprocess.run(["lake", "build", target], cwd=ROOT)
     if build.returncode:
         return build.returncode
     with tempfile.TemporaryDirectory(prefix="div256-regression-") as directory:
@@ -125,7 +132,7 @@ def main():
         print(f"Checking {len(cases)} vectors, seed={args.seed}; Python integer divmod is the oracle.", flush=True)
         try:
             result = run_execution(
-                ["lake", "env", "lean", "--run", "scripts/Div256Regression.lean", str(vector_file)],
+                ["lake", "env", "lean", "--run", driver, str(vector_file)],
                 cwd=ROOT, timeout=args.timeout,
             )
         except subprocess.TimeoutExpired:
