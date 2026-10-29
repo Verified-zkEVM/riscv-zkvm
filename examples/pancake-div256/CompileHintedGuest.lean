@@ -7,6 +7,8 @@ import Flapjack.RiscV.NativeCLIAdapter
 import Lean.Data.Json.FromToJson
 import PancakeDiv256.Compiler.Allocation
 import PancakeDiv256.Compiler.DepthCompress
+import PancakeDiv256.Compiler.BackendArtifactGenerator
+import PancakeDiv256.Deployment.HeaderAdaptedSource
 
 /-! Compute the unchanged whole compiler once and serialize that same result.
 The files are executable artifacts. They do not establish source equivalence,
@@ -103,34 +105,71 @@ private structure DriverOptions where
   deferDepth : Bool := false
   baselineSource : Bool := false
   proposals : Option String := none
+  helperColorIndex : Option Nat := none
+  functionColorIndices : List (Nat × Nat) := []
   inspectOnly : Bool := false
+  proofInputs : Bool := false
+  restoreSourceHeaders : Bool := false
   output : String := ""
 
 private def options (arguments : List String) (current : DriverOptions := {}) : Except String DriverOptions :=
   match arguments with
-  | [path] => .ok {current with output := path}
+  | [path] => if path.startsWith "--" then .error "missing output directory or option argument" else .ok {current with output := path}
   | "--defer-depth"::rest => options rest {current with deferDepth := true}
   | "--baseline-source"::rest => options rest {current with baselineSource := true}
   | "--inspect-allocation"::rest => options rest {current with inspectOnly := true}
+  | "--proof-inputs"::rest => options rest {current with proofInputs := true}
+  | "--restore-source-headers"::rest => options rest {current with restoreSourceHeaders := true}
   | "--allocation-proposals"::path::rest => options rest {current with proposals := some path}
-  | _ => .error "usage: CompileHintedGuest.lean [--baseline-source] [--defer-depth] [--allocation-proposals JSON] [--inspect-allocation] OUTPUT_DIRECTORY"
+  | "--helper-color-index"::value::rest =>
+    match value.toNat? with
+    | some index => options rest {current with helperColorIndex := some index}
+    | none => .error "helper-color-index must be a natural number"
+  | "--function-color-index"::value::rest =>
+    match value.splitOn ":" with
+    | [label,index] =>
+      match label.toNat?,index.toNat? with
+      | some label,some index => options rest {current with functionColorIndices := current.functionColorIndices ++ [(label,index)]}
+      | _,_ => .error "function-color-index must be LABEL:POOLINDEX with natural numbers"
+    | _ => .error "function-color-index must be LABEL:POOLINDEX with natural numbers"
+  | _ => .error "usage: CompileHintedGuest.lean [--baseline-source] [--restore-source-headers] [--defer-depth] [--allocation-proposals JSON] [--helper-color-index NAT] [--function-color-index LABEL:POOLINDEX] [--inspect-allocation] [--proof-inputs] OUTPUT_DIRECTORY"
 
 private def preparePool (program : List PancakeDiv256.Compiler.Allocation.WordProgram)
-    (names : Spt MlString) (pool : List (Option (Spt Nat))) :
+    (names : Spt MlString) (pool : List (Option (Spt Nat))) (helperColorIndex : Option Nat)
+    (functionColorIndices : List (Nat × Nat)) :
     IO (List (Option (Spt Nat)) × List PancakeDiv256.Compiler.Allocation.WordProgram × List Json) := do
   let mut selected := []
   let mut preparedProgram := []
   let mut selections := []
   let corpus := pool.toArray
+  if let some helperIndex := helperColorIndex then
+    match pool[helperIndex]? with
+    | some (some _) => pure ()
+    | _ => throw (IO.userError "explicit helper color index must identify a Some proposal in the pool")
+  for (label,candidate) in functionColorIndices do
+    unless (program.filter (fun entry => entry.1 == label)).length == 1 do
+      throw (IO.userError s!"explicit function color label {label} does not identify exactly one actual word function")
+    match pool[candidate]? with
+    | some (some _) => pure ()
+    | _ => throw (IO.userError s!"explicit function color index {candidate} must identify a Some proposal in the pool")
+  let mut helperSeen := false
   for (entry,index) in program.zipIdx do
     let name := (sptLookup entry.1 names).map toStringOfBytes
     IO.eprintln s!"Function {index+1}/{program.length}, word label={entry.1}, name={repr name}, args={entry.2.1}"
     let prepared ← timed s!"function {index} optimization" (fun _ => PancakeDiv256.Compiler.Allocation.prepare entry)
     let mut chosen : Option Nat := none
     let mut attempts := 0
-    if !pool.isEmpty && name != some "hinted_u256_div" then
+    let isHelper := name == some "hinted_u256_div"
+    let functionColorIndex := (functionColorIndices.find? (fun entry' => entry'.1 == entry.1)).map Prod.snd
+    if isHelper && helperColorIndex.isSome && functionColorIndex.isSome then
+      throw (IO.userError "the helper has both a helper-color-index and a function-color-index")
+    let explicitColorIndex := if isHelper then helperColorIndex.or functionColorIndex else functionColorIndex
+    if isHelper then helperSeen := true
+    if !pool.isEmpty && (!isHelper || explicitColorIndex.isSome) then
       let input ← timed s!"function {index} clash/forced conditions" (fun _ => PancakeDiv256.Compiler.Allocation.problem prepared)
-      for candidate in PancakeDiv256.Compiler.Allocation.candidateOrder pool.length index do
+      let candidates := if explicitColorIndex.isSome then explicitColorIndex.toList
+        else PancakeDiv256.Compiler.Allocation.candidateOrder pool.length index
+      for candidate in candidates do
         attempts := attempts+1
         if attempts % 32 == 0 then
           IO.eprintln s!"Function {index}: checked {attempts}/{pool.length} candidate colors…"
@@ -138,12 +177,18 @@ private def preparePool (program : List PancakeDiv256.Compiler.Allocation.WordPr
           chosen := some candidate
           break
       IO.eprintln s!"Function {index}: checked {attempts} candidates; accepted pool index={repr chosen}"
+    if explicitColorIndex.isSome && chosen.isNone then
+      if isHelper && helperColorIndex.isSome then
+        throw (IO.userError "explicit helper color failed the unchanged compiler checker")
+      else throw (IO.userError s!"explicit color for word label {entry.1} failed the unchanged compiler checker")
     let color := chosen.bind (fun candidate => corpus[candidate]!)
     selected := color :: selected
     preparedProgram := prepared :: preparedProgram
     selections := Json.mkObj [("word_label",toJson entry.1),("source_export_name",toJson name),
       ("current_index",toJson index),("candidate_pool_index",toJson chosen),
       ("checker_accepted",toJson chosen.isSome),("candidates_checked",toJson attempts)] :: selections
+  if helperColorIndex.isSome && !helperSeen then
+    throw (IO.userError "explicit helper color requested but the actual program has no helper")
   return (selected.reverse,preparedProgram.reverse,selections.reverse)
 
 private def finishProgress (cfg : Backend.Config)
@@ -161,12 +206,24 @@ def main (args : List String) : IO Unit := do
   let chosen ← match options args with
     | .ok chosen => pure chosen
     | .error error => throw (IO.userError error)
+  if chosen.helperColorIndex.isSome && (chosen.baselineSource || chosen.proposals.isNone) then
+    throw (IO.userError "helper color requires the hinted source and an explicit proposal pool")
+  if !chosen.functionColorIndices.isEmpty && chosen.proposals.isNone then
+    throw (IO.userError "explicit function colors require a proposal pool")
+  unless (chosen.functionColorIndices.map Prod.fst).eraseDups.length == chosen.functionColorIndices.length do
+    throw (IO.userError "duplicate function-color-index word label")
+  if chosen.inspectOnly && chosen.proofInputs then
+    throw (IO.userError "proof inputs require allocation and an image; inspection alone cannot produce them")
+  if chosen.baselineSource && chosen.restoreSourceHeaders then
+    throw (IO.userError "restoring source headers requires the hinted source profile")
   let deferDepth := chosen.deferDepth
   let path := chosen.output
   let output : System.FilePath := path
   IO.FS.createDirAll output
   let baseline := staticCheck Guest.Software.guestAst
-  let source := if chosen.baselineSource then Guest.Software.guestAst else hintedGuestAst
+  let source := if chosen.baselineSource then Guest.Software.guestAst else
+    if chosen.restoreSourceHeaders then PancakeDiv256.Deployment.HeaderAdaptedSource.deploymentGuestAst
+    else hintedGuestAst
   let checked := staticCheck source
   let .ok _ := checked.1
     | throw (IO.userError s!"source static check failed: {repr checked.1}")
@@ -197,7 +254,7 @@ def main (args : List String) : IO Unit := do
   if chosen.inspectOnly then
     IO.eprintln s!"Inspected {wordProgram.length} actual word functions and {pool.length} untrusted candidates; no allocation or image generated."
     return
-  let (tape,preparedProgram,selections) ← preparePool wordProgram namesFromSource pool
+  let (tape,preparedProgram,selections) ← preparePool wordProgram namesFromSource pool chosen.helperColorIndex chosen.functionColorIndices
   unless tape.length == wordProgram.length && preparedProgram.length == wordProgram.length do
     throw (IO.userError "internal allocation tape length differs from current word program")
   let cfg := if chosen.proposals.isSome then PancakeDiv256.Compiler.Allocation.withTape tape
@@ -226,6 +283,9 @@ def main (args : List String) : IO Unit := do
     (fun _ => PancakeDiv256.Artifact.backend cfg stackProgram bitmapData)
   let some (bytes, bitmaps, config) := image
     | throw (IO.userError "ordinary compiler returned none")
+  if chosen.proofInputs then
+    PancakeDiv256.Compiler.BackendArtifactGenerator.generate
+      (output / "proof-inputs") allocated bytes bitmaps config
   let names := (Backend.ffinamesToStringList (config.labConf.ffiNames.getD [])).map toStringOfBytes
   if chosen.baselineSource then
     if names.contains "divmod256_fallback_v1" then
@@ -242,10 +302,11 @@ def main (args : List String) : IO Unit := do
       (Flapjack.RiscV.NativeCLI.compileProgNames declarations) config) ++ "\n")
   let maximum ← if deferDepth then pure none else
     timed "exact stack-depth analysis" (fun _ => PancakeDiv256.Artifact.depth wordConfig.stackFrameSize allocated)
-  let metadata := Json.mkObj [
+  let metadata := Json.mkObj ([
     ("version", toJson (1 : Nat)),
     ("source_declarations", toJson declarations.length),
-    ("source_profile", toJson (if chosen.baselineSource then "original-baseline" else "private-hint-v1")),
+    ("source_profile", toJson (if chosen.baselineSource then "original-baseline" else
+      if chosen.restoreSourceHeaders then "private-hint-v1-header-restore" else "private-hint-v1")),
     ("code_bytes", toJson bytes.length),
     ("bitmap_words", toJson bitmaps.length),
     ("static_stack_bound_words", toJson maximum),
@@ -256,10 +317,16 @@ def main (args : List String) : IO Unit := do
     ("allocation_proposals_file", toJson chosen.proposals),
     ("allocation_proposals_source_sha256", proposalSource),
     ("allocation_candidate_pool_entries", toJson pool.length),
+    ("allocation_helper_color_index", toJson chosen.helperColorIndex),
     ("allocation_selected_tape_file", toJson "selected-allocation-proposals.json"),
     ("allocation_config_has_explicit_tape", toJson chosen.proposals.isSome),
     ("compiler_configuration_change", toJson (if chosen.proposals.isSome then "wordToWordConf.colOracle only" else "none")),
     ("certificate", toJson false),
-    ("installation_limit_check", toJson "pending compiler equality and actual getStackHeapLimit")]
+    ("installation_limit_check", toJson "pending compiler equality and actual getStackHeapLimit")] ++
+    (if chosen.proofInputs then [("proof_input_proposals", Json.mkObj [
+      ("directory", toJson "proof-inputs"), ("certificate", toJson false)])] else []) ++
+    (if chosen.functionColorIndices.isEmpty then [] else
+      [("allocation_function_color_indices",toJson chosen.functionColorIndices)]) ++
+    (if chosen.restoreSourceHeaders then [("restore_source_headers",toJson true)] else []))
   IO.FS.writeFile (output / "compiler-metadata.json") (metadata.pretty ++ "\n")
   IO.println metadata.pretty

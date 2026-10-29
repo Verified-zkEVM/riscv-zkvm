@@ -84,11 +84,27 @@ def input_files(guest: Path, proposals: Path | None = None) -> list[Path]:
         "import-allocation-proposals.py", "PancakeDiv256/Compiler/Allocation.lean", "PancakeDiv256/Compiler/DepthShape.lean",
         "PancakeDiv256/Compiler/DepthCertificate.lean", "PancakeDiv256/Compiler/DepthCheck.lean",
         "PancakeDiv256/Compiler/DepthCompress.lean",
+        "PancakeDiv256/Deployment/HeaderAdaptedSource.lean",
         "PancakeDiv256/Source/HintedWordProgram.lean", "PancakeDiv256/Source/Ast.lean",
         "PancakeDiv256/Source/hinted_u256_div.pnk", "lake-manifest.json", "lean-toolchain",
         "runtime/spike/hint_stub.S", "runtime/spike/elf_metadata.py"]]
-    paths += [guest / name for name in ["guest/runtime/start.S", "guest/runtime/guest.ld", "Guest/SoftwareAst.lean"]]
+    paths += [guest / name for name in ["guest/runtime/start.S", "guest/runtime/guest.ld", "Guest/SoftwareAst.lean", "Guest/Bookkeeping.lean"]]
     paths += sorted((HERE / "patches").glob("*.patch"))
+    # The imported serializer is dormant unless --proof-inputs is selected,
+    # but its complete local source closure is still an artifact input.
+    pending = ["PancakeDiv256.Compiler.BackendArtifactGenerator"]
+    seen = set()
+    while pending:
+        module = pending.pop()
+        if module in seen:
+            continue
+        seen.add(module)
+        source = HERE / (module.replace(".", "/") + ".lean")
+        paths.append(source)
+        for line in source.read_text().splitlines():
+            if line.startswith("import "):
+                pending.extend(name for name in line.split()[1:]
+                               if name.startswith("PancakeDiv256.Compiler.Backend"))
     if proposals is not None:
         paths.append(proposals)
     return paths
@@ -134,16 +150,34 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, help="new output directory (must not exist)")
     parser.add_argument("--baseline-source", action="store_true", help="compile the unchanged pinned Guest AST, without a private hint symbol or trampoline")
+    parser.add_argument("--restore-source-headers", action="store_true", help="prepend the reviewed five-word source-header restoration to hinted main")
     proposals = parser.add_mutually_exclusive_group()
     proposals.add_argument("--allocation-proposals", type=Path, help="untrusted coloring JSON input")
     proposals.add_argument("--baseline-allocation-proposals", action="store_true", help="import the pinned Guest's current baseline's untrusted coloring pool; current-program compiler validation is mandatory")
+    parser.add_argument("--helper-color-index", type=int, help="explicit Some proposal pool index for hinted_u256_div; checked by the unchanged compiler; default keeps native helper allocation")
+    parser.add_argument("--function-color-index", action="append", default=[], metavar="LABEL:POOLINDEX", help="use one explicitly supplied Some proposal for an actual word label; repeat for distinct labels; each is checked by the compiler")
     parser.add_argument("--defer-depth", action="store_true", help="generate the exact image projection; leave stack-bound certification pending")
+    parser.add_argument("--proof-inputs", action="store_true", help="serialize untrusted typed compiler-output proposals from the same allocation and image tuple")
     parser.add_argument("--compile-timeout", type=int, default=3600)
     parser.add_argument("--tool-timeout", type=int, default=120)
     parser.add_argument("--lock", type=Path, default=Path("/tmp/riscv-zkvm-heavy-build.lock"))
     args = parser.parse_args()
     if args.compile_timeout <= 0 or args.tool_timeout <= 0:
         parser.error("timeouts must be positive seconds")
+    if args.helper_color_index is not None and (args.helper_color_index < 0 or args.baseline_source or args.allocation_proposals is None):
+        parser.error("helper color index requires hinted source, an explicit proposal file, and a nonnegative index")
+    if args.restore_source_headers and args.baseline_source:
+        parser.error("restoring source headers requires the hinted source profile")
+    color_indices = []
+    for value in args.function_color_index:
+        parts = value.split(":")
+        if len(parts) != 2 or any(not part or not part.isascii() or not part.isdecimal() for part in parts):
+            parser.error("function color index must be LABEL:POOLINDEX with natural numbers")
+        color_indices.append(tuple(map(int, parts)))
+    if len({label for label, _ in color_indices}) != len(color_indices):
+        parser.error("duplicate function color word label")
+    if color_indices and not (args.allocation_proposals or args.baseline_allocation_proposals):
+        parser.error("explicit function colors require a proposal pool")
     output = args.output.resolve()
     if output.exists():
         parser.error("output directory already exists; choose a fresh path")
@@ -184,6 +218,8 @@ def main() -> int:
         # Refresh all imported compiler/source modules before executing the
         # immutable launch driver; a source hash alone cannot detect stale oleans.
         run(["lake", "build", "PancakeDiv256.Compiler.Allocation", "PancakeDiv256.Compiler.DepthCompress",
+             "PancakeDiv256.Compiler.BackendArtifactGenerator",
+             "PancakeDiv256.Deployment.HeaderAdaptedSource",
              "PancakeDiv256.Source.HintedWordProgram", "Flapjack.Pancake.PanStatic",
              "Flapjack.Pancake.Proofs.PanToTarget.ExecutableCompileProgMaxDepth",
              "Flapjack.Compiler.Backend.RiscVConfig.Executable",
@@ -202,8 +238,16 @@ def main() -> int:
         driver_args = (["--defer-depth"] if args.defer_depth else [])
         if args.baseline_source:
             driver_args += ["--baseline-source"]
+        if args.restore_source_headers:
+            driver_args += ["--restore-source-headers"]
         if proposal_path:
             driver_args += ["--allocation-proposals", str(proposal_path)]
+        if args.helper_color_index is not None:
+            driver_args += ["--helper-color-index", str(args.helper_color_index)]
+        if args.proof_inputs:
+            driver_args += ["--proof-inputs"]
+        for label, index in color_indices:
+            driver_args += ["--function-color-index", f"{label}:{index}"]
         driver_args += [str(output)]
         run(["lake", "env", "lean", "--run", str(launch_driver), *driver_args],
             output / "compile.log", args.compile_timeout)
@@ -256,8 +300,16 @@ def main() -> int:
             run(["python3", str(HERE / "runtime/spike/elf_metadata.py"), str(elf)],
                 output / "link.log", args.tool_timeout, stdout=output / "runtime-metadata.json")
         verify_launch(launched, pins, guest, flapjack)
+        proof_outputs = []
+        if args.proof_inputs:
+            proof_root = output / "proof-inputs"
+            if not (proof_root / "COMPLETE").is_file() or (proof_root / "INCOMPLETE").exists():
+                raise ValueError("compiler proof-input proposals did not complete")
+            proof_outputs = sorted(path.relative_to(output).as_posix()
+                                   for path in proof_root.rglob("*") if path.is_file())
         manifest = {"version": 1, **pins,
-                    "source_profile": "original-baseline" if args.baseline_source else "private-hint-v1",
+                    "source_profile": "original-baseline" if args.baseline_source else (
+                        "private-hint-v1-header-restore" if args.restore_source_headers else "private-hint-v1"),
                     "certificate": False,
                     "linked_compiler_code_equal": True, "linked_bitmap_data_equal": True,
                     "inputs_sha256": launched,
@@ -265,7 +317,9 @@ def main() -> int:
                         ["guest.code.bin", "guest.bitmaps.bin", "guest.cake.S", "guest.elf",
                          "compiler-metadata.json", "runtime-metadata.json", "inputs-at-launch.json", "CompileHintedGuest.launch.lean"] +
                         ["selected-allocation-proposals.json", "allocation-alignment.json", "allocation-signatures.json", "stack-analysis-input.json"] +
-                        (["allocation-proposals.json"] if proposal_path else [])}}
+                        (["allocation-proposals.json"] if proposal_path else []) + proof_outputs}}
+        if args.restore_source_headers:
+            manifest["restore_source_headers"] = True
         (output / "artifact-manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
         incomplete.unlink()
         print(f"Built and checked {elf}; executable artifact, no correctness certificate.")
