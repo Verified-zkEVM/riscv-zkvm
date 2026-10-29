@@ -90,6 +90,12 @@ optional hint layer. Import `RiscvZkvm.Rv64.Hints` for its executable interface,
 or `RiscvZkvm.Rv64.Logic.Hints` for the corresponding proof rules. There is one
 unchanged generated Sail extraction; a Sail hint adapter remains separate work.
 
+The experimental [DIV256 pilot](docs/div256-hints.md) specifies untrusted
+quotient/remainder hints, preserves the original operands across response
+installation, and provides a raw ordinary-instruction checker with reproducible
+adversarial regressions. Its deployment and compiler boundaries are documented
+separately from the arithmetic and execution proofs.
+
 ## Downstream compatibility — read before changing anything
 
 **This repository exists to serve

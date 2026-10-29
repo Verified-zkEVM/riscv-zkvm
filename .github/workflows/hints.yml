@@ -25,6 +25,8 @@ jobs:
         run: lake build RiscvZkvm.Interpreter.HintTests riscv-zkvm-run
       - name: Run interpreter fixtures
         run: scripts/run-interpreter-tests.sh
+      - name: DIV256 actual-machine differential regressions
+        run: python3 scripts/test-div256.py --timeout 900
 
   pancake-consumer:
     runs-on: ubuntu-latest
