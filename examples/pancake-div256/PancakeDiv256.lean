@@ -24,3 +24,5 @@ import PancakeDiv256.Source.U256Word
 import PancakeDiv256.Source.WordWrapping
 import PancakeDiv256.Source.U256Division
 import PancakeDiv256.Source.U256Quotient
+import PancakeDiv256.Source.HintValidation
+import PancakeDiv256.Source.HintValues
