@@ -85,8 +85,8 @@ python3 regenerate-hinted-helper.py
 lake env lean --run AxiomSweep.lean
 ```
 
-The sweep checks the transitive axioms of every public `PancakeDiv256`
-declaration against exactly `propext`, `Classical.choice`, and `Quot.sound`.
+The sweep checks the transitive axioms of every declaration owned by the
+`PancakeDiv256` modules, including private helpers, against exactly `propext`, `Classical.choice`, and `Quot.sound`.
 Passing the consumer does not replace the parent core audit or downstream
 compatibility gates.
 
@@ -145,3 +145,36 @@ same inputs and physical retirement accounting with the unmodified source.
 Reported physical steps include startup and runtime work; they are distinct
 from the formal target clock. Output directories must be fresh. Build and
 matrix commands acquire the shared heavy-build lock.
+
+## Check resource data and proof dependencies
+
+The optional stack checker proves a conservative bound against the original
+compiler's call-graph analysis. Its checked 815-function table admits a 538-word
+cap; the unchanged installation arithmetic supplies 2,097,104 stack words.
+Theorems keep the three outstanding compiler-data equations explicit: the
+actual allocated program, its exact frame map, and its canonical compact shape
+must match that table. This is not yet a concrete compiler/image certificate.
+
+```sh
+lake build PancakeDiv256.Compiler.DepthCompiler PancakeDiv256.Compiler.DepthTests
+lake env lean --run AxiomSweep.lean --deployment --artifacts --resource-data
+lake env python3 test-axiom-sweep.py
+python3 generate-depth-data.py --self-test
+python3 generate-depth-data.py /tmp/div-hinted/stack-analysis-input.json --lean-output /tmp/DepthDataNew.lean --proposal-output /tmp/depth-proposal.json
+lake env lean /tmp/DepthDataNew.lean
+```
+
+The generator proposes ranks, bounds and Lean literals. Kernel-checking its
+output checks the input table; a separate compiler proof must connect it to the
+actual compiled program. Outputs must be new paths. The script rejects malformed
+schemas, missing frames or callees, indirect calls, installation instructions
+and cycles. Its parser limits are operational guards, not language semantics.
+
+The axiom sweep includes private and generated declarations by their owning
+module, even when they use another namespace. `--artifacts` adds the producer's
+allocation and generic resource modules; `--resource-data` adds the checked
+concrete table and compiler resource bridge. Unknown options fail instead of
+silently narrowing the audit. Its negative tests compile isolated temporary
+modules and verify that an unused private axiom is rejected. The standalone
+consumer allows only the three standard Lean axioms; the parent retains its
+separate documented seven-axiom audit.
