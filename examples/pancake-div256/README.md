@@ -183,6 +183,15 @@ arbitrary initial header words. Its only behavioral premise is termination of
 the original source. Concrete compiler-image equality and machine installation
 remain explicit obligations. CI builds and audits this front door.
 
+`Compiler.SourceChecks` closes the actual adapted source's static compiler
+premises. Assuming original-source termination with a covered outcome,
+`Deployment.CompilerSemantics.native_execution` uses the unchanged compiler
+correctness and target-totality theorems to obtain a finite native halt, the
+original public trace and `InitE.matchingResult`. Exact compiler output, resource
+fit and physical installation with the image's actual headers are explicit
+premises. This theorem starts at native entry; the concrete ROM/bootstrap proof
+and final versioned deployment certificate remain separate work.
+
 ```sh
 lake build PancakeDiv256.Deployment.Proofs
 lake env lean --run AxiomSweep.lean --compiler
