@@ -1,5 +1,6 @@
 // Real pinned-Spike regression. Build/run only with the heavy-build slot.
 // The fixture is a processor test, not a replacement compiled evm.fast ELF.
+#include <sys/syscall.h>
 #include "sim.h"
 #include "cfg.h"
 #include "processor.h"
@@ -30,7 +31,9 @@ int main(int argc, char** argv) {
     const reg_t hint_entry = std::strtoull(argv[2], &end, 0);
     test_assert(end && !*end, "invalid actual ELF symbol argument");
     cfg_t cfg;
-    cfg.isa = "RV64IMAC_Zicclsm";
+    // Enable counters for the negative inhibition control below. Production
+    // guest ISA selection remains in the unchanged baseline driver.
+    cfg.isa = "RV64IMAC_Zicsr_Zicclsm_Zicntr";
     cfg.priv = "M";
     cfg.hartids = std::vector<size_t>{0};
     cfg.mem_layout = {mem_cfg_t(0x80000000ULL, 0x10000ULL)};
@@ -93,6 +96,7 @@ int main(int argc, char** argv) {
                 "unsigned physical-retirement delta did not survive wrap");
 
     state->mcountinhibit->write(5);
+    test_assert((sample(processor).inhibit & 5) == 5, "fixture ISA does not expose counter inhibition");
     bool rejected = false;
     try { Div256Accounting::require_counting(sample(processor)); }
     catch (const std::runtime_error&) { rejected = true; }

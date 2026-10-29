@@ -45,8 +45,10 @@ untrusted candidate arithmetic and restoring its borrowed source memory.
 Pinned Spike revision `55b4658dbf574ba0b714083ec436ce2cb5be1998` provides
 `is_waiting_for_interrupt` and `clear_waiting_for_interrupt`. Its WFI macro
 serializes `npc` before throwing; the step loop marks the processor waiting and
-ends the batch. The real-processor regression must verify that behavior before
-this overlay is described as deployed.
+ends the batch. The real-processor regression verifies batching, resume, waiting-poll behavior,
+64-bit counter wrap and inhibition rejection. Its negative inhibition case
+explicitly enables Zicntr in the test processor; the production driver keeps
+its original ISA configuration.
 
 ## Prepare and run
 
@@ -55,14 +57,22 @@ python3 runtime/spike/prepare_overlay.py --guest .lake/packages/Guest --output r
 python3 -m unittest discover -s runtime/spike -p 'test_*.py' -v
 ```
 
-Build the copied `overlay/spike/build.sh` against that exact Spike revision,
-using the existing repository heavy-build slot. Its output is the opt-in
-`overlay/spike/spike_run`; the baseline driver is never replaced. Build the
-whole-guest ELF with `build-hinted-guest.py`, then:
+With that exact Spike checkout and the documented Spike build dependencies
+available, use `build_spike.py` to build or verify the archives and run the real
+processor regression. It acquires the shared heavy-build lock and records the
+source, configuration, environment and archive hashes:
 
 ```sh
-python3 runtime/spike/run_guest.py --driver runtime/spike/.work/overlay/spike/spike_run --elf hinted.elf --input input.bin --output output.bin --record calls.jsonl
-python3 runtime/spike/run_guest.py --driver runtime/spike/.work/overlay/spike/spike_run --elf hinted.elf --input input.bin --output replay.bin --replay calls.jsonl
+python3 runtime/spike/build_spike.py --source PATH_TO_PINNED_SPIKE --jobs 2
+```
+
+Its output is `.work/overlay-retirement/spike/spike_run`. The separate baseline
+driver is preserved. Build the whole-guest ELF with `build-hinted-guest.py`,
+then:
+
+```sh
+python3 runtime/spike/run_guest.py --driver runtime/spike/.work/overlay-retirement/spike/spike_run --elf hinted.elf --input input.bin --output output.bin --record calls.jsonl
+python3 runtime/spike/run_guest.py --driver runtime/spike/.work/overlay-retirement/spike/spike_run --elf hinted.elf --input input.bin --output replay.bin --replay calls.jsonl
 ```
 
 The runner derives the actual hook address directly from the ELF, launches
@@ -157,3 +167,15 @@ The expanded tests reject actual staged/unstaged ISA edits in an isolated exact
 Spike checkout, stale provenance and modified archive/configuration bytes before
 any expensive compilation. Those refusal/hash tests do not certify marker files
 as valid libraries or substitute for the pending real processor regression.
+
+`test_real_hook.py` uses the built driver and a small assembled processor
+fixture. It verifies an actual hint pause/resume, all 32 integer registers,
+immutable request bytes, response placement and neighboring memory, honest and
+wrong-mathematics replies, unavailable/short/timed-out providers, and rejection
+of invalid ABI arguments before any request. It deliberately passes wrong
+mathematics to the fixture: checking the candidate belongs to the compiled
+source helper. These tests do not claim compiler or whole-guest correctness.
+
+```sh
+python3 -m unittest discover -s runtime/spike -p test_real_hook.py -v
+```
