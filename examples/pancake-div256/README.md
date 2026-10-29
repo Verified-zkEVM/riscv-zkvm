@@ -23,6 +23,13 @@ serialized image and proves that the root interpreter decoder recovers all
 427 emitted instructions. This is a fixed-image kernel calculation using
 `decide`, not native computation or a general decoder/ISA refinement result.
 
+`PancakeDiv256/CallerEncoded.lean` extends the same certificate to the
+455-instruction caller, whose actual encoder image is 1820 bytes. It proves
+the whole-suffix gate at all positions, supplies a concrete loaded ROM, and
+proves decoder recovery of the complete caller code. This includes the
+96-byte save/restore frame and final `JALR`. The certificate says nothing
+about code at the return destination or an actual compiler call site.
+
 The positional `addCarry` mapping follows the actual encoder clause. No
 arithmetic meaning is inferred from the carrier constructor's field names.
 The separate parent arithmetic proof accounts for x31 scratch, register
