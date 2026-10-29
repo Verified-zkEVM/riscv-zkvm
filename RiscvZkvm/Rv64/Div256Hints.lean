@@ -14,3 +14,4 @@ import RiscvZkvm.Rv64.Div256Hints.Decision
 import RiscvZkvm.Rv64.Div256Hints.Arithmetic
 import RiscvZkvm.Rv64.Div256Hints.Protocol
 import RiscvZkvm.Rv64.Div256Hints.Checker
+import RiscvZkvm.Rv64.Div256Hints.Caller
