@@ -78,3 +78,19 @@ public state or modifies the input bytes.
 The CLI's binary frame I/O is synchronous with its caller. The provider timeout
 bounds the private subprocess, not a host caller that stops sending frames or
 reading the adapter's replies.
+
+An optional absolute `deadline` keyword on `SubprocessProvider.invoke` and
+`Adapter.call` uses `time.monotonic()` coordinates. The concrete subprocess runs
+only until the earlier of that deadline and its own timeout, including startup;
+an expired outer deadline prevents launch. Outer cancellation raises
+`TimeoutError`, with group cleanup completed before returning, instead of
+producing another guest response. Existing calls without this keyword retain
+their provider-timeout/fallback behavior. Cleanup grace remains additional to
+the execution budget.
+
+Deadline-bearing transcript calls accept concrete BytesIO/StringIO or regular
+file streams backed by FileIO (ASCII/UTF8 for recording). Arbitrary Python stream
+methods and custom raw wrappers are rejected before invocation; a post-hoc time
+check cannot bound such user code. Records remain byte-bounded and deadline
+checks surround supported file I/O, which still depends on the OS/storage
+returning rather than being hard-preemptible.

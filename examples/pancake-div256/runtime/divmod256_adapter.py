@@ -12,11 +12,13 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 import json
+import io
 import math
 import os
 from pathlib import Path
 import selectors
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -93,6 +95,40 @@ def _exited_without_reaping(process: subprocess.Popen) -> os.waitid_result | Non
     return os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
 
 
+def check_deadline(deadline: float | None) -> None:
+    if deadline is not None:
+        if not math.isfinite(deadline):
+            raise ValueError("absolute deadline must be finite")
+        if time.monotonic() >= deadline:
+            raise TimeoutError("overall execution deadline expired")
+
+
+def bounded_transcript_stream(stream, *, writing: bool) -> None:
+    """Deadline-bearing calls support concrete memory or regular-file streams.
+
+    Arbitrary Python stream methods can block indefinitely. Do not invoke them
+    under a deadline and then claim that a post-hoc check bounded that work.
+    Regular-file I/O still depends on the operating system/storage returning.
+    """
+    memory_type = io.StringIO if writing else io.BytesIO
+    if type(stream) is memory_type:
+        return
+    if writing:
+        if type(stream) is not io.TextIOWrapper or stream.encoding.lower() not in ("ascii", "utf-8", "utf8"):
+            raise ProtocolError("deadline-bearing recording requires a concrete ASCII/UTF8 regular file or StringIO")
+        binary = stream.buffer
+        if type(binary) not in (io.BufferedWriter, io.BufferedRandom, io.FileIO):
+            raise ProtocolError("deadline-bearing recording requires a concrete regular-file buffer")
+    else:
+        binary = stream
+        if type(binary) not in (io.BufferedReader, io.BufferedRandom, io.FileIO):
+            raise ProtocolError("deadline-bearing replay requires a concrete regular file or BytesIO")
+    if type(binary) is not io.FileIO and type(binary.raw) is not io.FileIO:
+        raise ProtocolError("deadline-bearing transcript buffers require concrete FileIO")
+    if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+        raise ProtocolError("deadline-bearing transcript I/O requires a regular file")
+
+
 class SubprocessProvider:
     def __init__(self, command: Sequence[str], *, timeout: float = 1.0, grace: float = 0.05):
         if not math.isfinite(timeout) or timeout <= 0:
@@ -107,12 +143,16 @@ class SubprocessProvider:
         self.timeout = timeout
         self.grace = grace
 
-    def invoke(self, request: bytes) -> Reply:
+    def invoke(self, request: bytes, *, deadline: float | None = None) -> Reply:
         if type(request) is not bytes or len(request) != REQUEST_SIZE:
             raise ProtocolError("expected exactly 64 request bytes")
+        check_deadline(deadline)
         if not self.command:
             return Reply(None, "unavailable")
-        deadline = time.monotonic() + self.timeout
+        execution_deadline = time.monotonic() + self.timeout
+        if deadline is not None:
+            execution_deadline = min(execution_deadline, deadline)
+        check_deadline(deadline)
         try:
             process = subprocess.Popen(
                 self.command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -132,15 +172,16 @@ class SubprocessProvider:
             selector.register(process.stdin, selectors.EVENT_WRITE, "stdin")
             selector.register(process.stdout, selectors.EVENT_READ, "stdout")
             while True:
+                check_deadline(deadline)
+                remaining = execution_deadline - time.monotonic()
+                if remaining <= 0:
+                    return Reply(None, "timeout")
                 exited = _exited_without_reaping(process)
                 if exited is not None:
                     if exited.si_code != os.CLD_EXITED or exited.si_status != 0:
                         return Reply(None, "exit")
                     if stdout_eof and process.stdin.closed:
                         return Reply(bytes(response), "returned") if len(response) == RESPONSE_SIZE else Reply(None, "short")
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    return Reply(None, "timeout")
                 # A short poll notices parent exit even if a descendant keeps
                 # stdout open. Only WNOWAIT observes that parent here.
                 for key, _ in selector.select(min(remaining, 0.02)):
@@ -186,7 +227,10 @@ class TranscriptWriter:
     def __init__(self, stream: TextIO):
         self.stream = stream
 
-    def append(self, call: int, array: bytes, reply: Reply) -> None:
+    def append(self, call: int, array: bytes, reply: Reply, *, deadline: float | None = None) -> None:
+        check_deadline(deadline)
+        if deadline is not None:
+            bounded_transcript_stream(self.stream, writing=True)
         record = {"version": TRANSCRIPT_VERSION, "service": SERVICE_NAME, "call": call,
                   "array": array.hex(), "response": None if reply.response is None else reply.response.hex(),
                   "outcome": reply.outcome}
@@ -195,14 +239,19 @@ class TranscriptWriter:
             raise ProtocolError("transcript record exceeds its size limit")
         self.stream.write(encoded)
         self.stream.flush()
+        check_deadline(deadline)
 
 
 class TranscriptReplay:
     def __init__(self, stream: BinaryIO):
         self.stream = stream
 
-    def invoke(self, array: bytes, call: int) -> Reply:
+    def invoke(self, array: bytes, call: int, *, deadline: float | None = None) -> Reply:
+        check_deadline(deadline)
+        if deadline is not None:
+            bounded_transcript_stream(self.stream, writing=False)
         encoded = self.stream.readline(MAX_RECORD_BYTES + 1)
+        check_deadline(deadline)
         if not encoded:
             raise ProtocolError("replay ended before this call")
         if len(encoded) > MAX_RECORD_BYTES or not encoded.endswith(b"\n"):
@@ -225,8 +274,13 @@ class TranscriptReplay:
                 raise
             raise ProtocolError("invalid replay record") from error
 
-    def finish(self) -> None:
-        if self.stream.read(1):
+    def finish(self, *, deadline: float | None = None) -> None:
+        check_deadline(deadline)
+        if deadline is not None:
+            bounded_transcript_stream(self.stream, writing=False)
+        extra = self.stream.read(1)
+        check_deadline(deadline)
+        if extra:
             raise ProtocolError("replay contains unconsumed calls")
 
 
@@ -237,16 +291,18 @@ class Adapter:
         self.recorder = recorder
 
     def call(self, array: bytes, public_state: object, private_state: PrivateState,
-             *, configuration: bytes = b"") -> Exchange:
+             *, configuration: bytes = b"", deadline: float | None = None) -> Exchange:
         if type(configuration) is not bytes or configuration:
             raise ProtocolError("the private service requires empty configuration")
         if type(array) is not bytes or len(array) != ARRAY_SIZE:
             raise ProtocolError("the private service requires exactly 128 array bytes")
+        check_deadline(deadline)
         request = array[:REQUEST_SIZE]
-        reply = (self.provider.invoke(array, private_state.calls) if isinstance(self.provider, TranscriptReplay)
-                 else self.provider.invoke(request))
+        reply = (self.provider.invoke(array, private_state.calls, deadline=deadline) if isinstance(self.provider, TranscriptReplay)
+                 else self.provider.invoke(request, deadline=deadline))
+        check_deadline(deadline)
         if self.recorder is not None:
-            self.recorder.append(private_state.calls, array, reply)
+            self.recorder.append(private_state.calls, array, reply, deadline=deadline)
         # Failure normalization changes only the answer half. Exact-length
         # wrong mathematics is deliberately retained for the guest to reject.
         return Exchange(request + (reply.response if reply.response is not None else ZERO_RESPONSE),
