@@ -21,7 +21,10 @@ def isScanned (n : Name) : Bool :=
 def main (args : List String) : IO UInt32 := do
   let report := args.contains "--report"
   initSearchPath (← findSysroot)
-  let env ← importModules scanModules {} (trustLevel := 1024)
+  let modules := if args.contains "--deployment" then
+      scanModules.push { module := `PancakeDiv256.Deployment.V1 }
+    else scanModules
+  let env ← importModules modules {} (trustLevel := 1024)
   let ctx : Core.Context := { fileName := "<axiomsweep>", fileMap := default }
   let state : Core.State := { env }
 
