@@ -31,6 +31,17 @@ def main() -> None:
         response = bytes([0xA5]) * 64
     elif mode == "wrong":
         response = bytes([0xA5]) * 64
+    elif mode in ("wrong-low", "noncanonical-range", "wrap-product"):
+        from math import gcd
+        a, b = int.from_bytes(request[:32], "little"), int.from_bytes(request[32:], "little")
+        q, r = divmod(a, b) if b else (0, 0)
+        if mode == "wrong-low":
+            q += 1
+        elif mode == "noncanonical-range":
+            q, r = (q-1, r+b) if q else (q, r+b)
+        elif b:
+            q += (1 << 64) // gcd(b, 1 << 64)
+        response = q.to_bytes(32, "little") + r.to_bytes(32, "little")
     elif mode == "short":
         response = bytes(63)
     elif mode == "empty":
