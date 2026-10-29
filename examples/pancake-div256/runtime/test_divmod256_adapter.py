@@ -214,6 +214,38 @@ class TransportTests(unittest.TestCase):
 
 
 class ReplayAndCliTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == "linux", "real CLI termination uses Linux /proc")
+    def test_sigterm_cli_cleans_provider_and_term_ignoring_worker(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            metadata_path = Path(temporary)/"provider.json"
+            command = [sys.executable,str(CLI),"--timeout","30","--",sys.executable,
+                       str(FIXTURE),"timeout-child",str(metadata_path)]
+            parent = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL,start_new_session=True)
+            metadata = None
+            try:
+                parent.stdin.write(request()+bytes(64))
+                parent.stdin.close()
+                deadline = time.monotonic()+5
+                while not metadata_path.exists() and time.monotonic()<deadline:
+                    time.sleep(.01)
+                self.assertTrue(metadata_path.exists(),"provider scenario did not start")
+                metadata = json.loads(metadata_path.read_text())
+                parent.send_signal(signal.SIGTERM)
+                self.assertEqual(parent.wait(timeout=3),130)
+                stopped = time.monotonic()+1
+                while process_state(metadata["child"]) not in (None,"Z") and time.monotonic()<stopped:
+                    time.sleep(.01)
+                self.assertIn(process_state(metadata["parent"]),(None,"Z"))
+                self.assertIn(process_state(metadata["child"]),(None,"Z"))
+            finally:
+                if parent.returncode is None:
+                    terminate_execution_group(parent,0)
+                if metadata is None and metadata_path.exists():
+                    metadata = json.loads(metadata_path.read_text())
+                if metadata and any(process_state(metadata[key]) not in (None,"Z") for key in ("parent","child")):
+                    os.killpg(metadata["group"],signal.SIGKILL)
+
     def test_record_replay_identity_and_call_count(self):
         recording = io.StringIO()
         public = object()

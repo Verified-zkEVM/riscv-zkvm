@@ -91,6 +91,54 @@ class RunnerTests(unittest.TestCase):
             control.terminate()
             control.wait()
 
+    @unittest.skipUnless(sys.platform == "linux", "real CLI termination uses Linux /proc")
+    def test_sigterm_cli_cleans_processor_provider_and_worker(self):
+        def state(pid):
+            try:
+                return Path(f"/proc/{pid}/stat").read_text().rsplit(")",1)[1].split()[0]
+            except FileNotFoundError:
+                return None
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            action = ("Path(sys.argv[3]+'.pid').write_text(str(os.getpid()))\n"
+                      "os.write(fd,Path(sys.argv[2]).read_bytes())\n"
+                      "while True: os.read(fd,128)\n")
+            driver,elf,input_file,output = self.setup_files(directory,action)
+            recorded = directory/"provider.json"
+            parent = subprocess.Popen([sys.executable,str(HERE/"run_guest.py"),"--driver",str(driver),
+                "--elf",str(elf),"--input",str(input_file),"--output",str(output),"--timeout","30",
+                "--guest-timeout","40","--",sys.executable,str(RUNTIME/"provider_fixture.py"),
+                "timeout-child",str(recorded)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                start_new_session=True)
+            metadata = None
+            try:
+                deadline = time.monotonic()+5
+                while not recorded.exists() and time.monotonic()<deadline:
+                    time.sleep(.01)
+                self.assertTrue(recorded.exists(),"provider scenario did not start")
+                metadata = json.loads(recorded.read_text())
+                processor = int(Path(str(output)+".pid").read_text())
+                parent.send_signal(signal.SIGTERM)
+                self.assertEqual(parent.wait(timeout=3),130)
+                stopped = time.monotonic()+1
+                while state(metadata["child"]) not in (None,"Z") and time.monotonic()<stopped:
+                    time.sleep(.01)
+                for pid in (processor,metadata["parent"],metadata["child"]):
+                    self.assertIn(state(pid),(None,"Z"))
+            finally:
+                if parent.returncode is None:
+                    from divmod256_adapter import terminate_execution_group
+                    terminate_execution_group(parent,0)
+                if metadata is None and recorded.exists():
+                    metadata = json.loads(recorded.read_text())
+                if metadata and any(state(metadata[key]) not in (None,"Z") for key in ("parent","child")):
+                    os.killpg(metadata["group"],signal.SIGKILL)
+                processor_file = Path(str(output)+".pid")
+                if processor_file.exists():
+                    processor = int(processor_file.read_text())
+                    if state(processor) not in (None,"Z"):
+                        os.killpg(processor,signal.SIGKILL)
+
     def test_partial_frame_is_bounded_and_child_reaped(self):
         with tempfile.TemporaryDirectory() as temporary:
             files = self.setup_files(Path(temporary), "os.write(fd,b'x')\ntime.sleep(60)\n")

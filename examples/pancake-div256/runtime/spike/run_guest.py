@@ -11,6 +11,7 @@ import math
 import os
 from pathlib import Path
 import selectors
+import signal
 import socket
 import stat
 import subprocess
@@ -182,4 +183,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # Library imports keep the caller's handlers. CLI termination follows the
+    # same finally-based process-group cleanup as an interactive interruption.
+    def interrupt_cli(signum, frame):
+        raise KeyboardInterrupt()
+    signal.signal(signal.SIGTERM, interrupt_cli)
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        raise SystemExit(130)
