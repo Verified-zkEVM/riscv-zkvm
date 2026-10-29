@@ -8,5 +8,7 @@ import RiscvZkvm.Rv64.Div256Hints.Transport
 import RiscvZkvm.Rv64.Div256Hints.Encoding
 import RiscvZkvm.Rv64.Div256Hints.Compare
 import RiscvZkvm.Rv64.Div256Hints.Program
+import RiscvZkvm.Rv64.Div256Hints.Registers
 import RiscvZkvm.Rv64.Div256Hints.Refinement
+import RiscvZkvm.Rv64.Div256Hints.Decision
 import RiscvZkvm.Rv64.Div256Hints.Protocol
