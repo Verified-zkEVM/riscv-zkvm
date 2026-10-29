@@ -1,0 +1,24 @@
+name = "PancakeDiv256"
+version = "0.1.0"
+defaultTargets = ["PancakeDiv256"]
+
+# This experimental consumer is deliberately outside the Mathlib-free core.
+[[require]]
+name = "riscv-zkvm"
+path = "../.."
+
+[[require]]
+name = "flapjack"
+git = "https://github.com/flamingoponderado/flapjack"
+rev = "034bb5a1ed0b757082768d5406206bd2f8e31b7c"
+
+# Match the parent and its downstream validation toolchain while keeping the
+# reviewed Flapjack source fixed. This overrides Flapjack's inherited v4.33.1.
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.35.0"
+
+[[lean_lib]]
+name = "PancakeDiv256"
