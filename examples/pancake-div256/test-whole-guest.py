@@ -85,6 +85,31 @@ def baseline_run(driver: Path, elf: Path, input_file: Path, output: Path, timeou
         terminate_execution_group(process, 0)
 
 
+def check_provider_mode(mode: str, events: list[dict]) -> None:
+    """A failed attack provider must not masquerade as arithmetic coverage."""
+    expected_outcome = {"short":"short", "timeout":"timeout", "unavailable":"unavailable"}.get(mode,"returned")
+    for event in events:
+        require(event["outcome"] == expected_outcome, f"{mode}: wrong provider outcome {event['outcome']}")
+        if expected_outcome != "returned":
+            require(event["response"] is None, f"{mode}: failure recorded a returned response")
+            continue
+        wire = bytes.fromhex(event["array"])
+        a,b = int.from_bytes(wire[:32],"little"),int.from_bytes(wire[32:64],"little")
+        q,r = divmod(a,b)
+        response = bytes.fromhex(event["response"])
+        if mode == "wrong":
+            expected = bytes([0xA5])*64
+        else:
+            if mode == "wrong-low":
+                q += 1
+            elif mode == "noncanonical-range":
+                q,r = q-1,r+b
+            elif mode == "wrap-product":
+                q += (1 << 64)//math.gcd(b,1 << 64)
+            expected = q.to_bytes(32,"little")+r.to_bytes(32,"little")
+        require(response == expected, f"{mode}: provider did not return its intended witness")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifact", type=Path, required=True)
@@ -147,6 +172,7 @@ def main() -> None:
                     current = [(int.from_bytes(bytes.fromhex(event['array'])[:32], 'little'),
                         int.from_bytes(bytes.fromhex(event['array'])[32:64], 'little')) for event in events]
                     require(len(events) == hint_calls and all(0 < b <= a < 1 << 64 for a,b in current), "unexpected private request/count")
+                    check_provider_mode(mode,events)
                     if honest is None:
                         honest, questions = actual, current
                     require(current == questions, f"{label}/{mode}: private question sequence differs")
