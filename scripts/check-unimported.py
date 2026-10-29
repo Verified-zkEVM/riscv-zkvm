@@ -33,8 +33,10 @@ import sys
 # backend's emission, not an orphan to clean up here.
 ROOTS = [
     "RiscvZkvm.Rv64",
+    "RiscvZkvm.Rv64.Hints",
     "RiscvZkvm.Rv64.SailEquiv",
     "RiscvZkvm.Rv64.Logic",
+    "RiscvZkvm.Rv64.Logic.Hints",
     "RiscvZkvm.Interpreter",
     "MainRun",
 ]
@@ -47,6 +49,10 @@ ALLOWED_ORPHANS = {
     # Scoped Sail-initializer regression checks. Kept out of the published
     # library; CI builds this module by name alongside the decoder guards.
     "RiscvZkvm.Interpreter.SailInitTests",
+    # Static hint transport/loader regressions, built by the hint workflow.
+    "RiscvZkvm.Interpreter.HintTests",
+    # Ordinary import isolation, checked explicitly after the Sail build in CI.
+    "RiscvZkvm.Interpreter.HintImportTests",
 }
 
 SCAN_DIRS = ["RiscvZkvm/Rv64", "RiscvZkvm/Interpreter"]

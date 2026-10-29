@@ -77,6 +77,26 @@ instruction semantics. Guest images must use the zkVM memory map the model
 hard-codes; **the standard `riscv-tests` images do not run here**, for reasons
 recorded in [validation](docs/validation.md) along with three other known gaps.
 
+## Experimental prover hints
+
+The [resumable hint API](docs/resumable-hints.md) supports suspension,
+stateful handlers, all-response guest safety, and non-intercepting CPS/WP
+lifting. An isolated [Pancake modinv example](examples/pancake-modinv/README.md)
+checks real buffer write-back and a concrete RV64 checker execution.
+
+Hints are opt-in. Ordinary `RiscvZkvm.Sail`, `RiscvZkvm.Rv64`,
+`RiscvZkvm.Rv64.SailEquiv`, and `RiscvZkvm.Rv64.Logic` imports exclude the
+optional hint layer. Import `RiscvZkvm.Rv64.Hints` for its executable interface,
+or `RiscvZkvm.Rv64.Logic.Hints` for the corresponding proof rules. There is one
+unchanged generated Sail extraction; a Sail hint adapter remains separate work.
+
+The experimental [DIV256 pilot](docs/div256-hints.md) verifies untrusted
+quotient/remainder hints with a proved 233-instruction checker and resumable
+stateful protocol, plus a callee-save validation function. Original operands
+are preserved across response installation.
+Actual-machine and protocol regressions accompany the proofs. Its deployment,
+compiler, and emitted EVM-opcode boundaries remain explicit.
+
 ## Downstream compatibility — read before changing anything
 
 **This repository exists to serve
