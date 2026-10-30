@@ -1,8 +1,13 @@
 import PancakeDiv256.Compiler.BackendGenerator
+import InitECandidate.Proofs.CompactComputation
+import InitECandidate.Proofs.CompilerComputation
 
 /-! Per-function native certificates proposed in an external directory.
 The allocated input module is supplied independently by the fresh data tree;
 each emitted equation must be checked by the kernel before composition. -/
+
+/- These are also imports of the generated proof modules. Keep them in this
+generator's build closure so cold consumers have the required proof helpers. -/
 namespace PancakeDiv256.Compiler.BackendNativeProposalGenerator
 
 open Lean Flapjack Flapjack.Compiler.Backend
