@@ -16,6 +16,9 @@ jobs:
       - name: Exercise finite providers, process cleanup, and replay
         working-directory: examples/pancake-div256
         run: python3 -m unittest discover -s runtime -p 'test_*.py' -v
+      - name: Reproduce Native154 sources and exercise input refusals
+        working-directory: examples/pancake-div256
+        run: python3 test-backend-native154-structural.py --production-root .
 
   core-regressions:
     runs-on: ubuntu-latest
@@ -71,9 +74,65 @@ jobs:
       - name: Apply recorded Flapjack compatibility patch
         working-directory: examples/${{ matrix.directory }}
         run: python3 prepare-flapjack.py
+      - name: Verify pinned external cache source roots
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, subprocess
+          from pathlib import Path
+          workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+          manifest = json.loads(Path('lake-manifest.json').read_text())
+          pins = {p['name']: p['rev'] for p in manifest['packages'] if p['type'] == 'git'}
+          for name in ['Guest', 'flapjack']:
+              root = (Path('.lake/packages') / name).resolve(strict=True)
+              if not root.is_relative_to(workspace):
+                  raise SystemExit(f'external cache package escapes CI workspace: {name}')
+              actual = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+              if actual != pins[name]:
+                  raise SystemExit(f'wrong pinned package revision: {name}')
+          guest = Path('.lake/packages/Guest')
+          dirty = subprocess.check_output(['git', '-C', str(guest), 'status', '--porcelain', '--untracked-files=no'])
+          if dirty:
+              raise SystemExit('Guest tracked sources changed before cache restore')
+          PYTHON
+      # Cache only pinned upstream build products, after exact patch validation.
+      # Sources, example build output, executables and release archives stay out.
+      - name: Restore pinned DIV dependency build cache
+        if: matrix.directory == 'pancake-div256'
+        id: div-dependency-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-${{ github.run_id }}-${{ github.run_attempt }}-final
+          restore-keys: |
+            div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
       - name: Build isolated consumer
         working-directory: examples/${{ matrix.directory }}
         run: lake build ${{ matrix.target }}
+      # Save completed dependencies before the later proof stages.
+      # Pushes write; pull-request runs only restore caches.
+      - name: Checkpoint pinned DIV dependency build cache
+        if: >-
+          matrix.directory == 'pancake-div256' &&
+          github.event_name == 'push' &&
+          steps.div-dependency-cache.outcome == 'success'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-${{ github.run_id }}-${{ github.run_attempt }}-consumer
       - name: Build reviewed compiler and initialization proofs
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
@@ -108,3 +167,21 @@ jobs:
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
         run: lake env lean --run OracleRegression.lean
+      # Preserve completed upstream modules after ordinary failures. A cancelled
+      # job may have live writers or a hard deadline; use its earlier checkpoint.
+      - name: Save pinned DIV dependency build cache
+        if: >-
+          always() && !cancelled() &&
+          matrix.directory == 'pancake-div256' &&
+          github.event_name == 'push' &&
+          steps.div-dependency-cache.outcome == 'success'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-${{ github.run_id }}-${{ github.run_attempt }}-final

@@ -1,8 +1,9 @@
 # Executable DIV256 provider transport
 
 This is the executable transport for `divmod256_fallback_v1`. It is a runtime
-component for the evm.fast prototype; the Spike guest hook and complete guest
-correctness theorem are separate integration work.
+component for the evm.fast prototype. The opt-in Spike overlay in `spike/`
+implements the guest hook; the complete source-to-machine correctness certificate
+remains integration work.
 
 The implementation uses Python's standard library on Linux, including
 `waitid(..., WNOWAIT)` to observe provider exit without reaping its parent.
@@ -12,7 +13,7 @@ The implementation uses Python's standard library on Linux, including
 The dedicated adapter CLI accepts consecutive **128-byte binary frames** and
 returns one 128-byte frame for each. There are no length prefixes, JSON messages,
 or diagnostics on stdout. Empty stdin ends the session; a partial final frame
-is a protocol error. The future Spike hook should dispatch this endpoint only
+is a protocol error. The opt-in Spike hook dispatches this endpoint only
 for the exact service name and empty configuration.
 
 Each input frame is `a32LE || b32LE || old_q32LE || old_r32LE`. The adapter passes
