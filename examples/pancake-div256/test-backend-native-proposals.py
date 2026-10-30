@@ -74,7 +74,14 @@ def main() -> None:
 
     def checked(command: list[str], name: str, environment: dict[str,str] | None = None) -> None:
         actual = command if environment is None else ["env","LEAN_PATH="+environment["LEAN_PATH"],*command]
-        assert run(actual,work/(name+".log"),args.timeout) == 0, name
+        log = work/(name+".log")
+        status = run(actual,log,args.timeout)
+        if status != 0:
+            with log.open("rb") as stream:
+                stream.seek(0,os.SEEK_END)
+                stream.seek(max(0,stream.tell()-12000))
+                diagnostic = stream.read().decode("utf-8",errors="replace")
+            raise RuntimeError(f"{name} failed (exit {status}); see {log}\n{diagnostic}")
 
     data,oleans,native = work/"data",work/"data-oleans",work/"native"
     checked(["lean","--run",str(fixture),"valid",str(data)],"fixture")
