@@ -12,6 +12,7 @@ import PancakeDiv256.Deployment.HeaderBehaviour
 import PancakeDiv256.Deployment.CompilerSemantics
 import PancakeDiv256.Compiler.ReflectionHeaderSimplification
 import PancakeDiv256.Compiler.Stages.Header07.Proofs
+import PancakeDiv256.Compiler.Stages.Header07.Optimize65.Allocated
 import PancakeDiv256.Deployment.Image07.BootstrapProgram
 import PancakeDiv256.Deployment.Image07.Proofs
 

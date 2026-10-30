@@ -210,6 +210,15 @@ exclusion and checks the three changed bodies directly. `WordReuse06` proves
 that the full DIV and helper Word tuples match their earlier captured optimizer
 inputs; optimizer, color and allocation bindings remain separate.
 
+`Compiler.Stages.Header07.Optimize65.Allocated` checks all eleven original
+optimizer and allocation passes for the captured Word input of the adapted
+main function. Its named `compiled_allocated65_eq` identifies the complete
+per-function compiler result with the actual candidate07 main tuple used by
+Native lowering, including label, argument count and body. The selected color
+and configuration are explicit; the configuration changes only the compiler's
+color oracle. The remaining functions, complete oracle tape and whole-program
+allocation equality still need their separate bindings.
+
 `Deployment.Image07.Runtime` and `BootstrapProgram` record the actual image's
 startup envelope and prove that its first 208 bytes encode the 40 admitted
 bootstrap blocks. `Deployment.Image07.Proofs` additionally exposes the exact
