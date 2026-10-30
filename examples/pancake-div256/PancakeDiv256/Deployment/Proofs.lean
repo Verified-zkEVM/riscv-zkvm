@@ -8,6 +8,7 @@ import PancakeDiv256.Compiler.Stages.Declarations06
 import PancakeDiv256.Deployment.HeaderMismatch
 import PancakeDiv256.Deployment.HeaderPreamble
 import PancakeDiv256.Deployment.HeaderBehaviour
+import PancakeDiv256.Deployment.CompilerSemantics
 
 /-! Reviewed intermediate compiler and initialization proofs. The concrete
 allocation, generated-image and complete deployment certificate obligations
