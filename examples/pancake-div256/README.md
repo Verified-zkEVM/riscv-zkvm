@@ -222,6 +222,19 @@ and configuration are explicit; the configuration changes only the compiler's
 color oracle. The remaining functions, complete oracle tape and whole-program
 allocation equality still need their separate bindings.
 
+`Compiler.NativeSubset07` is a separate opt-in checkpoint for 388 of the 815
+captured allocation tuples. Each `BackendStages.functionN_eq` identifies the
+full per-function Native compiler result, including frame and bitmap state for
+an arbitrary prefix. The combined strict audit checks 825 owning modules,
+204,031 declarations and 25,508 theorems using only Lean's standard three axioms;
+a separate consumer checks all 388 exact compiler endpoint types. Build this
+checkpoint explicitly with
+`LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.NativeSubset07`.
+This requests one Lake worker for a cold build; it does not impose a memory bound.
+It starts from captured allocated inputs; whole-program allocation, remaining
+Native equations and composition, later lowering, bytes and resource bindings
+remain separate obligations. Ordinary consumer roots exclude this import.
+
 `Deployment.Image07.Runtime` and `BootstrapProgram` record the actual image's
 startup envelope and prove that its first 208 bytes encode the 40 admitted
 bootstrap blocks. `Deployment.Image07.Proofs` additionally exposes the exact
