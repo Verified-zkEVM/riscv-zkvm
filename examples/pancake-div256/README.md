@@ -180,8 +180,8 @@ The complete adapted-source theorem transports actual optional initialization
 and proves termination of the compiler's main-first declarations, preserving
 the original outcome and public trace for every finite adaptive provider and
 arbitrary initial header words. Its only behavioral premise is termination of
-the original source. Concrete compiler-image equality and machine installation
-remain explicit obligations. CI builds and audits this front door.
+the original source. Concrete compiler-output equality and resource binding
+remain separate obligations. CI builds and audits this front door.
 
 `Compiler.SourceChecks` closes the actual adapted source's static compiler
 premises. Assuming original-source termination with a covered outcome,
@@ -189,30 +189,77 @@ premises. Assuming original-source termination with a covered outcome,
 correctness and target-totality theorems to obtain a finite native halt, the
 original public trace and `InitE.matchingResult`. Exact compiler output, resource
 fit and physical installation with the image's actual headers are explicit
-premises. This theorem starts at native entry; the concrete ROM/bootstrap proof
-and final versioned deployment certificate remain separate work.
+premises. This theorem starts at native entry. The concrete bootstrap and
+installation proof below supplies its startup contract; the final versioned
+deployment certificate still requires the remaining compiler and resource
+bindings.
 
 The exact normalized compiler input prefixes main at index zero and preserves
 the remaining declaration list. Its first simplification pass is related to
 the original source by explicit DIV, helper and main replacements.
 `Compiler.Stages.Header07.Proofs` binds the actual adapted declaration table
-through simplification, struct lowering and global lowering. The global pass
+through simplification, struct, global, Crep, Loop and Word lowering. Its
+`frontend_eq` binds the actual normalized source to the table of 815 Word
+entries. The global pass
 retains the original checked initialization caller, reuses unchanged function
 certificates, and checks the three changed function bodies under the exact
-global context.
+global context. The Crep pass reuses 812 original function translations under
+checked callee exclusion and proves the three changed outputs directly.
+The Loop pass also reuses 812 original translations under checked callee
+exclusion and checks the three changed bodies directly. `WordReuse06` proves
+that the full DIV and helper Word tuples match their earlier captured optimizer
+inputs; optimizer, color and allocation bindings remain separate.
+
 `Deployment.Image07.Runtime` and `BootstrapProgram` record the actual image's
 startup envelope and prove that its first 208 bytes encode the 40 admitted
 bootstrap blocks. `Deployment.Image07.Proofs` additionally exposes the exact
 1,028,152-byte ROM, all submission admission conditions, the initial machine
 relation for every input, and checked setup and copy-loop execution. Every
 instruction in all 4,614 copy iterations is checked against its installed bytes,
-and the complete resulting memory function is proved. Packed native code and
-bitmap data are kernel checked as literals; equality with the complete compiler
-result remains a separate obligation. The post-copy tail, physical native
-installation and complete private V1 certificate remain in progress.
+and the complete resulting memory function is proved. All 32 tail blocks and
+their eight stores are checked too. `Installation.bootstrapped` derives a finite
+quiet prefix of the actual target evaluator and the complete physical compiler
+installation contract, for any input and current FFI record. Packed native code
+and bitmap data are kernel checked as literals; equality with the complete
+compiler result, resource binding and the private V1 certificate remain separate
+obligations.
 
 These additions stay in the optional proof import. The default consumer and
 the parent's generated Sail extraction retain their existing imports.
+
+`Compiler.BackendStages.CriticalProofs` checks the actual Native translations
+of initialization, main, DIV and the helper. The larger, straight-line function
+154 has a separate opt-in import, `Compiler.BackendStages.Function154`: it
+checks all 11,534 input nodes compositionally against the unchanged proposed
+Stack output. Its exact frame and full bitmap state are checked independently;
+it does not establish the complete compiler/image equality.
+
+The large Native function 154 has a separate source-only producer. It reproduces
+its fixed 256-node chunks, unchanged prefix 000–013, numeric suffix 014–045 and
+`MaxPrefix` bridge from the committed allocated input and stack `Data.lean`,
+copying the reviewed composition lemmas. A pinned profile checks every input
+and all 50 output source hashes; changed shapes, namespaces, counts or existing
+outputs are refused. This reproduces proposals and runs no allocator, compiler
+or Lean proof check. From this example directory:
+
+```sh
+native154_work="$(mktemp -d)"
+python3 generate-backend-native154-structural.py \
+  --allocated-input PancakeDiv256/Compiler/BackendStages/Allocated154.lean \
+  --data PancakeDiv256/Compiler/BackendStages/NativeStructural154/Data.lean \
+  --composition-lemmas PancakeDiv256/Compiler/BackendNativeSequence.lean \
+  --output "$native154_work/proposed"
+python3 test-backend-native154-structural.py --production-root . \
+  --work-dir "$native154_work/refusal-checks"
+```
+
+To reproduce from the archived original single-file Native proposal instead,
+replace `--data ...` with `--native-output /path/to/original/Function154.lean`.
+That input must have the profile's original output hash; the current small
+`Function154.lean` wrapper is not that archive. The same optional
+`--native-output` argument on the source regression checks both modes. Python
+3.10 or newer is sufficient, without Lake or built oleans. A future profile or
+proof change requires separate review and updated hashes.
 
 ```sh
 lake build PancakeDiv256.Deployment.Proofs
