@@ -44,7 +44,8 @@ jobs:
 
   pancake-consumer:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # The exact guest global-pass certificates add a substantial cold build.
+    timeout-minutes: 180
     strategy:
       matrix:
         include:

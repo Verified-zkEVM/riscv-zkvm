@@ -195,10 +195,24 @@ and final versioned deployment certificate remain separate work.
 The exact normalized compiler input prefixes main at index zero and preserves
 the remaining declaration list. Its first simplification pass is related to
 the original source by explicit DIV, helper and main replacements.
+`Compiler.Stages.Header07.Proofs` binds the actual adapted declaration table
+through simplification, struct lowering and global lowering. The global pass
+retains the original checked initialization caller, reuses unchanged function
+certificates, and checks the three changed function bodies under the exact
+global context.
 `Deployment.Image07.Runtime` and `BootstrapProgram` record the actual image's
 startup envelope and prove that its first 208 bytes encode the 40 admitted
-bootstrap blocks. The copy count is 4,614 words. These are byte and instruction
-facts; the bootstrap execution and installed memory require further proofs.
+bootstrap blocks. `Deployment.Image07.Proofs` additionally exposes the exact
+1,028,152-byte ROM, all submission admission conditions, the initial machine
+relation for every input, and checked setup and copy-loop execution. Every
+instruction in all 4,614 copy iterations is checked against its installed bytes,
+and the complete resulting memory function is proved. Packed native code and
+bitmap data are kernel checked as literals; equality with the complete compiler
+result remains a separate obligation. The post-copy tail, physical native
+installation and complete private V1 certificate remain in progress.
+
+These additions stay in the optional proof import. The default consumer and
+the parent's generated Sail extraction retain their existing imports.
 
 ```sh
 lake build PancakeDiv256.Deployment.Proofs
