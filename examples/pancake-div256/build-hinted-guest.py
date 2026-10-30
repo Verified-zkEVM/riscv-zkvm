@@ -88,6 +88,7 @@ def input_files(guest: Path, proposals: Path | None = None) -> list[Path]:
         "PancakeDiv256/Source/HintedWordProgram.lean", "PancakeDiv256/Source/Ast.lean",
         "PancakeDiv256/Source/hinted_u256_div.pnk", "lake-manifest.json", "lean-toolchain",
         "runtime/spike/hint_stub.S", "runtime/spike/elf_metadata.py"]]
+    paths.append(HERE.parents[1] / "scripts/test-div256.py")
     paths += [guest / name for name in ["guest/runtime/start.S", "guest/runtime/guest.ld", "Guest/SoftwareAst.lean", "Guest/Bookkeeping.lean"]]
     paths += sorted((HERE / "patches").glob("*.patch"))
     # The imported serializer is dormant unless --proof-inputs is selected,

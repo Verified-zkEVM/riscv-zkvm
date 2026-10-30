@@ -53,27 +53,46 @@ its original ISA configuration.
 
 ## Prepare and run
 
+Run these commands from `examples/pancake-div256` on Linux with Python 3.11 or
+newer. The host needs Git, Bash, patch, make, a C/C++ toolchain (`gcc`, a
+C++20-capable `g++`, `cpp`, `ar`, `ranlib`), `xxd`,
+RISC-V binutils (`riscv64-unknown-elf-as`, `riscv64-unknown-elf-ld`,
+`riscv64-unknown-elf-nm`, `riscv64-unknown-elf-objcopy`), a device-tree compiler,
+Boost headers/Regex/System libraries, and OpenSSL headers/libcrypto. The optional
+`--sysroot` example below assumes an already prepared local dependency cache;
+that cache is not included in a clean checkout.
+
+Materialize the exact processor source at a fresh path:
+
+```sh
+mkdir -p runtime/spike/.work
+git clone --no-checkout https://github.com/riscv-software-src/riscv-isa-sim.git runtime/spike/.work/riscv-isa-sim
+git -C runtime/spike/.work/riscv-isa-sim checkout --detach 55b4658dbf574ba0b714083ec436ce2cb5be1998
+```
+
 ```sh
 python3 runtime/spike/prepare_overlay.py --guest .lake/packages/Guest --output runtime/spike/.work/overlay
 python3 -m unittest discover -s runtime/spike -p 'test_*.py' -v
 ```
 
-With that exact Spike checkout and the documented Spike build dependencies
-available, use `build_spike.py` to build or verify the archives and run the real
+The pre-build test suite skips the real hook tests until the driver exists.
+With that exact Spike checkout and the dependencies above available, use
+`build_spike.py` to build or verify the archives and run the real
 processor regression. It acquires the shared heavy-build lock and records the
 source, configuration, environment and archive hashes:
 
 ```sh
-python3 runtime/spike/build_spike.py --source PATH_TO_PINNED_SPIKE --jobs 2
+python3 runtime/spike/build_spike.py --source runtime/spike/.work/riscv-isa-sim --jobs 2
 ```
 
-Its output is `.work/overlay-retirement/spike/spike_run`. The separate baseline
-driver is preserved. Build the whole-guest ELF with `build-hinted-guest.py`,
-then:
+Its output is `runtime/spike/.work/overlay-retirement/spike/spike_run`.
+The separate baseline driver is preserved. Build the whole-guest ELF with `build-hinted-guest.py`,
+then replace `input.bin` below with an input path from the second column of
+`/tmp/div-inputs/manifest.tsv` in the fixture recipe:
 
 ```sh
-python3 runtime/spike/run_guest.py --driver runtime/spike/.work/overlay-retirement/spike/spike_run --elf hinted.elf --input input.bin --output output.bin --record calls.jsonl
-python3 runtime/spike/run_guest.py --driver runtime/spike/.work/overlay-retirement/spike/spike_run --elf hinted.elf --input input.bin --output replay.bin --replay calls.jsonl
+python3 runtime/spike/run_guest.py --driver runtime/spike/.work/overlay-retirement/spike/spike_run --elf /tmp/div-adapted/guest.elf --input input.bin --output output.bin --record calls.jsonl
+python3 runtime/spike/run_guest.py --driver runtime/spike/.work/overlay-retirement/spike/spike_run --elf /tmp/div-adapted/guest.elf --input input.bin --output replay.bin --replay calls.jsonl
 ```
 
 The runner derives the actual hook address directly from the ELF, launches

@@ -69,12 +69,13 @@ The original challenge statement, original guest dependency and reference
 checker remain unchanged. The ordinary compiler produces a linked whole-guest
 ELF whose code and bitmap bytes are checked against its actual result. That
 guest passes eight DIV EEST fixtures across nine provider modes on pinned
-Spike. The source refinement has a separate kernel proof; connecting it to the
-concrete compiler result, resources, installed image and bootstrap remains a
-deployment obligation. Full-width acceleration remains separate work.
+Spike. The source refinement, exact bootstrap and installation checkpoints have
+separate kernel proofs. Binding the concrete compiler result and resources
+into the final deployment certificate remains open. Full-width acceleration remains separate work.
 Acceleration currently covers zero-extended 64-bit operands. Other operands
 use the original division implementation.
 
+Use Linux with Python 3.11 or newer for the runtime demo and fixture tools.
 From a clean checkout, run these commands in `examples/pancake-div256`.
 The checked-in manifest fixes dependency revisions; cache preparation does
 not require `lake update`. The preparation script verifies Flapjack's exact
@@ -124,8 +125,10 @@ selected tape are recorded. Only `wordToWordConf.colOracle` changes. The
 baseline profile compiles the unchanged pinned source with no private FFI
 symbol or trampoline. Both profiles use the unchanged bootstrap and linker.
 
-The optional header-restoring profile supplies the source used by the deployment
-proofs. For the pinned source, the ordinary baseline pool has 814 entries. These
+The candidate07 header-restoring profile supplies the source used by the deployment
+proofs. The first `/tmp/div-hinted` command above selects `private-hint-v1`; the
+commands below select candidate07, `private-hint-v1-header-restore`. For the pinned
+source, the ordinary baseline pool has 814 entries. These
 commands append separately checked proposals for the private helper (label 878)
 and adapted main (label 65), then compile with their explicit pool indices:
 
@@ -157,7 +160,7 @@ The selector verifies the complete archive and each selected member's SHA256:
 ```sh
 python3 prepare-div-fixtures.py /path/to/fixtures_zkevm.tar.gz /tmp/div-fixtures
 python3 .lake/packages/Guest/tools/eest-stateless-to-input.py --fixtures-dir /tmp/div-fixtures --out-dir /tmp/div-inputs --filter div.json --verify-input-parity
-python3 test-whole-guest.py --artifact /tmp/div-hinted --baseline-artifact /tmp/div-baseline --manifest /tmp/div-inputs/manifest.tsv --output /tmp/div-results
+python3 test-whole-guest.py --artifact /tmp/div-adapted --baseline-artifact /tmp/div-baseline --manifest /tmp/div-inputs/manifest.tsv --output /tmp/div-results
 ```
 
 The matrix compares all 65,536 public output bytes against the honest run and
@@ -297,7 +300,7 @@ lake build PancakeDiv256.Compiler.DepthCompiler PancakeDiv256.Compiler.DepthTest
 lake env lean --run AxiomSweep.lean --deployment --artifacts --resource-data
 lake env python3 test-axiom-sweep.py
 python3 generate-depth-data.py --self-test
-python3 generate-depth-data.py /tmp/div-hinted/stack-analysis-input.json --lean-output /tmp/DepthDataNew.lean --proposal-output /tmp/depth-proposal.json
+python3 generate-depth-data.py /tmp/div-adapted/stack-analysis-input.json --lean-output /tmp/DepthDataNew.lean --proposal-output /tmp/depth-proposal.json
 lake env lean /tmp/DepthDataNew.lean
 ```
 
