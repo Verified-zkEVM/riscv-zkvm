@@ -44,7 +44,7 @@ jobs:
 
   pancake-consumer:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       matrix:
         include:
@@ -89,6 +89,20 @@ jobs:
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
         run: lake env python3 test-axiom-sweep.py
+      - name: Build exact-result serializers
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        run: |
+          lake build PancakeDiv256.Compiler.BackendArtifactGenerator \
+            PancakeDiv256.Compiler.BackendNativeProposalGenerator \
+            PancakeDiv256.Compiler.BackendComputation
+      - name: Check typed proposal roundtrips and producer refusals
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        run: |
+          lake env python3 test-backend-proposals.py --timeout 300
+          lake env python3 test-backend-native-proposals.py --timeout 300
+          python3 test-producer-controls.py
       - name: Exercise private oracle framing and replay
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
