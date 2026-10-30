@@ -9,7 +9,9 @@ import PancakeDiv256.Deployment.HeaderMismatch
 import PancakeDiv256.Deployment.HeaderPreamble
 import PancakeDiv256.Deployment.HeaderBehaviour
 import PancakeDiv256.Deployment.CompilerSemantics
+import PancakeDiv256.Compiler.ReflectionHeaderSimplification
+import PancakeDiv256.Deployment.Image07.BootstrapProgram
 
-/-! Reviewed intermediate compiler and initialization proofs. The concrete
+/-! Reviewed compiler, source and image-proof checkpoints. The concrete
 allocation, generated-image and complete deployment certificate obligations
 remain separate from this proof front door. -/

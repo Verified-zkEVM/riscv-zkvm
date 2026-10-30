@@ -192,6 +192,14 @@ fit and physical installation with the image's actual headers are explicit
 premises. This theorem starts at native entry; the concrete ROM/bootstrap proof
 and final versioned deployment certificate remain separate work.
 
+The exact normalized compiler input prefixes main at index zero and preserves
+the remaining declaration list. Its first simplification pass is related to
+the original source by explicit DIV, helper and main replacements.
+`Deployment.Image07.Runtime` and `BootstrapProgram` record the actual image's
+startup envelope and prove that its first 208 bytes encode the 40 admitted
+bootstrap blocks. The copy count is 4,614 words. These are byte and instruction
+facts; the bootstrap execution and installed memory require further proofs.
+
 ```sh
 lake build PancakeDiv256.Deployment.Proofs
 lake env lean --run AxiomSweep.lean --compiler
