@@ -16,6 +16,9 @@ jobs:
       - name: Exercise finite providers, process cleanup, and replay
         working-directory: examples/pancake-div256
         run: python3 -m unittest discover -s runtime -p 'test_*.py' -v
+      - name: Reproduce Native154 sources and exercise input refusals
+        working-directory: examples/pancake-div256
+        run: python3 test-backend-native154-structural.py --production-root .
 
   core-regressions:
     runs-on: ubuntu-latest
