@@ -131,6 +131,86 @@ jobs:
           restore-keys: |
             div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-
             div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+      - name: Check 31 captured Native functions and their source owners
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -o pipefail
+          mkdir -p .lake/build
+          lake --fail-fast build PancakeDiv256.Compiler.Native31Checks 2>&1 | tee .lake/build/native31-checks.log
+      - name: Preserve captured Native31 proof objects
+        if: always() && matrix.directory == 'pancake-div256'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native31-oleans-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            examples/pancake-div256/.lake/build/native31-checks.log
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated642.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function642.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated671.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function671.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated327.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function327.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated325.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function325.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated252.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function252.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated712.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function712.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated358.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function358.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated600.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function600.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated599.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function599.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated643.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function643.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated659.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function659.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated346.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function346.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated870.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function870.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated871.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function871.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated872.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function872.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated873.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function873.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated874.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function874.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated875.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function875.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated876.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function876.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated877.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function877.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated331.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function331.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated781.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function781.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated303.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function303.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated304.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function304.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated484.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function484.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated434.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function434.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated478.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function478.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated383.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function383.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated291.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function291.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated432.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function432.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated689.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function689.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Native31Checks.olean
       - name: Check actual07 constructor rendering and fixed Kernel roundtrips
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
