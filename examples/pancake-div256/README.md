@@ -270,7 +270,32 @@ axioms. Run
 to build it explicitly. The dedicated Native checkpoint workflow builds it from
 fresh project proof objects and records source provenance; ordinary consumer roots
 and the hint regression workflow keep their existing targets. This combined
-candidate has not yet passed kernel validation or extended the accepted checkpoint.
+checkpoint passed fresh kernel validation and independent evidence review:
+204,419 declarations and 25,512 theorems, with only the standard three axioms.
+The accepted aggregate now covers 390 captured per-function inputs; whole-program
+allocation, Native composition and deployment bindings remain separate.
+
+The optional `Serializer07` fixture checks an untrusted constructor printer
+against four captured candidate07 section literals (64, 65, 500 and 878), a long
+list and a mixed string/list/bitvector value. Its focused driver actually runs
+the Lean producer twice, then checks six fixed Kernel equality types, a strict
+ten-owner proof/data audit and six weakened-type rejection controls. The isolated
+DIV job runs it early, after external cache restore and before consumer builds.
+Actual rendering and Kernel validation of this draft fixture are still pending;
+source-only comparison controls are not roundtrip evidence. The printer and
+unsafe producer remain untrusted tools. Copied data does not establish original
+compiler-body links, whole Stack/byte correctness or a deployment certificate.
+See [the fixture instructions](README-serializer07.md), or run from this directory:
+
+```sh
+LEAN_NUM_THREADS=1 lake env bash test-serializer07.sh FRESH_ABSOLUTE_WORK_ROOT
+```
+
+The driver requires fresh fixture objects and owns its focused build. It requests
+one worker without imposing a memory cap. Logs, two generated source sets, pinned
+providers, selected private proof objects and typed-negative results are preserved
+as a bounded CI artifact. Ordinary import roots and the dedicated Native390
+checkpoint workflow stay unchanged.
 
 `Deployment.Image07.Runtime` and `BootstrapProgram` record the actual image's
 startup envelope and prove that its first 208 bytes encode the 40 admitted
@@ -304,14 +329,15 @@ four named bitmap/frame boundaries, with a strict two-owner axiom audit and all
 sixteen theorem-presence guards. Build it explicitly with
 `LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.NativePrimitiveTests`.
 The isolated DIV CI job runs this target after restoring pinned dependencies.
-These helper candidates await kernel validation; they do not establish the
-114-function sequence frontier or change ordinary imports.
+The focused kernel checks passed CI. They do not establish the 114-function
+sequence frontier or change ordinary imports.
 
 `Compiler.Native575Checks` is an opt-in structural candidate for the captured
 five-call function 575. It checks the complete Native tuple at bitmap offset
 2002→2007, preserving its frame and exact nested bitmap tree, and audits all
 private/generated declarations of five source owners against the standard
-three axioms. Its first Kernel check is pending. Build it explicitly with
+three axioms. Its positive and three typed-negative CI checks passed; inclusion
+in the accepted aggregate remains separate. Build it explicitly with
 `LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.Native575Checks`.
 This setting requests one build worker and does not impose a memory cap.
 The isolated DIV CI job also checks that three fixtures under `tests/native575/`
