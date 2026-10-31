@@ -307,6 +307,19 @@ The isolated DIV CI job runs this target after restoring pinned dependencies.
 These helper candidates await kernel validation; they do not establish the
 114-function sequence frontier or change ordinary imports.
 
+`Compiler.Native575Checks` is an opt-in structural candidate for the captured
+five-call function 575. It checks the complete Native tuple at bitmap offset
+2002→2007, preserving its frame and exact nested bitmap tree, and audits all
+private/generated declarations of five source owners against the standard
+three axioms. Its first Kernel check is pending. Build it explicitly with
+`LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.Native575Checks`.
+This setting requests one build worker and does not impose a memory cap.
+The isolated DIV CI job also checks that three fixtures under `tests/native575/`
+reject changed offsets, frames and bitmap-tree shapes with typed proof errors.
+These checks do not establish frontend allocation, the 114-function sequence
+frontier, complete Native compilation or the deployment-byte/resource bindings.
+Ordinary imports and combined Native checkpoint imports remain unchanged.
+
 `Compiler.BackendStages.CriticalProofs` checks the actual Native translations
 of initialization, main, DIV and the helper. The larger, straight-line function
 154 has a separate opt-in import, `Compiler.BackendStages.Function154`: it
