@@ -358,6 +358,59 @@ jobs:
                   if result.returncode != 1 or output.exists() or output.is_symlink() or lower.count("error:") != 1 or "type mismatch" not in lower or witness not in diagnostic or any(text in lower for text in ["unknown identifier", "unknown constant", "unknown module", "object file"]):
                       raise SystemExit(name + ": expected typed proof mismatch without output")
           PYSEQ
+      - name: Check actual07 backend input slice and numeric RawInfo
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -o pipefail
+          mkdir -p .lake/build
+          lake --fail-fast build PancakeDiv256.Compiler.Backend07InputChecks 2>&1 | tee .lake/build/backend07-input-checks.log
+      - name: Preserve actual07 backend input proof evidence
+        if: always() && matrix.directory == 'pancake-div256'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend07-input-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            examples/pancake-div256/.lake/build/backend07-input-checks.log
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/AlignmentControls.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Bindings.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/CapturedEntries.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/CapturedRawInfo.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Data/Function500.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Data/Function64.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Data/Function65.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Data/Function878.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Entry/Function500.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Entry/Function64.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Entry/Function65.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Entry/Function878.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/NumericFacts.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Projection/Stubs.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/ProjectionCore.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Stubs.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07InputChecks.olean
+      - name: Reject changed backend07 entry, compiled allocation and label
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        run: |
+          lake env python3 - <<'PYINPUT'
+          from pathlib import Path
+          import re
+          import subprocess
+          import tempfile
+          with tempfile.TemporaryDirectory(prefix="backend07-input-negatives-") as directory:
+              for name, witness in [("WrongEntry227", "captured_entry227_eq"), ("WrongCompiledEntry64", "compiled64_entry_eq"), ("WrongLabel64", "body64_eq")]:
+                  output = Path(directory) / (name + ".olean")
+                  result = subprocess.run(["lean", "-o", str(output), "tests/backend07-input-slice/" + name + ".lean"], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
+                  diagnostic = result.stdout
+                  print(name + ": expected typed rejection\n" + diagnostic[-20000:])
+                  lower = diagnostic.lower()
+                  if result.returncode != 1 or output.exists() or output.is_symlink() or lower.count("error:") != 1 or "type mismatch" not in lower or re.search(r"(?<![\w'])" + re.escape(witness) + r"(?![\w'])", diagnostic) is None or any(text in lower for text in ["unknown identifier", "unknown constant", "unknown module", "object file", "unexpected token", "expected token", "unexpected end of input", "unterminated", "parser error", "invalid syntax", "failed to synthesize"]):
+                      raise SystemExit(name + ": expected typed proof mismatch without output")
+          PYINPUT
       - name: Build isolated consumer
         working-directory: examples/${{ matrix.directory }}
         run: lake build ${{ matrix.target }}

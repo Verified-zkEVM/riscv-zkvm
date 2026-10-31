@@ -281,8 +281,9 @@ list and a mixed string/list/bitvector value. Its focused driver actually runs
 the Lean producer twice, then checks six fixed Kernel equality types, a strict
 ten-owner proof/data audit and six weakened-type rejection controls. The isolated
 DIV job runs it early, after external cache restore and before consumer builds.
-Actual rendering and Kernel validation of this draft fixture are still pending;
-source-only comparison controls are not roundtrip evidence. The printer and
+Actual rendering, all six Kernel equality goals, the ten-owner audit and all six
+weakened-type rejections passed independently reviewed hosted validation. The
+explicit generated-proof prerequisite also passed a corrected cold-cache run. The printer and
 unsafe producer remain untrusted tools. Copied data does not establish original
 compiler-body links, whole Stack/byte correctness or a deployment certificate.
 See [the fixture instructions](README-serializer07.md), or run from this directory:
@@ -351,13 +352,30 @@ captured functions: 287, 575, 587, 654, 725 and 774. Their exact input and full 
 output tuples retain bitmap offsets/trees and complete frames, including the
 frame 29 zero-effect case and two tails. It audits 26 distinct primary source
 owners (including private/generated declarations) against the standard three
-axioms. These new translations await Kernel validation. Build with
+axioms. The focused positive and three typed-negative checks passed CI;
+combined aggregate acceptance remains separate. Build with
 `LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.NativeSequenceSelectedChecks`.
 The setting requests one worker and does not impose a memory cap. Isolated DIV
 CI also rejects three typed frame/offset/tree mutations. These candidates do
 not establish the broader sequence frontier, frontend allocation, complete
 Native compilation, compiler-byte bindings or deployment resources; ordinary
 imports and the combined Native checkpoint imports remain unchanged.
+
+`Compiler.Native31Checks` adds a separate candidate for the 31 remaining small
+Native functions, with exact full-tuple consumers and a 62-owner audit. It awaits
+Kernel validation; see [the candidate checks](README-native31.md).
+
+`Compiler.Backend07InputChecks` is an opt-in candidate for four actual07
+Stack bodies (64, 65, 500 and 878), their entries and exact links to the existing
+Native computation theorems. It also checks the captured 817 numeric entry
+records, actual stubs 5/6, their RawInfo tree and six small alignment controls,
+with a strict 16-owner standard-three axiom audit. Build explicitly with
+`LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.Backend07InputChecks`.
+This requests one worker and does not impose a memory cap. These new checks
+await Kernel validation. The whole 815-function Stack projection remains an
+explicit premise; the numeric fixture does not prove that projection, full
+Native/compiler correctness, linked bytes or deployment resources. Ordinary
+roots remain unchanged.
 
 `Compiler.BackendStages.CriticalProofs` checks the actual Native translations
 of initialization, main, DIV and the helper. The larger, straight-line function
