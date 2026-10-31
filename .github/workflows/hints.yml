@@ -113,6 +113,12 @@ jobs:
           key: div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-${{ github.run_id }}-${{ github.run_attempt }}-final
           restore-keys: |
             div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+      - name: Check Native primitive equations and bitmap boundaries
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: lake --fail-fast build PancakeDiv256.Compiler.NativePrimitiveTests
       - name: Build isolated consumer
         working-directory: examples/${{ matrix.directory }}
         run: lake build ${{ matrix.target }}

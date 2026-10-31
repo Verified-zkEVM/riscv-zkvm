@@ -299,6 +299,14 @@ job runs the same target. These are compositional stage lemmas; complete
 compiler/image equality and resource binding remain separate obligations.
 The default consumer and parent core imports exclude this test import.
 
+`Compiler.NativePrimitiveTests` checks twelve additional primitive equations and
+four named bitmap/frame boundaries, with a strict two-owner axiom audit and all
+sixteen theorem-presence guards. Build it explicitly with
+`LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.NativePrimitiveTests`.
+The isolated DIV CI job runs this target after restoring pinned dependencies.
+These helper candidates await kernel validation; they do not establish the
+114-function sequence frontier or change ordinary imports.
+
 `Compiler.BackendStages.CriticalProofs` checks the actual Native translations
 of initialization, main, DIV and the helper. The larger, straight-line function
 154 has a separate opt-in import, `Compiler.BackendStages.Function154`: it
