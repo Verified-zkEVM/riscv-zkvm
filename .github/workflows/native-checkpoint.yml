@@ -1,0 +1,241 @@
+name: Captured Native390 checkpoint
+
+on:
+  push:
+    paths:
+      - examples/pancake-div256/PancakeDiv256/Compiler/Native390Checks.lean
+      - .github/workflows/native-checkpoint.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native390:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      LEAN_NUM_THREADS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Fetch isolated Mathlib cache
+        working-directory: examples/pancake-div256
+        run: |
+          cmp ../../lean-toolchain lean-toolchain
+          lake exe cache get
+      - name: Apply recorded Flapjack compatibility patch
+        working-directory: examples/pancake-div256
+        run: python3 prepare-flapjack.py
+      - name: Verify pinned external cache source roots
+        working-directory: examples/pancake-div256
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, subprocess
+          from pathlib import Path
+          workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+          manifest = json.loads(Path('lake-manifest.json').read_text())
+          pins = {p['name']: p['rev'] for p in manifest['packages'] if p['type'] == 'git'}
+          for name in ['Guest', 'flapjack']:
+              root = (Path('.lake/packages') / name).resolve(strict=True)
+              if not root.is_relative_to(workspace):
+                  raise SystemExit(f'external cache package escapes CI workspace: {name}')
+              actual = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+              if actual != pins[name]:
+                  raise SystemExit(f'wrong pinned package revision: {name}')
+          guest = Path('.lake/packages/Guest')
+          dirty = subprocess.check_output(['git', '-C', str(guest), 'status', '--porcelain', '--untracked-files=no'])
+          if dirty:
+              raise SystemExit('Guest tracked sources changed before cache restore')
+          PYTHON
+      # Cache only pinned upstream build products, after exact patch validation.
+      # Sources, example build output, executables and release archives stay out.
+      - name: Restore pinned DIV dependency build cache
+        id: div-dependency-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-${{ github.run_id }}-${{ github.run_attempt }}-final
+          restore-keys: |
+            div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+      - name: Record committed source basis and require fresh local proofs
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          root = Path.cwd().resolve(strict=True)
+          evidence = root / 'native390-evidence'
+          if evidence.exists() or evidence.is_symlink():
+              raise SystemExit('checkpoint evidence directory already exists')
+          local = root / 'examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256'
+          for parent in [local, *local.parents]:
+              if parent == root:
+                  break
+              if parent.is_symlink():
+                  raise SystemExit('local proof namespace has a directory alias')
+          if local.exists() and any(p.is_symlink() or p.suffix == '.olean' for p in local.rglob('*')):
+              raise SystemExit('local PancakeDiv256 proof objects already exist')
+          def digest(raw):
+              return hashlib.sha256(raw).hexdigest()
+          baseline = root / 'examples/pancake-div256/native-subset07-sources.sha256'
+          if digest(baseline.read_bytes()) != 'c5cf9a71460874d465eb0b67507ddc6d9325ab22618614d372439e026232df54':
+              raise SystemExit('reviewed Native388 source manifest changed')
+          expected = {}
+          for line in baseline.read_text().splitlines():
+              want, name = line.split('  ', 1)
+              if name in expected or not name.startswith('examples/pancake-div256/PancakeDiv256/') or '..' in Path(name).parts:
+                  raise SystemExit('invalid or duplicate baseline source path')
+              expected[name] = want
+          if len(expected) != 827:
+              raise SystemExit('Native388 source closure cardinality changed')
+          prefix = 'examples/pancake-div256/PancakeDiv256/Compiler/'
+          extra = {
+              'BackendStages/Allocated644.lean': '9b793371f199a8a4c98fd9989ab4ccf60f4a9559e6bc1571b6990b574f711836',
+              'BackendStages/Function644.lean': '9eed45d6b322cc42339e0cc9627446e4a1b9db8eea24e6d73604a8fe8106a9d3',
+              'BackendStages/Allocated658.lean': 'b2952506c8c2d98aeea4172d4ebd3dc73370e8678b0e58650e43c9e49797d825',
+              'BackendStages/Function658.lean': '6224c5fe02abba6c3b0e111f01ce7ede1ae373268b5281b5c06e9f1d58456f6a',
+              'Native390Checks.lean': 'db35186d4651e47defa432ba9cd3c832739fd25066177bb69fd3f15d758a588e',
+          }
+          for name, want in extra.items():
+              if prefix + name in expected:
+                  raise SystemExit('new source collides with baseline')
+              expected[prefix + name] = want
+          if len(expected) != 832:
+              raise SystemExit('Native390 source closure cardinality changed')
+          policy = [
+              '.github/workflows/native-checkpoint.yml', 'lean-toolchain', 'lakefile.toml', 'lake-manifest.json',
+              'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lakefile.toml',
+              'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py',
+              'examples/pancake-div256/patches/flapjack-lean435-compat.patch',
+              'examples/pancake-div256/native-subset07-sources.sha256',
+              'examples/pancake-div256/native-subset07-sources.json',
+          ]
+          paths = sorted(set(expected) | set(policy))
+          tree = subprocess.check_output(['git', 'ls-tree', '-r', 'HEAD', '--', *paths], text=True)
+          blobs = {}
+          for line in tree.splitlines():
+              metadata, name = line.split('\t', 1)
+              mode, kind, oid = metadata.split()
+              if kind != 'blob' or mode not in ['100644', '100755']:
+                  raise SystemExit('source basis is not a regular committed blob')
+              blobs[name] = oid
+          if set(blobs) != set(paths):
+              raise SystemExit('uncommitted checkpoint source or policy file')
+          records = {}
+          for name in paths:
+              path = root / name
+              if path.is_symlink() or path.resolve(strict=True) != path:
+                  raise SystemExit('checkpoint source alias')
+              raw = path.read_bytes()
+              oid = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+              if oid != blobs[name] or (name in expected and digest(raw) != expected[name]):
+                  raise SystemExit('checkpoint source differs from committed/reviewed bytes')
+              records[name] = {'sha256': digest(raw), 'git_blob': oid}
+          example = root / 'examples/pancake-div256'
+          lean = Path(subprocess.check_output(['elan', 'which', 'lean'], cwd=example, text=True).strip()).resolve(strict=True)
+          kernel = {'path': str(lean), 'sha256': digest(lean.read_bytes()),
+                    'version': subprocess.check_output([str(lean), '--version'], text=True).strip()}
+          packages = {}
+          for name in ['Guest', 'flapjack']:
+              package = (example / '.lake/packages' / name).resolve(strict=True)
+              packages[name] = {'path': str(package),
+                  'commit': subprocess.check_output(['git', '-C', str(package), 'rev-parse', 'HEAD'], text=True).strip(),
+                  'tracked_diff_sha256': digest(subprocess.check_output(['git', '-C', str(package), 'diff', '--binary', 'HEAD', '--']))}
+          evidence.mkdir()
+          report = {
+              'kind': 'hosted Native390 preflight; no acceptance claim', 'certificate': False,
+              'checkout_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'checkout_tree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+              'reviewed_source_basis': 'f1398b0062c0ea9675a6d7af1c53fb9d3ff04d52',
+              'public_run_metadata': {name: os.environ.get(name) for name in [
+                  'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'GITHUB_REF', 'GITHUB_EVENT_NAME']},
+              'kernel': kernel, 'prepared_packages': packages,
+              'fresh_local_proof_namespace': True, 'selected_owner_count': 829,
+              'imported_local_source_count': 831, 'source_count_with_new_checker': 832,
+              'source_paths': sorted(expected), 'files': records,
+              'dependency_policy': 'pinned Guest/Flapjack sources and recorded patch; external build cache only',
+              'local_memory_profile_applied': False,
+          }
+          (evidence / 'sources-before.json').write_text(json.dumps(report, indent=2) + '\n')
+          print('Verified832 committed source files; fresh local proof namespace; checkout', report['checkout_commit'])
+          PYTHON
+      - name: Build all 390 exact endpoints and audit 829 source owners
+        working-directory: examples/pancake-div256
+        run: |
+          set -o pipefail
+          lake --fail-fast build PancakeDiv256.Compiler.Native390Checks 2>&1 | tee ../../native390-evidence/build.log
+      - name: Verify final source basis and record checked artifacts
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, re, subprocess
+          from pathlib import Path
+          root = Path.cwd().resolve(strict=True)
+          evidence = root / 'native390-evidence'
+          before = json.loads((evidence / 'sources-before.json').read_bytes())
+          if subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() != before['checkout_commit']:
+              raise SystemExit('checkout changed during checkpoint')
+          for name, row in before['files'].items():
+              path = root / name
+              if path.is_symlink() or path.resolve(strict=True) != path or hashlib.sha256(path.read_bytes()).hexdigest() != row['sha256']:
+                  raise SystemExit('source/policy bytes changed during checkpoint')
+          kernel = before['kernel']
+          if hashlib.sha256(Path(kernel['path']).read_bytes()).hexdigest() != kernel['sha256']:
+              raise SystemExit('Kernel binary changed during checkpoint')
+          for row in before['prepared_packages'].values():
+              commit = subprocess.check_output(['git', '-C', row['path'], 'rev-parse', 'HEAD'], text=True).strip()
+              diff = subprocess.check_output(['git', '-C', row['path'], 'diff', '--binary', 'HEAD', '--'])
+              if commit != row['commit'] or hashlib.sha256(diff).hexdigest() != row['tracked_diff_sha256']:
+                  raise SystemExit('prepared external package changed during checkpoint')
+          text = (evidence / 'build.log').read_text()
+          matches = re.findall(r'Native390 strict audit: 829 owners / (\d+) declarations / (\d+) theorems / 0 offenders', text)
+          if len(matches) != 1 or int(matches[0][0]) == 0 or int(matches[0][1]) < 390:
+              raise SystemExit('missing complete Native390 strict audit output')
+          oleans = {}
+          prefix = 'examples/pancake-div256/'
+          for name in before['source_paths']:
+              relative = name.removeprefix(prefix).removesuffix('.lean') + '.olean'
+              path = root / prefix / '.lake/build/lib/lean' / relative
+              if path.is_symlink() or not path.is_file() or path.resolve(strict=True) != path:
+                  raise SystemExit('missing/aliased freshly built checkpoint object')
+              oleans[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+          if len(oleans) != 832:
+              raise SystemExit('wrong checked local artifact inventory')
+          report = {
+              'kind': 'hosted Native390 Kernel checkpoint; Root acceptance review pending',
+              'certificate': False, 'active': False, 'checkout_commit': before['checkout_commit'],
+              'sources_before_sha256': hashlib.sha256((evidence / 'sources-before.json').read_bytes()).hexdigest(),
+              'build_log_sha256': hashlib.sha256((evidence / 'build.log').read_bytes()).hexdigest(),
+              'selected_owners': 829, 'declarations': int(matches[0][0]), 'theorems': int(matches[0][1]),
+              'unexpected_axiom_offenders': 0, 'endpoint_count': 390, 'fresh_local_objects': oleans,
+              'local03_report_synthesized': False, 'whole_program_certificate': False,
+          }
+          (evidence / 'checked-artifacts.json').write_text(json.dumps(report, indent=2) + '\n')
+          print('Native390 checkpoint complete; Root acceptance and whole-program obligations remain separate')
+          PYTHON
+      - name: Preserve checkpoint evidence and selected proof objects
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native390-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            native390-evidence
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Native390Checks.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/NativeSubset07Checks.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated644.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function644.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated658.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function658.olean
