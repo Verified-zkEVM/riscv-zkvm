@@ -1,0 +1,5 @@
+{
+  "scope": "IO guard regression only; captured constructor/type-proof prefix with empty lines, not an actual roundtrip or Kernel result",
+  "label": "actual64",
+  "value": "(@_root_.«Flapjack».«Compiler».«Backend».«LabLang».«Section».«mk» (@_root_.«Flapjack».«Compiler».«Backend».«LabSem».«LabLineHOL» (@_root_.«OfNat».«ofNat».{0} @_root_.«Nat» 64 (@_root_.«instOfNatNat» 64)) @_root_.«PancakeDiv256».«Compiler».«Serializer07».«Inputs».«section64».«_proof_1») (@_root_.«OfNat».«ofNat».{0} @_root_.«Nat» 64 (@_root_.«instOfNatNat» 64)) [])"
+}

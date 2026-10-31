@@ -113,6 +113,99 @@ jobs:
           key: div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-${{ github.run_id }}-${{ github.run_attempt }}-final
           restore-keys: |
             div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+      - name: Check actual07 constructor rendering and fixed Kernel roundtrips
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: lake env bash test-serializer07.sh "$RUNNER_TEMP/serializer07-${{ github.run_id }}-${{ github.run_attempt }}"
+      - name: Preserve actual07 serializer fixture evidence
+        if: always() && matrix.directory == 'pancake-div256'
+        uses: actions/upload-artifact@v4
+        with:
+          name: serializer07-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/generate-first.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/generate-second.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/SyntheticList.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/SyntheticMixed.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/Actual64.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/Actual65.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/Actual500.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/Actual878.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/Checks.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/comparison.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/pins-before.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/generated-source-pins.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/checked-private-files.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/checked-artifacts.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-lean-path.txt
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/first/proposal-manifest.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/first/SOURCE-PROPOSAL-COMPLETE
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/first/INCOMPLETE
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/first/PancakeDiv256/Compiler/Serializer07/Outputs/SyntheticList.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/first/PancakeDiv256/Compiler/Serializer07/Outputs/SyntheticMixed.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/first/PancakeDiv256/Compiler/Serializer07/Outputs/Actual64.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/first/PancakeDiv256/Compiler/Serializer07/Outputs/Actual65.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/first/PancakeDiv256/Compiler/Serializer07/Outputs/Actual500.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/first/PancakeDiv256/Compiler/Serializer07/Outputs/Actual878.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/second/proposal-manifest.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/second/SOURCE-PROPOSAL-COMPLETE
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/second/INCOMPLETE
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/second/PancakeDiv256/Compiler/Serializer07/Outputs/SyntheticList.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/second/PancakeDiv256/Compiler/Serializer07/Outputs/SyntheticMixed.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/second/PancakeDiv256/Compiler/Serializer07/Outputs/Actual64.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/second/PancakeDiv256/Compiler/Serializer07/Outputs/Actual65.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/second/PancakeDiv256/Compiler/Serializer07/Outputs/Actual500.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/second/PancakeDiv256/Compiler/Serializer07/Outputs/Actual878.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Inputs/Section64.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Inputs/Section65.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Inputs/Section500.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Inputs/Section878.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Outputs/SyntheticList.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Outputs/SyntheticMixed.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Outputs/Actual64.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Outputs/Actual65.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Outputs/Actual500.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Outputs/Actual878.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/private-oleans/PancakeDiv256/Compiler/Serializer07/Checks.olean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticList/weak-module.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticList/Checks.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticList/Checks.exit-status
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticList/typed-refusal.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticList/pins.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticList/source/PancakeDiv256/Compiler/Serializer07/Outputs/SyntheticList.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticMixed/weak-module.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticMixed/Checks.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticMixed/Checks.exit-status
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticMixed/typed-refusal.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticMixed/pins.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-SyntheticMixed/source/PancakeDiv256/Compiler/Serializer07/Outputs/SyntheticMixed.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual64/weak-module.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual64/Checks.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual64/Checks.exit-status
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual64/typed-refusal.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual64/pins.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual64/source/PancakeDiv256/Compiler/Serializer07/Outputs/Actual64.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual65/weak-module.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual65/Checks.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual65/Checks.exit-status
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual65/typed-refusal.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual65/pins.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual65/source/PancakeDiv256/Compiler/Serializer07/Outputs/Actual65.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual500/weak-module.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual500/Checks.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual500/Checks.exit-status
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual500/typed-refusal.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual500/pins.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual500/source/PancakeDiv256/Compiler/Serializer07/Outputs/Actual500.lean
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual878/weak-module.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual878/Checks.log
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual878/Checks.exit-status
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual878/typed-refusal.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual878/pins.json
+            ${{ runner.temp }}/serializer07-${{ github.run_id }}-${{ github.run_attempt }}/weak-Actual878/source/PancakeDiv256/Compiler/Serializer07/Outputs/Actual878.lean
       - name: Check Native primitive equations and bitmap boundaries
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
