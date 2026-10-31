@@ -361,6 +361,12 @@ not establish the broader sequence frontier, frontend allocation, complete
 Native compilation, compiler-byte bindings or deployment resources; ordinary
 imports and the combined Native checkpoint imports remain unchanged.
 
+`Compiler.NativeBranchPilotChecks` is an opt-in candidate for functions255,406
+and448, including conditional ordering and an actual loop bitmap insertion.
+Its three full-tuple consumers,15-owner audit and three typed rejection tests
+await Kernel validation; see [the branch pilot](README-branch-pilot.md). This
+small candidate does not establish the broader conditional/loop frontier.
+
 `Compiler.Native31Checks` adds a separate candidate for the 31 remaining small
 Native functions, with exact full-tuple consumers and a 62-owner audit. Its
 focused Kernel evidence is independently accepted; see [the checks](README-native31.md).
