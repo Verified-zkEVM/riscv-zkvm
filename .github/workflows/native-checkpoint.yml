@@ -57,7 +57,22 @@ jobs:
           PYTHON
       # Cache only pinned upstream build products, after exact patch validation.
       # Sources, example build output, executables and release archives stay out.
-      - name: Restore pinned DIV dependency build cache
+      - name: Restore completed DIV deployment dependencies
+        id: div-dependency-complete-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-
+      - name: Restore DIV dependency progress fallback
+        if: steps.div-dependency-complete-cache.outputs.cache-matched-key == ''
         id: div-dependency-cache
         continue-on-error: true
         uses: actions/cache/restore@v4
@@ -68,8 +83,9 @@ jobs:
             examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
             examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
             examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
-          key: div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-${{ github.run_id }}-${{ github.run_attempt }}-final
+          key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-${{ github.run_id }}-${{ github.run_attempt }}-final
           restore-keys: |
+            div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-
             div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
       - name: Record committed source basis and require fresh local proofs
         run: |
