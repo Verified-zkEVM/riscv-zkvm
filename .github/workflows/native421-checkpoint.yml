@@ -1,0 +1,386 @@
+name: Captured Native421 checkpoint
+
+on:
+  push:
+    paths:
+      - examples/pancake-div256/PancakeDiv256/Compiler/Native421Checks.lean
+      - .github/workflows/native421-checkpoint.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native421:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      LEAN_NUM_THREADS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Fetch isolated Mathlib cache
+        working-directory: examples/pancake-div256
+        run: |
+          cmp ../../lean-toolchain lean-toolchain
+          lake exe cache get
+      - name: Apply recorded Flapjack compatibility patch
+        working-directory: examples/pancake-div256
+        run: python3 prepare-flapjack.py
+      - name: Verify pinned external cache source roots
+        working-directory: examples/pancake-div256
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, subprocess
+          from pathlib import Path
+          workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+          manifest = json.loads(Path('lake-manifest.json').read_text())
+          pins = {p['name']: p['rev'] for p in manifest['packages'] if p['type'] == 'git'}
+          for name in ['Guest', 'flapjack']:
+              root = (Path('.lake/packages') / name).resolve(strict=True)
+              if not root.is_relative_to(workspace):
+                  raise SystemExit(f'external cache package escapes CI workspace: {name}')
+              actual = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+              if actual != pins[name]:
+                  raise SystemExit(f'wrong pinned package revision: {name}')
+          guest = Path('.lake/packages/Guest')
+          dirty = subprocess.check_output(['git', '-C', str(guest), 'status', '--porcelain', '--untracked-files=no'])
+          if dirty:
+              raise SystemExit('Guest tracked sources changed before cache restore')
+          PYTHON
+      # Cache only pinned upstream build products, after exact patch validation.
+      # Sources, example build output, executables and release archives stay out.
+      - name: Restore completed DIV deployment dependencies
+        id: div-dependency-complete-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-
+      - name: Restore DIV dependency progress fallback
+        if: steps.div-dependency-complete-cache.outputs.cache-matched-key == ''
+        id: div-dependency-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-${{ github.run_id }}-${{ github.run_attempt }}-final
+          restore-keys: |
+            div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-
+            div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+      - name: Record committed source basis and require fresh local proofs
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          root = Path.cwd().resolve(strict=True)
+          evidence = root / 'native421-evidence'
+          if evidence.exists() or evidence.is_symlink():
+              raise SystemExit('checkpoint evidence directory already exists')
+          local = root / 'examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256'
+          for parent in [local, *local.parents]:
+              if parent == root:
+                  break
+              if parent.is_symlink():
+                  raise SystemExit('local proof namespace has a directory alias')
+          if local.exists() and any(p.is_symlink() or p.suffix == '.olean' for p in local.rglob('*')):
+              raise SystemExit('local PancakeDiv256 proof objects already exist')
+          def digest(raw):
+              return hashlib.sha256(raw).hexdigest()
+          baseline = root / 'examples/pancake-div256/native-subset07-sources.sha256'
+          if digest(baseline.read_bytes()) != 'c5cf9a71460874d465eb0b67507ddc6d9325ab22618614d372439e026232df54':
+              raise SystemExit('reviewed Native388 source manifest changed')
+          expected = {}
+          for line in baseline.read_text().splitlines():
+              want, name = line.split('  ', 1)
+              if name in expected or not name.startswith('examples/pancake-div256/PancakeDiv256/') or '..' in Path(name).parts:
+                  raise SystemExit('invalid or duplicate baseline source path')
+              expected[name] = want
+          if len(expected) != 827:
+              raise SystemExit('Native388 source closure cardinality changed')
+          prefix = 'examples/pancake-div256/PancakeDiv256/Compiler/'
+          extra = {
+              'BackendStages/Allocated644.lean': '9b793371f199a8a4c98fd9989ab4ccf60f4a9559e6bc1571b6990b574f711836',
+              'BackendStages/Function644.lean': '9eed45d6b322cc42339e0cc9627446e4a1b9db8eea24e6d73604a8fe8106a9d3',
+              'BackendStages/Allocated658.lean': 'b2952506c8c2d98aeea4172d4ebd3dc73370e8678b0e58650e43c9e49797d825',
+              'BackendStages/Function658.lean': '6224c5fe02abba6c3b0e111f01ce7ede1ae373268b5281b5c06e9f1d58456f6a',
+              'Native390Checks.lean': 'db35186d4651e47defa432ba9cd3c832739fd25066177bb69fd3f15d758a588e',
+              'BackendStages/Allocated252.lean': 'fe8d1b4e7e9a41cbc7e9c9247985598ad0016e8f731c260e62ac6dc312dc0f33',
+              'BackendStages/Allocated291.lean': 'eaf2002c684775b8a70775628f48de4d71c3ebf2e7424757380dee2d9f15bbd8',
+              'BackendStages/Allocated303.lean': '80f613e33dcecee04d6ca2c7f24b92ab807c68cbdc99bd9b869e2a20087418fe',
+              'BackendStages/Allocated304.lean': '82dfa97c1f2e3f77e7998c4166b558a4e0caefec045eb11904f981db3abf718e',
+              'BackendStages/Allocated325.lean': 'a740deed213cbc8e3bde2878cbdc43f3e16d4b08c660994f67aa538cf27e349c',
+              'BackendStages/Allocated327.lean': '588a04b3208a7baf9f52112681a1ee94442d6ff15ddd893dbcc136ea5ae7d38b',
+              'BackendStages/Allocated331.lean': 'ddffa24bb41268e41394e6000be649b158e9a378f467685b2a8a8bf3e846d05f',
+              'BackendStages/Allocated346.lean': '1a25bd5b22f691cda758e2961c014f1d8760fc01702acb5c398523f2273ed9f0',
+              'BackendStages/Allocated358.lean': '351025a835f3af1775827ba0e34b05a4364fc35282f26fe1f170b8cd90bfb28b',
+              'BackendStages/Allocated383.lean': '617938318263969a4a70cf70bfca36e6c4f7221ff9d240e9361dc9a37a845b16',
+              'BackendStages/Allocated432.lean': 'f7770529b37a0313b8582a6533feae2e196d9c30a50037a260f4a0526493f90f',
+              'BackendStages/Allocated434.lean': '48dab11ec829e1fd9f890d5518d77a47c1e6646741285c3256982071defddf23',
+              'BackendStages/Allocated478.lean': '8f44f1b622f601b5a4d1f880d79c82cb665120d3b7e5fd1759c024cfc516bf81',
+              'BackendStages/Allocated484.lean': 'ee7dd1a1e2a428e1178632f35d78111d3eb9a916934895eb1ce21b3ad82e7d04',
+              'BackendStages/Allocated599.lean': '1269344162fbf64c363d59416ce7546864c4b2dfa263011a5fd259f0503c1cf1',
+              'BackendStages/Allocated600.lean': 'b3b85b58ca84c3f6412253befa352bcaa3550c54e36df97523d58f36dded66fc',
+              'BackendStages/Allocated642.lean': '346fad07c50d80252ce31ee16d9dfac7f52aee93286431977b574a9d6882160a',
+              'BackendStages/Allocated643.lean': 'd9a4cfabbd0d78c06adfaf9eafb46067fdae1ea9652d66d4b41bc61e4b18f0c0',
+              'BackendStages/Allocated659.lean': '3fdeeed549b8af9099802da7789ecc9f42baa39f0ffaac8e033f25c76e7e1e70',
+              'BackendStages/Allocated671.lean': '6b7bca7eddfe6af5f4b4485fbf584cb5f84c6deb29180dd0cb908bdb927b162e',
+              'BackendStages/Allocated689.lean': 'a0b895a841c989af4176f569b61cf405023424b436dfcbecdfd6202a3d3c0f05',
+              'BackendStages/Allocated712.lean': 'b2653cd924047163e5080b83a04e0f27ad0b3e1767aaedbf5a707d252092dbdd',
+              'BackendStages/Allocated781.lean': 'bb92b302b9e0a56156d5854d3d75d24eb7e931f8d3778b811a3491dbc3d3deda',
+              'BackendStages/Allocated870.lean': 'b79090c0aee2d9baf065c06626e595fa93b8a5695fb37b3d209aa819f19edceb',
+              'BackendStages/Allocated871.lean': '4b50404bf5128b21c6a46c78889a1db00796a4951be0edc79c4262068a9629be',
+              'BackendStages/Allocated872.lean': '1b588ff9891d3554e279feb1b4b140561b956b6ebc93087f2aeb6638422e5fe8',
+              'BackendStages/Allocated873.lean': '4282d1b7b7c0585ba3253328da6d2957ef8850019320dc6a2f0919b2a0b5c6d8',
+              'BackendStages/Allocated874.lean': '83200b7133c9b9d6d0417a4844d1c774d1a5fa94e888bda5e1f0f6cd4a85a76a',
+              'BackendStages/Allocated875.lean': '44bdc0f9a5cfc7fbb7641df1ce5e16030a036f535d0ab591282c27702672e122',
+              'BackendStages/Allocated876.lean': '2f7109910223ffb45f089a21c361b0da6d283d038761bb80647a8846ac0d96f8',
+              'BackendStages/Allocated877.lean': 'bab519e66fbad22f987ecc7cfebf5a942238dc054caf8814dc5d9f041670b261',
+              'BackendStages/Function252.lean': '7ae085649c4639383ca527785ad00d418ace0b5bb4379249bb75076f98ea680c',
+              'BackendStages/Function291.lean': '86c69725f66d8a0822e948a95136c1d6a0757defa76091b167c363eeee65fb5a',
+              'BackendStages/Function303.lean': '0c8d7744c4b4ba80f7bdb4612b0880cd40e0adfc8006567d8b78e44235cc3026',
+              'BackendStages/Function304.lean': '76eeb8dec56f89b4da5b43957e894fd6701cbdc6a7b62e6b91a5f435c4614682',
+              'BackendStages/Function325.lean': '3634c92c7f1f21a9bb22300add34ef88260f81c2e123e6169e5c6951a4028b6e',
+              'BackendStages/Function327.lean': 'b6f9de7b94aa2caf5b680c8bdd66438bc64a73b0bd68a5aa573e52a9ac2d60f6',
+              'BackendStages/Function331.lean': '66154c4d06d61d5b82d567d8f9f1c45dee85776e213b815557832ed4a1b44688',
+              'BackendStages/Function346.lean': 'd753e8b885c630b00283b031e1a61a353cb36d64b421f919413fb0bf0e8f15b5',
+              'BackendStages/Function358.lean': '8e180d35efed5e535d6f41964dc995ab43a65262e05fc56270f672f6be794a45',
+              'BackendStages/Function383.lean': '05f95ec17805f2607ed56f764e4699e4a633193481872be7234f2f569e940cee',
+              'BackendStages/Function432.lean': 'f251ec922a72170f5ab1ca86569112287fca81c0b62d3c4d3c63faf17fbe7c3b',
+              'BackendStages/Function434.lean': '1386dbfee5efccfa20fc3d08fbfb3d44ee55d2d4be63b6d007fcbe4f0e7a1619',
+              'BackendStages/Function478.lean': 'e8dd1ad783dafadce6d72bbdc12900f32e1f2c3927331ca858777c0654a4a02a',
+              'BackendStages/Function484.lean': 'f4e5a08ef6dbb94560c2eb35da3b51e6b99866b415755728ecd5972d0fc64b98',
+              'BackendStages/Function599.lean': 'a51207e2d4402158e83d1f181731b58237a9a21391afa8bcc99915a755300a6f',
+              'BackendStages/Function600.lean': '2e2fb02a2bfc7b329966d16e6dc587e41e7398177509a80292eec6de773e8cfa',
+              'BackendStages/Function642.lean': '3b58ff7d51861eff29c947eed8cd68bf68bfd500c078dea951c785030047b0e4',
+              'BackendStages/Function643.lean': '527d11343e095322895e5eb363368ebb734448584458c6f8127b21025b3ff554',
+              'BackendStages/Function659.lean': '9d14b8a24b682feb28cba8186b7bc3216d4de750f08bdf42a37dac96cf0a7147',
+              'BackendStages/Function671.lean': '51ba4216f52bc593243de61af34f3eea4fd940d24d7eba158eb85619dabdb5a0',
+              'BackendStages/Function689.lean': '03e3db75f79556765d6acffc6b9648e9058f9d06ad1f409689efb790d01695dc',
+              'BackendStages/Function712.lean': '770d081a403eef89d3218147d22c7ab410b740124befaf09921a69908d05e458',
+              'BackendStages/Function781.lean': '03052a8f31225168c2dcbce0147e658a20a55d116817c5382ae36f2358f1204f',
+              'BackendStages/Function870.lean': '1c866f91c8fc0e7be9372c2c1048a8336cd3b19cac3a1e107d0b007e780120ba',
+              'BackendStages/Function871.lean': 'c772ff02295f5732573facd454fbcda38ee7a3bc00066174da37c7dc37629c96',
+              'BackendStages/Function872.lean': '6bf6e085ed7247d9ad5d6a18d0bed4be0b9856bcc3a0d1d95b8caf55a81b843d',
+              'BackendStages/Function873.lean': 'c0d4ce1db8523e9a964d496d47979bd872891f2b945ee475614c5796a5d0729e',
+              'BackendStages/Function874.lean': 'd62f47c566a9aa5d1a6d1ffd0efa6c4d699a1ffc7194b9e70b6d909b043ca029',
+              'BackendStages/Function875.lean': 'f0fb602f2024d9a7cfe612ae9485f15a98e084149f15b030f8b093633a806fad',
+              'BackendStages/Function876.lean': '43dda86c429cd57291e0c2fb8f97cd226f0dfb0a65876dce7b6d934b6080dc27',
+              'BackendStages/Function877.lean': 'bbbdf14ea3acbd999bb146f4ad42178004dc2b3d4777347d0ddf8d847f2c2cbd',
+              'Native31Checks.lean': 'b3933d62370262f8d1642d5ea1bfe9a1fa8299095df4b6fff9e4153734538400',
+              'Native421Checks.lean': '25036712ad319c17d8c372b8b7566ccb1cd1a5d1565c4b116d9444e4db709423',
+          }
+          for name, want in extra.items():
+              if prefix + name in expected:
+                  raise SystemExit('new source collides with baseline')
+              expected[prefix + name] = want
+          if len(expected) != 896:
+              raise SystemExit('Native421 source closure cardinality changed')
+          policy = [
+              '.github/workflows/native421-checkpoint.yml', 'lean-toolchain', 'lakefile.toml', 'lake-manifest.json',
+              'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lakefile.toml',
+              'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py',
+              'examples/pancake-div256/patches/flapjack-lean435-compat.patch',
+              'examples/pancake-div256/native-subset07-sources.sha256',
+              'examples/pancake-div256/native-subset07-sources.json',
+          ]
+          paths = sorted(set(expected) | set(policy))
+          tree = subprocess.check_output(['git', 'ls-tree', '-r', 'HEAD', '--', *paths], text=True)
+          blobs = {}
+          for line in tree.splitlines():
+              metadata, name = line.split('\t', 1)
+              mode, kind, oid = metadata.split()
+              if kind != 'blob' or mode not in ['100644', '100755']:
+                  raise SystemExit('source basis is not a regular committed blob')
+              blobs[name] = oid
+          if set(blobs) != set(paths):
+              raise SystemExit('uncommitted checkpoint source or policy file')
+          records = {}
+          for name in paths:
+              path = root / name
+              if path.is_symlink() or path.resolve(strict=True) != path:
+                  raise SystemExit('checkpoint source alias')
+              raw = path.read_bytes()
+              oid = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+              if oid != blobs[name] or (name in expected and digest(raw) != expected[name]):
+                  raise SystemExit('checkpoint source differs from committed/reviewed bytes')
+              records[name] = {'sha256': digest(raw), 'git_blob': oid}
+          example = root / 'examples/pancake-div256'
+          lean = Path(subprocess.check_output(['elan', 'which', 'lean'], cwd=example, text=True).strip()).resolve(strict=True)
+          kernel = {'path': str(lean), 'sha256': digest(lean.read_bytes()),
+                    'version': subprocess.check_output([str(lean), '--version'], text=True).strip()}
+          packages = {}
+          for name in ['Guest', 'flapjack']:
+              package = (example / '.lake/packages' / name).resolve(strict=True)
+              packages[name] = {'path': str(package),
+                  'commit': subprocess.check_output(['git', '-C', str(package), 'rev-parse', 'HEAD'], text=True).strip(),
+                  'tracked_diff_sha256': digest(subprocess.check_output(['git', '-C', str(package), 'diff', '--binary', 'HEAD', '--']))}
+          evidence.mkdir()
+          report = {
+              'kind': 'hosted Native421 preflight; no acceptance claim', 'certificate': False,
+              'checkout_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'checkout_tree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+              'reviewed_native390_source_basis': 'f1398b0062c0ea9675a6d7af1c53fb9d3ff04d52',
+              'reviewed_native31_source_basis': '15df22991322cd1543e6b27990c59895cc2922b5',
+              'public_run_metadata': {name: os.environ.get(name) for name in [
+                  'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'GITHUB_REF', 'GITHUB_EVENT_NAME']},
+              'kernel': kernel, 'prepared_packages': packages,
+              'fresh_local_proof_namespace': True, 'selected_owner_count': 891,
+              'imported_local_source_count': 895, 'source_count_with_new_checker': 896,
+              'source_paths': sorted(expected), 'files': records,
+              'dependency_policy': 'pinned Guest/Flapjack sources and recorded patch; external build cache only',
+              'local_memory_profile_applied': False,
+          }
+          (evidence / 'sources-before.json').write_text(json.dumps(report, indent=2) + '\n')
+          print('Verified896 committed source files; fresh local proof namespace; checkout', report['checkout_commit'])
+          PYTHON
+      - name: Build all 421 exact endpoints and audit 891 source owners
+        working-directory: examples/pancake-div256
+        run: |
+          set -o pipefail
+          lake --fail-fast build PancakeDiv256.Compiler.Native421Checks 2>&1 | tee ../../native421-evidence/build.log
+      - name: Verify final source basis and record checked artifacts
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, re, subprocess
+          from pathlib import Path
+          root = Path.cwd().resolve(strict=True)
+          evidence = root / 'native421-evidence'
+          before = json.loads((evidence / 'sources-before.json').read_bytes())
+          if subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() != before['checkout_commit']:
+              raise SystemExit('checkout changed during checkpoint')
+          for name, row in before['files'].items():
+              path = root / name
+              if path.is_symlink() or path.resolve(strict=True) != path or hashlib.sha256(path.read_bytes()).hexdigest() != row['sha256']:
+                  raise SystemExit('source/policy bytes changed during checkpoint')
+          kernel = before['kernel']
+          if hashlib.sha256(Path(kernel['path']).read_bytes()).hexdigest() != kernel['sha256']:
+              raise SystemExit('Kernel binary changed during checkpoint')
+          for row in before['prepared_packages'].values():
+              commit = subprocess.check_output(['git', '-C', row['path'], 'rev-parse', 'HEAD'], text=True).strip()
+              diff = subprocess.check_output(['git', '-C', row['path'], 'diff', '--binary', 'HEAD', '--'])
+              if commit != row['commit'] or hashlib.sha256(diff).hexdigest() != row['tracked_diff_sha256']:
+                  raise SystemExit('prepared external package changed during checkpoint')
+          text = (evidence / 'build.log').read_text()
+          matches = re.findall(r'Native421 strict audit: 891 owners / (\d+) declarations / (\d+) theorems / 0 offenders', text)
+          if len(matches) != 1 or int(matches[0][0]) == 0 or int(matches[0][1]) < 421:
+              raise SystemExit('missing complete Native421 strict audit output')
+          oleans = {}
+          prefix = 'examples/pancake-div256/'
+          for name in before['source_paths']:
+              relative = name.removeprefix(prefix).removesuffix('.lean') + '.olean'
+              path = root / prefix / '.lake/build/lib/lean' / relative
+              if path.is_symlink() or not path.is_file() or path.resolve(strict=True) != path:
+                  raise SystemExit('missing/aliased freshly built checkpoint object')
+              oleans[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+          if len(oleans) != 896:
+              raise SystemExit('wrong checked local artifact inventory')
+          report = {
+              'kind': 'hosted Native421 Kernel checkpoint; Root acceptance review pending',
+              'certificate': False, 'active': False, 'checkout_commit': before['checkout_commit'],
+              'sources_before_sha256': hashlib.sha256((evidence / 'sources-before.json').read_bytes()).hexdigest(),
+              'build_log_sha256': hashlib.sha256((evidence / 'build.log').read_bytes()).hexdigest(),
+              'selected_owners': 891, 'declarations': int(matches[0][0]), 'theorems': int(matches[0][1]),
+              'unexpected_axiom_offenders': 0, 'endpoint_count': 421, 'fresh_local_objects': oleans,
+              'local03_report_synthesized': False, 'whole_program_certificate': False,
+          }
+          (evidence / 'checked-artifacts.json').write_text(json.dumps(report, indent=2) + '\n')
+          print('Native421 checkpoint complete; Root acceptance and whole-program obligations remain separate')
+          PYTHON
+      - name: Preserve checkpoint evidence and selected proof objects
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native421-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            native421-evidence
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Native390Checks.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/NativeSubset07Checks.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated644.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function644.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated658.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function658.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Native421Checks.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Native31Checks.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated252.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated291.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated303.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated304.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated325.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated327.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated331.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated346.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated358.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated383.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated432.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated434.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated478.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated484.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated599.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated600.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated642.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated643.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated659.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated671.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated689.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated712.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated781.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated870.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated871.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated872.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated873.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated874.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated875.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated876.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated877.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function252.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function291.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function303.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function304.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function325.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function327.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function331.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function346.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function358.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function383.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function432.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function434.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function478.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function484.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function599.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function600.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function642.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function643.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function659.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function671.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function689.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function712.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function781.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function870.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function871.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function872.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function873.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function874.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function875.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function876.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function877.olean
