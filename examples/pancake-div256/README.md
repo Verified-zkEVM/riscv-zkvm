@@ -251,6 +251,18 @@ The environment setting requests one Lake worker; it does not impose a memory li
 The JSON source manifest records each input/proof pair and original bitmap
 offset. This target stays outside ordinary roots and default CI builds.
 
+`Compiler.Native658Checks` separately checks the captured function 658's exact
+Native endpoint for an arbitrary bitmap prefix and audits its two source owners,
+including private and generated declarations, against the standard three axioms.
+This candidate awaits kernel and CI validation and does not extend the accepted
+checkpoint.
+Build it with
+`LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.Native658Checks`.
+This requests one build worker; it does not impose a memory cap. The isolated
+DIV CI job builds this checker explicitly. Ordinary imports and the 388-function
+checkpoint stay unchanged; complete Native composition and deployment bindings
+remain separate obligations.
+
 `Deployment.Image07.Runtime` and `BootstrapProgram` record the actual image's
 startup envelope and prove that its first 208 bytes encode the 40 admitted
 bootstrap blocks. `Deployment.Image07.Proofs` additionally exposes the exact
