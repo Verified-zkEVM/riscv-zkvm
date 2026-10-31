@@ -346,6 +346,19 @@ These checks do not establish frontend allocation, the 114-function sequence
 frontier, complete Native compilation or the deployment-byte/resource bindings.
 Ordinary imports and combined Native checkpoint imports remain unchanged.
 
+`Compiler.NativeSequenceSelectedChecks` is an opt-in candidate for six
+captured functions: 287, 575, 587, 654, 725 and 774. Their exact input and full Native
+output tuples retain bitmap offsets/trees and complete frames, including the
+frame 29 zero-effect case and two tails. It audits 26 distinct primary source
+owners (including private/generated declarations) against the standard three
+axioms. These new translations await Kernel validation. Build with
+`LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.NativeSequenceSelectedChecks`.
+The setting requests one worker and does not impose a memory cap. Isolated DIV
+CI also rejects three typed frame/offset/tree mutations. These candidates do
+not establish the broader sequence frontier, frontend allocation, complete
+Native compilation, compiler-byte bindings or deployment resources; ordinary
+imports and the combined Native checkpoint imports remain unchanged.
+
 `Compiler.BackendStages.CriticalProofs` checks the actual Native translations
 of initialization, main, DIV and the helper. The larger, straight-line function
 154 has a separate opt-in import, `Compiler.BackendStages.Function154`: it
