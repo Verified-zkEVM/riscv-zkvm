@@ -254,14 +254,23 @@ offset. This target stays outside ordinary roots and default CI builds.
 `Compiler.Native658Checks` separately checks the captured function 658's exact
 Native endpoint for an arbitrary bitmap prefix and audits its two source owners,
 including private and generated declarations, against the standard three axioms.
-This candidate awaits kernel and CI validation and does not extend the accepted
-checkpoint.
+The isolated check passed CI. Extending the accepted checkpoint also requires
+the combined audit and provenance checks below.
 Build it with
 `LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.Native658Checks`.
 This requests one build worker; it does not impose a memory cap. The isolated
 DIV CI job builds this checker explicitly. Ordinary imports and the 388-function
 checkpoint stay unchanged; complete Native composition and deployment bindings
 remain separate obligations.
+
+`Compiler.Native390Checks` is an opt-in combined checkpoint candidate. It checks
+all 390 exact endpoints and audits 829 source owners against the standard three
+axioms. Run
+`LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.Native390Checks`
+to build it explicitly. The dedicated Native checkpoint workflow builds it from
+fresh project proof objects and records source provenance; ordinary consumer roots
+and the hint regression workflow keep their existing targets. This combined
+candidate has not yet passed kernel validation or extended the accepted checkpoint.
 
 `Deployment.Image07.Runtime` and `BootstrapProgram` record the actual image's
 startup envelope and prove that its first 208 bytes encode the 40 admitted
