@@ -8,6 +8,7 @@ if [ "$#" -ne 1 ]; then
 fi
 serializer_work="$1"
 serializer_lean="$(elan which lean)"
+python3 test-check-serializer07.py
 python3 serializer07-ci-pins.py prebuild --work "$serializer_work"
 lake --fail-fast build PancakeDiv256.Compiler.Serializer07.Produce
 python3 serializer07-ci-pins.py prepare --work "$serializer_work" --lean "$serializer_lean"

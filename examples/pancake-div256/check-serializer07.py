@@ -3,7 +3,7 @@ Actual producer execution must be established by CI commands/logs. Kernel checks
 of the six equalities and ten proof/data-owner audit are separate mandatory gates.
 """
 from pathlib import Path
-import argparse,hashlib,json,os
+import argparse,hashlib,json,os,re
 LABELS={'syntheticList':'SyntheticList','syntheticMixed':'SyntheticMixed','actual64':'Actual64','actual65':'Actual65','actual500':'Actual500','actual878':'Actual878'}
 PREFIX='PancakeDiv256/Compiler/Serializer07/Outputs/'
 COMPLETE='Kernel checking required; no certificate.\n'
@@ -11,6 +11,17 @@ def require(ok,message):
  if not ok:raise ValueError(message)
 def digest(raw):return hashlib.sha256(raw).hexdigest()
 def exact_json(a,b):return json.dumps(a,sort_keys=True,separators=(',',':'),allow_nan=False)==json.dumps(b,sort_keys=True,separators=(',',':'),allow_nan=False)
+ACTUAL_SECTION_CONSTRUCTOR='(@_root_.«Flapjack».«Compiler».«Backend».«LabLang».«Section».«mk» '
+def check_actual_value(value,label):
+ require(label in ['actual64','actual65','actual500','actual878'],'unknown actual fixture label')
+ require(value.lstrip().startswith(ACTUAL_SECTION_CONSTRUCTOR),'actual output must embed the Section constructor, not a data alias')
+ suffix=label.removeprefix('actual')
+ # Elaboration adds this proof of the width64 type argument. It is not the
+ # captured data value: only this exact same-input auxiliary may be referenced.
+ proof=f'@_root_.«PancakeDiv256».«Compiler».«Serializer07».«Inputs».«section{suffix}».«_proof_1»'
+ remainder=re.sub(re.escape(proof)+r'(?=[ \t\r\n)])','',value)
+ require('Serializer07'not in remainder and re.search(r'\bsection(?:64|65|500|878)\b',remainder)is None,'actual output contains an unexpected fixture reference or data alias')
+
 def inspect(root):
  root=Path(root);require(root.is_absolute()and root.resolve(strict=True)==root and root.is_dir()and not root.is_symlink(),'canonical proposal root required')
  for path in [root,*root.parents]:require(not path.is_symlink(),'proposal parent alias')
@@ -28,7 +39,7 @@ def inspect(root):
   require(f'noncomputable def {label} :'in text and f'theorem {label}_eq : {label} ='in text and':= by kernel_rfl'in text,'missing named literal/equality proof')
   definition=text.split(f'\ntheorem {label}_eq',1)[0].split(f'noncomputable def {label} :',1)[1];_,separator,value=definition.partition(' := ');require(separator and value.strip(),'missing rendered value')
   if label.startswith('actual'):
-   require('Serializer07'not in value,'actual output aliases its input instead of embedding constructor terms')
+   check_actual_value(value,label)
    suffix=label.removeprefix('actual');require(f'= _root_.PancakeDiv256.Compiler.Serializer07.Inputs.section{suffix} := by kernel_rfl'in text,'wrong actual equality target')
   if label=='syntheticList':require('List.replicate'not in value,'synthetic output aliases expected expression')
   require('namespace PancakeDiv256.Compiler.Serializer07.Roundtrip'in text,'wrong output declaration namespace')
