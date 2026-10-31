@@ -235,6 +235,22 @@ It starts from captured allocated inputs; whole-program allocation, remaining
 Native equations and composition, later lowering, bytes and resource bindings
 remain separate obligations. Ordinary consumer roots exclude this import.
 
+To reproduce the Native388 endpoint and owner audit after the pinned dependency
+preparation above, run these explicit checks from this example directory:
+
+```sh
+(cd ../.. && sha256sum -c examples/pancake-div256/native-subset07-sources.sha256)
+LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.NativeSubset07Checks
+```
+
+The first command checks repository-relative source hashes for all388 pairs,
+the complete local import closure and the checker. The second builds the
+optional checker, rechecks all388 exact endpoint types,
+and audits all825 source owners, including private and generated declarations.
+The environment setting requests one Lake worker; it does not impose a memory limit.
+The JSON source manifest records each input/proof pair and original bitmap
+offset. This target stays outside ordinary roots and default CI builds.
+
 `Deployment.Image07.Runtime` and `BootstrapProgram` record the actual image's
 startup envelope and prove that its first 208 bytes encode the 40 admitted
 bootstrap blocks. `Deployment.Image07.Proofs` additionally exposes the exact
