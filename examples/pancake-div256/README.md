@@ -252,6 +252,16 @@ obligations.
 These additions stay in the optional proof import. The default consumer and
 the parent's generated Sail extraction retain their existing imports.
 
+`Compiler.BackendNativeComposition` exposes local Native compiler equations for
+branches, loops, calls and exact bitmap-state updates. The optional
+`Compiler.NativeCompositionTests` import checks symbolic effect ordering and
+small boundary cases, then audits all three source owners, including private
+and generated declarations, against Lean's standard three axioms. Build it with
+`lake build PancakeDiv256.Compiler.NativeCompositionTests`; the isolated DIV CI
+job runs the same target. These are compositional stage lemmas; complete
+compiler/image equality and resource binding remain separate obligations.
+The default consumer and parent core imports exclude this test import.
+
 `Compiler.BackendStages.CriticalProofs` checks the actual Native translations
 of initialization, main, DIV and the helper. The larger, straight-line function
 154 has a separate opt-in import, `Compiler.BackendStages.Function154`: it

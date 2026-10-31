@@ -156,6 +156,10 @@ jobs:
           lake build PancakeDiv256.Compiler.BackendArtifactGenerator \
             PancakeDiv256.Compiler.BackendNativeProposalGenerator \
             PancakeDiv256.Compiler.BackendComputation
+      - name: Check generic Native composition equations
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        run: lake build PancakeDiv256.Compiler.NativeCompositionTests
       - name: Check typed proposal roundtrips and producer refusals
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
