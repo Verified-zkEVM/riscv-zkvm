@@ -1,11 +1,21 @@
 """I/O guard regressions; optional real CI output comparison. Never runs Lean."""
 from pathlib import Path
-import argparse,json,types,unittest
+import argparse,json,types,unittest,tempfile
 ROOT=Path(__file__).resolve().parent
 module=types.ModuleType('serializer07_guard_tests');module.__file__=str(ROOT/'check-serializer07.py')
 exec(compile(Path(module.__file__).read_bytes(),module.__file__,'exec'),module.__dict__)
 FIXTURE=json.loads((ROOT/'tests/serializer07/section-proof-argument.json').read_bytes())
 class ActualConstructorGuard(unittest.TestCase):
+ def test_cold_first_provider_remains_strict(self):
+  pins=types.ModuleType('serializer07_provider_tests');pins.__file__=str(ROOT/'serializer07-ci-pins.py')
+  exec(compile(Path(pins.__file__).read_bytes(),pins.__file__,'exec'),pins.__dict__)
+  with tempfile.TemporaryDirectory(prefix='serializer07-cold-provider-')as directory:
+   cold=Path(directory)/'cold';warm=Path(directory)/'warm';relative='InitECandidate/Proofs/CompilerComputation.olean'
+   (cold/'InitECandidate/Proofs').mkdir(parents=True);(cold/'InitECandidate/Proofs/CompactComputation.olean').write_bytes(b'fake prerequisite')
+   (warm/relative).parent.mkdir(parents=True);(warm/relative).write_bytes(b'fake later copy')
+   with self.assertRaises(ValueError):pins.provider('InitECandidate.Proofs.CompilerComputation',[str(cold),str(warm)])
+   (cold/relative).write_bytes(b'fake explicitly built prerequisite')
+   self.assertEqual(pins.provider('InitECandidate.Proofs.CompilerComputation',[str(cold),str(warm)])[0],cold)
  def test_real_constructor_proof_argument_shape(self):
   module.check_actual_value(FIXTURE['value'],FIXTURE['label'])
   for label in ['actual65','actual500','actual878']:

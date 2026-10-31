@@ -10,7 +10,7 @@ serializer_work="$1"
 serializer_lean="$(elan which lean)"
 python3 test-check-serializer07.py
 python3 serializer07-ci-pins.py prebuild --work "$serializer_work"
-lake --fail-fast build PancakeDiv256.Compiler.Serializer07.Produce
+lake --fail-fast build PancakeDiv256.Compiler.Serializer07.Produce @Guest/+InitECandidate.Proofs.CompilerComputation
 python3 serializer07-ci-pins.py prepare --work "$serializer_work" --lean "$serializer_lean"
 python3 serializer07-ci-pins.py check --work "$serializer_work"
 "$serializer_lean" --run PancakeDiv256/Compiler/Serializer07/Produce.lean "$serializer_work/first" > "$serializer_work/generate-first.log" 2>&1
