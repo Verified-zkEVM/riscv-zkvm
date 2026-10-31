@@ -119,6 +119,30 @@ jobs:
         env:
           LEAN_NUM_THREADS: 1
         run: lake --fail-fast build PancakeDiv256.Compiler.NativePrimitiveTests
+      - name: Check structural Native575 and its five source owners
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: lake --fail-fast build PancakeDiv256.Compiler.Native575Checks
+      - name: Reject changed Native575 offset, frame and bitmap tree
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        run: |
+          lake env python3 - <<'PY575'
+          from pathlib import Path
+          import subprocess
+          import tempfile
+          with tempfile.TemporaryDirectory(prefix="native575-negatives-") as directory:
+              for name, witness in [("WrongOffset", "function575_eq"), ("WrongFrame", "compiled575_46_eq"), ("WrongBitmapTree", "compiled575_46_eq")]:
+                  output = Path(directory) / (name + ".olean")
+                  result = subprocess.run(["lean", "-o", str(output), "tests/native575/" + name + ".lean"], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
+                  diagnostic = result.stdout
+                  print(name + ": expected typed rejection\n" + diagnostic[-20000:])
+                  lower = diagnostic.lower()
+                  if result.returncode != 1 or output.exists() or output.is_symlink() or lower.count("error:") != 1 or "type mismatch" not in lower or witness not in diagnostic or any(text in lower for text in ["unknown identifier", "unknown constant", "unknown module", "object file"]):
+                      raise SystemExit(name + ": expected typed proof mismatch without output")
+          PY575
       - name: Build isolated consumer
         working-directory: examples/${{ matrix.directory }}
         run: lake build ${{ matrix.target }}
