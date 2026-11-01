@@ -52,7 +52,7 @@ def captureLoopWith (asmConf : AsmConfigExact 64) (clock position : Nat) (initia
       (iteration :: later,result)
 termination_by clock
 
-def captureInputs (inputs : ConfigProjection07.Inputs) (stack : List (Nat × StackLang.HolProg 64)) : Context :=
+def captureInputs (inputs : ConfigProjection07.Inputs) (stack : List (Nat × StackLang.HolProg 64)) : ContextProposal.Context :=
   let lab := StackToLab.compile inputs.stackConf inputs.dataConf
     (2 * DataToWord.maxHeapLimit 64 inputs.dataConf - 1)
     (inputs.asmConf.regCount - (inputs.asmConf.avoidRegs.length + 3)) inputs.asmConf.addrOffset stack
