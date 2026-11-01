@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "kind": "accepted-prerequisites-for-untrusted-actual07-capture",
+  "proposal_manifest_sha256": null,
+  "policy_sha256": "4f382a26a355ac68a401d636c71f957566cd5e89a7fef26ebb5ca9fe4b28db27",
+  "roles": {
+    "config59": {
+      "source_manifest_sha256": "971845fda593242e829d6095698220800dbad717ec0601139221e5543b89c680",
+      "scope": "original-config-projection-bindings",
+      "accepted": false,
+      "commit": null,
+      "receipt": null
+    },
+    "quote62": {
+      "source_manifest_sha256": "75b3d4a5b97912360300bd045e3d2b69c7312090a7c7de2f1f238e16702282a8",
+      "scope": "finite-constructor-quotation",
+      "accepted": false,
+      "commit": null,
+      "receipt": null
+    },
+    "helper63": {
+      "source_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
+      "scope": "old-untrusted-trace-refactor-identities",
+      "accepted": false,
+      "commit": null,
+      "receipt": null
+    },
+    "runtime63": {
+      "source_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
+      "scope": "runtime-compile-only",
+      "accepted": false,
+      "commit": null,
+      "receipt": null
+    }
+  },
+  "runtime_materials": null,
+  "tools": null,
+  "profile": {
+    "capture_seconds": 900,
+    "transaction_seconds": 1800,
+    "process_virtual_address_bytes": 6442450944,
+    "lean_managed_MiB": 4096,
+    "per_file_bytes": 67108864,
+    "total_payload_bytes": 268435456,
+    "live_file_count": 108,
+    "final_file_count": 107,
+    "minimum_free_disk_bytes": 21474836480,
+    "iterations": 6,
+    "minimum_admission_memory_bytes": 17179869184,
+    "minimum_live_memory_bytes": 8589934592
+  },
+  "note": "Operational Root evidence receipt only; user already authorized completion. Every prerequisite is currently unmet; no capture may start.",
+  "profile_name": "shared-conservative"
+}

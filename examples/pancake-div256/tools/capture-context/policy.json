@@ -1,0 +1,131 @@
+{
+  "source_only": true,
+  "capture_executed": false,
+  "certificate": false,
+  "roles": {
+    "config59": {
+      "source_manifest_sha256": "971845fda593242e829d6095698220800dbad717ec0601139221e5543b89c680",
+      "scope": "original-config-projection-bindings"
+    },
+    "quote62": {
+      "source_manifest_sha256": "75b3d4a5b97912360300bd045e3d2b69c7312090a7c7de2f1f238e16702282a8",
+      "scope": "finite-constructor-quotation"
+    },
+    "helper63": {
+      "source_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
+      "scope": "old-untrusted-trace-refactor-identities"
+    },
+    "runtime63": {
+      "source_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
+      "scope": "runtime-compile-only"
+    }
+  },
+  "runtime_source_manifest": {
+    "relative": "backend07-capture-inputs-source-manifest.json",
+    "sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e"
+  },
+  "expected_blob": {
+    "bytes": 981712,
+    "sha256": "78e9445a511235b992bfec197b09fdea7a2aa4ca014148130d2940c1dfb4a380",
+    "authoritative_artifact_manifest": {
+      "sha256": "52a24d27d529aad12dd921d96f5b9edc4b7e06fbfda3788917d5af13cdc0a388"
+    },
+    "authoritative_blob": {
+      "sha256": "78e9445a511235b992bfec197b09fdea7a2aa4ca014148130d2940c1dfb4a380"
+    },
+    "source_profile": "private-hint-v1-header-restore"
+  },
+  "bounds": {
+    "capture_seconds": 900,
+    "transaction_seconds": 1800,
+    "process_virtual_address_bytes": 6442450944,
+    "lean_managed_MiB": 4096,
+    "per_file_bytes": 67108864,
+    "total_payload_bytes": 268435456,
+    "live_file_count": 108,
+    "final_file_count": 107,
+    "minimum_free_disk_bytes": 21474836480,
+    "iterations": 6,
+    "minimum_admission_memory_bytes": 17179869184,
+    "minimum_live_memory_bytes": 8589934592
+  },
+  "writer_source_sha256": "7a5ad40797ddc5ede3839719c28cda89e12968bd6ebf4f8ba1dc5d7e93b2a27e",
+  "reviewed_guard_source": {
+    "sha256": "6da0293b36c6c7179d9287d786b3a2b748bd2f3dcb539ee083a34d631de0c57f",
+    "relative_source": "context-quote-bounded-leaf.py"
+  },
+  "reviewed_provider_source": {
+    "sha256": "b281c9c9d9ee294b343704b42ee2fb456490160b5d335522b155d878188de8f3",
+    "relative_source": "context-quote-providers.py"
+  },
+  "reviewed_atomic_source": {
+    "sha256": "28d61db52b87ad956b310655d90e68b5ba362942399da2a6cae7f38bbea6910f",
+    "relative_source": "test-context-quote-roundtrip.py"
+  },
+  "operational_files": {
+    "Launch.lean": "21d4f8250d692562db42b27f4527d32a73d5a139fffc50eb57c72aa20964ef77",
+    "bounded_capture.py": "6463c56ba8c5088c2487a5fde867da383f92361b0292712ac8a00e2ced093691",
+    "providers.py": "e5f6ff74ebc497937c55e5caada3d65d7d0870b54ed6af60d265664dcc938efa",
+    "atomic_report.py": "cd4bb711d4b4fc0a99e8defe3440e0d3797b5e7e4caba7b8c40a6c47e8320701"
+  },
+  "profiles": {
+    "shared-conservative": {
+      "bounds": {
+        "capture_seconds": 900,
+        "transaction_seconds": 1800,
+        "process_virtual_address_bytes": 6442450944,
+        "lean_managed_MiB": 4096,
+        "per_file_bytes": 67108864,
+        "total_payload_bytes": 268435456,
+        "live_file_count": 108,
+        "final_file_count": 107,
+        "minimum_free_disk_bytes": 21474836480,
+        "iterations": 6,
+        "minimum_admission_memory_bytes": 17179869184,
+        "minimum_live_memory_bytes": 8589934592
+      },
+      "environment": "shared Linux host with at least16GiB available at admission"
+    },
+    "isolated-hosted": {
+      "bounds": {
+        "capture_seconds": 900,
+        "transaction_seconds": 1800,
+        "process_virtual_address_bytes": 4294967296,
+        "lean_managed_MiB": 3072,
+        "per_file_bytes": 67108864,
+        "total_payload_bytes": 268435456,
+        "live_file_count": 108,
+        "final_file_count": 107,
+        "minimum_free_disk_bytes": 21474836480,
+        "iterations": 6,
+        "minimum_admission_memory_bytes": 5368709120,
+        "minimum_live_memory_bytes": 1073741824
+      },
+      "environment": "one dedicated fresh standard ubuntu-latest GitHub job; direct Python, no resident Lake parent"
+    }
+  },
+  "conservative_history": {
+    "freeze_sha256": "f497ba16708ec2455ebd91d982dd80e1b9601ef89d51c89738bf7c3129bd8c35"
+  },
+  "common_shared_heavy_lock": "/tmp/riscv-zkvm-heavy-build.lock",
+  "source_migration_from_capture03": {
+    "path": "backend07-real-capture-launch-source-03",
+    "freeze_sha256": "5613ffb6364e602732cf2640641b51e5205460633cb151bbbc641e6fe48aa521",
+    "all_acceptance_flags_remain_false": true
+  },
+  "hosted_source_revision": {
+    "prior_hosted_packet_sha256": "56818310dbfa5ec68e02ed9e6160aa3322e8d940590783b54cbcd3e1ad143558",
+    "original_view_source_repair_sha256": "714209ce4be8d47491e341231ee086d987c0b5cf2cdae61f44c1d598a0a91935",
+    "helper_and_runtime_acceptance_still_pending": true,
+    "prior_hosted02_sha256": "59d6e4390bb950abbfb47421b0aad2b64614a53cfede1fd7da5382113fea6798",
+    "remove_redundant_immediate_authority_pass_only": true,
+    "data_migration_from_reviewed04": {
+      "packet_sha256": "a959c59a5be5153d81215854393cba577dcb3da42a517f248cd471afc65fd3e2",
+      "source_review_receipt_sha256": "aac20b9f81e5615dc723255d49e76867b2e6c61857b91f1c298a0dc441ef5d7b",
+      "committed_base": "2ff13191e384c37b4444cd3e11ffda95f3162ee8",
+      "old_shared_manifest_sha256": "5b4608ea67718bad2b74edd8da55b354cc42b8916d08b379059ac4dcee8acf13",
+      "new_shared_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
+      "helper_and_runtime_still_unaccepted": true
+    }
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "source_review_complete": false,
+  "repository": "Verified-zkEVM/riscv-zkvm",
+  "workflow_path": ".github/workflows/backend07-real-context-capture.yml",
+  "job_name": "bounded-real-capture",
+  "job_id": "bounded-real-capture",
+  "source_files": {
+    ".github/workflows/allocation-config-compatibility.yml": "575c46f0dfa1ccda13dcb224cd615e17e991056b30444b9c48bdc1a3f65cc9ef",
+    ".github/workflows/backend07-capture-inputs.yml": "70e4d4bcd13bf74ac35eb10577ea3f28d0a4d25f49e5e9f2aca007f21e848933",
+    ".github/workflows/backend07-real-context-capture.yml": "37fbbe81c6388b0ea57895f35196b67d78966cca042625782fe3048593515f5a",
+    ".github/workflows/hints.yml": "e2de254e1e05b2a6def65049477c1f20d4955565732ce69d167de79da34027da",
+    "examples/pancake-div256/PancakeDiv256/Compiler/Allocation.lean": "2370f7b2cf744fdbfadb2e8ae64a4a1d98595b6d4df9efccd9ddb8e8d9be278d",
+    "examples/pancake-div256/PancakeDiv256/Compiler/Allocation/Config.lean": "fe8128509615e3aa576cb486f4a85934ca7abe63ab6bb3dbf8054f1474ab2f65",
+    "examples/pancake-div256/PancakeDiv256/Compiler/AllocationConfigChecks.lean": "89d1f1fdf78c713d7f41a74d362b5fe1637438c17c5bcef9c16ba07a27f14977",
+    "examples/pancake-div256/PancakeDiv256/Compiler/AllocationLegacyChecks.lean": "eef2133b902eb60446ae925be80dfb1829e494721a68c82aabd1cb5c163a1c19",
+    "examples/pancake-div256/PancakeDiv256/Compiler/Backend07ConfigProjectionChecks.lean": "3b349b9595b3967d5b64bea3eef88334b5bbcff97857598d623f1cb97e39765b",
+    "examples/pancake-div256/PancakeDiv256/Compiler/ReflectionConfig.lean": "87cfd417a37912b1765516e0ff5fcf387acb2f7d49ca9b7feb0336e73fccf1d8",
+    "examples/pancake-div256/README-allocation-config-light.md": "5e86d0db16a5a2da855407e0e8ced66c46f19d202ebdde112917a2ff8952e417",
+    "examples/pancake-div256/README.md": "88d05ca7bdffdb6f9671dc27e9038ef2f6de9f558fdc4b4dba5863f0d8d6c92a",
+    "examples/pancake-div256/allocation-config-legacy-source-manifest.json": "4d39b76020621543326e87668d78fb5a63fb4c7f7b6fbe0e54d769a6f02dc575",
+    "examples/pancake-div256/backend07-capture-inputs-source-manifest.json": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
+    "examples/pancake-div256/backend07-config-projection-source-manifest.json": "971845fda593242e829d6095698220800dbad717ec0601139221e5543b89c680",
+    "examples/pancake-div256/build-hinted-guest.py": "f5ed7073d5415a7536218d3d664feabcd49f5f52d2a69ff914f46257a3abe1b1",
+    "examples/pancake-div256/check-backend07-capture-inputs-sources.py": "2adcd2e2bf23da30eef6fc0f5e3c0f0eeaaeb18d2e3aec59afe27bb49e7f6ccb",
+    "examples/pancake-div256/check-backend07-config-projection-sources.py": "b0e3630681ebfaba956ee72c05fd995184040ff94a00f7228e5d9ceb9a943501",
+    "examples/pancake-div256/context-quote-source-manifest.json": "75b3d4a5b97912360300bd045e3d2b69c7312090a7c7de2f1f238e16702282a8",
+    "examples/pancake-div256/generate-reflection-config.py": "4023ae6059dc7ff59780f26b55f768d67bfe7396c28d58c5094ad3750f9c0b27",
+    "examples/pancake-div256/lake-manifest.json": "230c895bc735580746c153f8d494837dfb08d1003190422b14771e0a5d256155",
+    "examples/pancake-div256/lakefile.toml": "c0a914f95d7a6626f656f2afbae226cf85ac8764acb5fff85581dc43cda8df59",
+    "examples/pancake-div256/lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+    "examples/pancake-div256/patches/flapjack-lean435-compat.patch": "fa218e60078281c5bde6a1ca542938a5fc821e4b210be608ca49316fe943be25",
+    "examples/pancake-div256/prepare-flapjack.py": "5942cfca4d1b311fa082dbabd26285e28ce932e22601ae6e54d7ea531914d737",
+    "examples/pancake-div256/tools/capture-context/Launch.lean": "21d4f8250d692562db42b27f4527d32a73d5a139fffc50eb57c72aa20964ef77",
+    "examples/pancake-div256/tools/capture-context/README.md": "06d81215f17cd0949945896cd31322dc72c47431124f0a6636c34cf8fcca4374",
+    "examples/pancake-div256/tools/capture-context/accepted-prerequisites.isolated-hosted.template.json": "a42d368256851421bd65c573ca0345c5ed84fe0ad3f508f70ff928c7edd8910a",
+    "examples/pancake-div256/tools/capture-context/accepted-prerequisites.template.json": "91e29e96132eed4f68ba87df821fc48eeb2f073e8b306d24ffddf4c0a3faf70d",
+    "examples/pancake-div256/tools/capture-context/artifacts.py": "72b185a828c8d11c5ae94384eadcb39e8adff041624ff989a723e0c827b63c42",
+    "examples/pancake-div256/tools/capture-context/atomic_report.py": "cd4bb711d4b4fc0a99e8defe3440e0d3797b5e7e4caba7b8c40a6c47e8320701",
+    "examples/pancake-div256/tools/capture-context/bounded_capture.py": "6463c56ba8c5088c2487a5fde867da383f92361b0292712ac8a00e2ced093691",
+    "examples/pancake-div256/tools/capture-context/controller.py": "f3b421bf8976ef021756fea05e2ae5c6bb1d9ffa73d8d86d422100da0427794c",
+    "examples/pancake-div256/tools/capture-context/driver.py": "ecc53475cfebdbad861f4bca666a6721b92d8a274191fcedb6efbc12ca27c41f",
+    "examples/pancake-div256/tools/capture-context/manifest.json": "9630de868136606b567c7260ed8dc8a41c92d6cf32030a721662e86a18a32091",
+    "examples/pancake-div256/tools/capture-context/policy.json": "4f382a26a355ac68a401d636c71f957566cd5e89a7fef26ebb5ca9fe4b28db27",
+    "examples/pancake-div256/tools/capture-context/providers.py": "e5f6ff74ebc497937c55e5caada3d65d7d0870b54ed6af60d265664dcc938efa",
+    "examples/pancake-div256/tools/capture-context/root-receipts/light-config69.json": "40aaa1dcd1613ddccf6f397a3dd2d8eee608c840b5aa6745f2935b4bf2b7d3b5",
+    "examples/pancake-div256/tools/capture-context/root-receipts/quotation66.json": "26adc2cc011e490098e9b3ae4d3c9bd98828e7ed1ff21ba80ae0aa64e4dbd634",
+    "lake-manifest.json": "e908a3cbe3a110d49afd28abcb9f9b14f6ab589e9b7f66cce8fe84f66dd5d0e6",
+    "lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c"
+  },
+  "role_assertions": {
+    "config59": {
+      "source_manifest_sha256": "971845fda593242e829d6095698220800dbad717ec0601139221e5543b89c680",
+      "scope": "original-config-projection-bindings",
+      "accepted": true,
+      "commit": "891f1b422902282ed295209164f0cfd79b4c1964",
+      "receipt": {
+        "relative": "examples/pancake-div256/tools/capture-context/root-receipts/light-config69.json",
+        "sha256": "40aaa1dcd1613ddccf6f397a3dd2d8eee608c840b5aa6745f2935b4bf2b7d3b5"
+      }
+    },
+    "quote62": {
+      "source_manifest_sha256": "75b3d4a5b97912360300bd045e3d2b69c7312090a7c7de2f1f238e16702282a8",
+      "scope": "finite-constructor-quotation",
+      "accepted": true,
+      "commit": "b9a0639ef281967aaa0aebaae4aae565aacb95fa",
+      "receipt": {
+        "relative": "examples/pancake-div256/tools/capture-context/root-receipts/quotation66.json",
+        "sha256": "26adc2cc011e490098e9b3ae4d3c9bd98828e7ed1ff21ba80ae0aa64e4dbd634"
+      }
+    },
+    "helper63": {
+      "source_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
+      "scope": "old-untrusted-trace-refactor-identities",
+      "accepted": false,
+      "commit": null,
+      "receipt": null
+    },
+    "runtime63": {
+      "source_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
+      "scope": "runtime-compile-only",
+      "accepted": false,
+      "commit": null,
+      "receipt": null
+    }
+  },
+  "note": "Dormant publication source-data revision atop2ff13191. Config971845 and finitequote75b3 accepted data preserved; helper/runtime2d546164 remain FALSE and source_review_complete FALSE. No workflow/capture execution or whole-program certificate."
+}
