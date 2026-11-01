@@ -1,0 +1,165 @@
+name: Target constructor quotation roundtrip
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/div256-target-quotation-roundtrip
+
+permissions:
+  contents: read
+
+jobs:
+  quote-roundtrip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      LEAN_NUM_THREADS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Fetch isolated Mathlib cache
+        working-directory: examples/pancake-div256
+        run: |
+          cmp ../../lean-toolchain lean-toolchain
+          lake exe cache get
+      - name: Apply recorded Flapjack compatibility patch
+        working-directory: examples/pancake-div256
+        run: python3 prepare-flapjack.py
+      - name: Verify pinned external cache source roots
+        working-directory: examples/pancake-div256
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, subprocess
+          from pathlib import Path
+          workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+          manifest = json.loads(Path('lake-manifest.json').read_text())
+          pins = {p['name']: p['rev'] for p in manifest['packages'] if p['type'] == 'git'}
+          for name in ['Guest', 'flapjack']:
+              root = (Path('.lake/packages') / name).resolve(strict=True)
+              if not root.is_relative_to(workspace):
+                  raise SystemExit(f'external cache package escapes CI workspace: {name}')
+              actual = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+              if actual != pins[name]:
+                  raise SystemExit(f'wrong pinned package revision: {name}')
+          guest = Path('.lake/packages/Guest')
+          dirty = subprocess.check_output(['git', '-C', str(guest), 'status', '--porcelain', '--untracked-files=no'])
+          if dirty:
+              raise SystemExit('Guest tracked sources changed before cache restore')
+          PYTHON
+      # Cache only pinned upstream build products, after exact patch validation.
+      # Sources, example build output, executables and release archives stay out.
+      - name: Restore completed DIV deployment dependencies
+        id: div-dependency-complete-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-
+      - name: Restore DIV dependency progress fallback
+        if: steps.div-dependency-complete-cache.outputs.cache-matched-key == ''
+        id: div-dependency-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-${{ github.run_id }}-${{ github.run_attempt }}-final
+          restore-keys: |
+            div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-
+            div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+      - name: Require reviewed committed fixture sources
+        working-directory: examples/pancake-div256
+        run: |
+          python3 - <<'PYQUOTE'
+          from pathlib import Path
+          import hashlib,json,subprocess
+          root=Path.cwd().resolve(strict=True).parent.parent
+          path=Path('context-quote-source-manifest.json')
+          raw=path.read_bytes()
+          if hashlib.sha256(raw).hexdigest() != '3c2ef801edd3f532d76814745eda563e8a860375829652742c28cd96e547fae8':
+              raise SystemExit('reviewed quotation source manifest drift')
+          data=json.loads(raw)
+          if data['source_only'] is not True or data['producer_run'] is not False:
+              raise SystemExit('wrong quotation source-only scope')
+          if subprocess.check_output(['git','show','HEAD:examples/pancake-div256/context-quote-source-manifest.json'],timeout=30)!=raw:
+              raise SystemExit('quotation manifest is not committed')
+          for relative,want in data['committed_files'].items():
+              file=root/relative
+              if file.is_symlink() or file.resolve(strict=True)!=file or not file.is_file():
+                  raise SystemExit('quotation source alias/missing')
+              value=file.read_bytes()
+              if hashlib.sha256(value).hexdigest()!=want or subprocess.check_output(['git','show','HEAD:'+relative],timeout=30)!=value:
+                  raise SystemExit('quotation source differs from reviewed checkout:'+relative)
+          PYQUOTE
+      - name: Run two real quotation proposals and independent finite Kernel fixture
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          lake env python3 test-context-quote-roundtrip.py "$GITHUB_WORKSPACE/context-quote-evidence"
+      - name: Preserve bounded quotation fixture evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-constructor-quotation-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            context-quote-evidence/source-before.json
+            context-quote-evidence/used-materials-before.json
+            context-quote-evidence/comparison.json
+            context-quote-evidence/batch.json
+            context-quote-evidence/PASS
+            context-quote-evidence/INCOMPLETE
+            context-quote-evidence/first/Output.lean
+            context-quote-evidence/second/Output.lean
+            context-quote-evidence/private-source/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/Cases.lean
+            context-quote-evidence/private-source/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/Output.lean
+            context-quote-evidence/private-source/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/FixedChecks.lean
+            context-quote-evidence/private-source/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/Audit.lean
+            context-quote-evidence/private-oleans/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/Cases.olean
+            context-quote-evidence/private-oleans/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/Output.olean
+            context-quote-evidence/private-oleans/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/FixedChecks.olean
+            context-quote-evidence/private-oleans/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/Audit.olean
+            context-quote-evidence/weak-source/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/Output.lean
+            context-quote-evidence/weak-oleans/PancakeDiv256/Compiler/Backend07/QuoteRoundtrip/Output.olean
+            context-quote-evidence/build-prerequisites.log
+            context-quote-evidence/produce-first.log
+            context-quote-evidence/produce-second.log
+            context-quote-evidence/Output.log
+            context-quote-evidence/FixedChecks.log
+            context-quote-evidence/Audit.log
+            context-quote-evidence/weak-module.log
+            context-quote-evidence/weak-fixed-consumer.log
+            context-quote-evidence/lean-version-before.log
+            context-quote-evidence/lake-version-before.log
+            context-quote-evidence/lean-version-after.log
+            context-quote-evidence/lake-version-after.log
+            context-quote-evidence/WrongWidth.log
+            context-quote-evidence/WrongLongDivOrder.log
+            context-quote-evidence/WrongHighWord.log
+            context-quote-evidence/WrongLinePosition.log
+            context-quote-evidence/WrongLineLength.log
+            context-quote-evidence/WrongTreeShape.log
+            context-quote-evidence/WrongStringByte.log
+            context-quote-evidence/WrongSectionId.log
+            context-quote-evidence/WrongByteOrder.log

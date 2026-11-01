@@ -440,6 +440,12 @@ Its isolated build records1,740 object hashes and awaits Kernel validation; see
 [the full-data checks](README-backend07-full-data.md). This is a captured-data
 checkpoint, not the whole Word-to-Stack or final target/byte result.
 
+The dedicated [constructor quotation fixture](README-context-quote-roundtrip.md)
+proposes two real renders, 44 fixed value/type consumers, a two-owner axiom audit
+and nine typed negatives plus a weakened-theorem check. Its bounded private
+replay has passed source/fake-process review; actual rendering and Kernel
+validation remain pending. It does not run a context capture.
+
 `Compiler.Backend07ConfigProjectionChecks` is a candidate for eleven original
 configuration and direct-fromStack attachment goals, with a two-owner audit
 and four typed negatives. It retains GC None, StackToLab parameter 24 and the
