@@ -131,6 +131,54 @@ jobs:
           restore-keys: |
             div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-
             div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+      - name: Check original direct-fromStack configuration projection
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          mkdir -p .lake/build
+          {
+            python3 check-backend07-config-projection-sources.py --manifest-sha256 08fdd8695199399457a1e14bcc0faddb88cdd460b30a2448e1553588de6b9dda
+            lake --fail-fast build PancakeDiv256.Compiler.Backend07ConfigProjectionChecks
+            python3 check-backend07-config-projection-sources.py --manifest-sha256 08fdd8695199399457a1e14bcc0faddb88cdd460b30a2448e1553588de6b9dda
+          } 2>&1 | tee .lake/build/backend07-config-projection-checks.log
+      - name: Reject changed projected GC, register counts and retained config
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -euo pipefail
+          lake env python3 - <<'PYCONFIG' 2>&1 | tee .lake/build/backend07-config-projection-negatives.log
+          from pathlib import Path
+          import re
+          import subprocess
+          import tempfile
+          with tempfile.TemporaryDirectory(prefix="backend07-config-projection-negatives-") as directory:
+              for name, witness in [("WrongGc", "original_gc_none"), ("WrongRegisterCount", "assembler_register_count"), ("WrongStackRegisterParameter", "stack_register_parameter"), ("WrongRetainedWordConfig", "attach_original_wordConf")]:
+                  output = Path(directory) / (name + ".olean")
+                  result = subprocess.run(["lean", "-o", str(output), "tests/backend07-config-projection/" + name + ".lean"], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
+                  diagnostic = result.stdout
+                  print(name + ": expected typed rejection\n" + diagnostic[-20000:])
+                  lower = diagnostic.lower()
+                  if result.returncode != 1 or output.exists() or output.is_symlink() or lower.count("error:") != 1 or "type mismatch" not in lower or re.search(r"(?<![\w'])" + re.escape(witness) + r"(?![\w'])", diagnostic) is None or any(text in lower for text in ["unknown identifier", "unknown constant", "unknown module", "object file", "unexpected token", "expected token", "unexpected end of input", "unterminated", "parser error", "invalid syntax", "failed to synthesize"]):
+                      raise SystemExit(name + ": expected typed proof mismatch without output")
+          PYCONFIG
+      - name: Preserve focused configuration projection proof evidence
+        if: always() && matrix.directory == 'pancake-div256'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend07-config-projection-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            examples/pancake-div256/.lake/build/backend07-config-projection-checks.log
+            examples/pancake-div256/.lake/build/backend07-config-projection-negatives.log
+            examples/pancake-div256/backend07-config-projection-source-manifest.json
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/ConfigProjection07/RuntimeInputs.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/ConfigProjection07/BindingGoals.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07ConfigProjectionChecks.olean
       - name: Check captured Native immediate comparison functions
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
