@@ -1,0 +1,252 @@
+name: Captured backend07 full Stack data (opt-in)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/div256-backend07-full-data
+
+permissions:
+  contents: read
+
+jobs:
+  captured-stack-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      LEAN_NUM_THREADS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Fetch isolated Mathlib cache
+        working-directory: examples/pancake-div256
+        run: |
+          cmp ../../lean-toolchain lean-toolchain
+          lake exe cache get
+      - name: Apply recorded Flapjack compatibility patch
+        working-directory: examples/pancake-div256
+        run: python3 prepare-flapjack.py
+      - name: Verify pinned external cache source roots
+        working-directory: examples/pancake-div256
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, subprocess
+          from pathlib import Path
+          workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+          manifest = json.loads(Path('lake-manifest.json').read_text())
+          pins = {p['name']: p['rev'] for p in manifest['packages'] if p['type'] == 'git'}
+          for name in ['Guest', 'flapjack']:
+              root = (Path('.lake/packages') / name).resolve(strict=True)
+              if not root.is_relative_to(workspace):
+                  raise SystemExit(f'external cache package escapes CI workspace: {name}')
+              actual = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+              if actual != pins[name]:
+                  raise SystemExit(f'wrong pinned package revision: {name}')
+          guest = Path('.lake/packages/Guest')
+          dirty = subprocess.check_output(['git', '-C', str(guest), 'status', '--porcelain', '--untracked-files=no'])
+          if dirty:
+              raise SystemExit('Guest tracked sources changed before cache restore')
+          PYTHON
+      # Cache only pinned upstream build products, after exact patch validation.
+      # Sources, example build output, executables and release archives stay out.
+      - name: Restore completed DIV deployment dependencies
+        id: div-dependency-complete-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-
+      - name: Restore DIV dependency progress fallback
+        if: steps.div-dependency-complete-cache.outputs.cache-matched-key == ''
+        id: div-dependency-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          enableCrossOsArchive: false
+          path: |
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+            examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+          key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-${{ github.run_id }}-${{ github.run_attempt }}-final
+          restore-keys: |
+            div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-
+            div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+      - name: Record committed source basis and require fresh local proofs
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          root = Path.cwd().resolve(strict=True)
+          evidence = root / 'backend07-full-data-evidence'
+          if evidence.exists() or evidence.is_symlink():
+              raise SystemExit('full-data evidence directory already exists')
+          local = root / 'examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256'
+          for parent in [local, *local.parents]:
+              if parent == root:
+                  break
+              if parent.is_symlink():
+                  raise SystemExit('local proof namespace has a directory alias')
+          if local.exists() and any(p.is_symlink() or p.suffix == '.olean' for p in local.rglob('*')):
+              raise SystemExit('local PancakeDiv256 proof objects already exist')
+          def digest(raw):
+              return hashlib.sha256(raw).hexdigest()
+          manifest_name = 'examples/pancake-div256/backend07-captured-source-manifest.json'
+          manifest_raw = (root / manifest_name).read_bytes()
+          if digest(manifest_raw) != 'c97662326162362367bd235d9472481e1ea7048761b290f53d888983f1530095':
+              raise SystemExit('reviewed captured source manifest changed')
+          rows = json.loads(manifest_raw)['sources']
+          expected = {}
+          prefix = 'examples/pancake-div256/PancakeDiv256/Compiler/Backend07/LowerInput/'
+          for row in rows:
+              name, want = row['path'], row['sha256']
+              if name in expected or not name.startswith(prefix) or not name.endswith('.lean') or '..' in Path(name).parts:
+                  raise SystemExit('invalid or duplicate captured source path')
+              if row['module'] != '.'.join(Path(name).relative_to('examples/pancake-div256').with_suffix('').parts):
+                  raise SystemExit('captured module/path mismatch')
+              expected[name] = want
+          if len(expected) != 1739:
+              raise SystemExit('captured source cardinality changed')
+          expected['examples/pancake-div256/PancakeDiv256/Compiler/Backend07FullDataChecks.lean'] = '003f041c4d362f175b1dea7fee006b55a3f64909bc115e92376584056c5258c6'
+          policy = [
+              '.github/workflows/backend07-full-data.yml', 'lean-toolchain', 'lakefile.toml', 'lake-manifest.json',
+              'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lakefile.toml',
+              'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py',
+              'examples/pancake-div256/patches/flapjack-lean435-compat.patch', manifest_name,
+          ]
+          paths = sorted(set(expected) | set(policy))
+          tree = subprocess.check_output(['git', 'ls-tree', '-r', 'HEAD', '--', *paths], text=True)
+          blobs = {}
+          for line in tree.splitlines():
+              metadata, name = line.split('\t', 1)
+              mode, kind, oid = metadata.split()
+              if kind != 'blob' or mode not in ['100644', '100755']:
+                  raise SystemExit('source basis is not a regular committed blob')
+              blobs[name] = oid
+          if set(blobs) != set(paths):
+              raise SystemExit('uncommitted full-data source or policy file')
+          records = {}
+          for name in paths:
+              path = root / name
+              if path.is_symlink() or path.resolve(strict=True) != path:
+                  raise SystemExit('full-data source alias')
+              raw = path.read_bytes()
+              oid = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+              if oid != blobs[name] or (name in expected and digest(raw) != expected[name]):
+                  raise SystemExit('full-data source differs from committed/reviewed bytes')
+              records[name] = {'sha256': digest(raw), 'git_blob': oid}
+          example = root / 'examples/pancake-div256'
+          sdk = {}
+          for tool in ['lean', 'lake']:
+              executable = Path(subprocess.check_output(['elan', 'which', tool], cwd=example, text=True).strip()).resolve(strict=True)
+              sdk[tool] = {'path': str(executable), 'sha256': digest(executable.read_bytes()),
+                           'version': subprocess.check_output([str(executable), '--version'], text=True).strip()}
+          packages = {}
+          for name in ['Guest', 'flapjack']:
+              package = (example / '.lake/packages' / name).resolve(strict=True)
+              packages[name] = {'path': str(package),
+                  'commit': subprocess.check_output(['git', '-C', str(package), 'rev-parse', 'HEAD'], text=True).strip(),
+                  'tracked_diff_sha256': digest(subprocess.check_output(['git', '-C', str(package), 'diff', '--binary', 'HEAD', '--']))}
+          evidence.mkdir()
+          report = {
+              'kind': 'hosted captured backend07 full-data preflight; no acceptance claim', 'certificate': False,
+              'checkout_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'checkout_tree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+              'public_run_metadata': {name: os.environ.get(name) for name in [
+                  'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'GITHUB_REF', 'GITHUB_EVENT_NAME']},
+              'sdk': sdk, 'prepared_packages': packages, 'fresh_local_proof_namespace': True,
+              'selected_owner_count': 1739, 'source_count_with_checker': 1740,
+              'source_paths': sorted(expected), 'files': records,
+              'dependency_policy': 'pinned Guest/Flapjack sources and recorded patch; external build cache only',
+              'local_memory_profile_applied': False,
+              'Word_to_Stack_equality': 'not established', 'whole_program_certificate': False,
+          }
+          (evidence / 'sources-before.json').write_text(json.dumps(report, indent=2) + '\n')
+          print('Verified1740 committed source files; fresh local proof namespace; checkout', report['checkout_commit'])
+          PYTHON
+      - name: Elaborate captured Stack and RawInfo; audit1739 source owners
+        working-directory: examples/pancake-div256
+        run: |
+          set -o pipefail
+          lake --fail-fast build PancakeDiv256.Compiler.Backend07FullDataChecks 2>&1 | tee ../../backend07-full-data-evidence/build.log
+      - name: Verify final source basis and record1740 checked artifacts
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, re, subprocess
+          from pathlib import Path
+          root = Path.cwd().resolve(strict=True)
+          evidence = root / 'backend07-full-data-evidence'
+          before = json.loads((evidence / 'sources-before.json').read_bytes())
+          if subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() != before['checkout_commit'] or subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip() != before['checkout_tree']:
+              raise SystemExit('checkout changed during full-data check')
+          for name, row in before['files'].items():
+              path = root / name
+              if path.is_symlink() or path.resolve(strict=True) != path or hashlib.sha256(path.read_bytes()).hexdigest() != row['sha256']:
+                  raise SystemExit('source/policy bytes changed during full-data check')
+          for tool, row in before['sdk'].items():
+              actual = Path(subprocess.check_output(['elan', 'which', tool], cwd=root / 'examples/pancake-div256', text=True).strip()).resolve(strict=True)
+              if str(actual) != row['path'] or hashlib.sha256(actual.read_bytes()).hexdigest() != row['sha256'] or subprocess.check_output([str(actual), '--version'], text=True).strip() != row['version']:
+                  raise SystemExit('SDK binary/selection changed during full-data check')
+          for row in before['prepared_packages'].values():
+              commit = subprocess.check_output(['git', '-C', row['path'], 'rev-parse', 'HEAD'], text=True).strip()
+              diff = subprocess.check_output(['git', '-C', row['path'], 'diff', '--binary', 'HEAD', '--'])
+              if commit != row['commit'] or hashlib.sha256(diff).hexdigest() != row['tracked_diff_sha256']:
+                  raise SystemExit('prepared external package changed during full-data check')
+          text = (evidence / 'build.log').read_text()
+          matches = re.findall(r'Captured07 full-data audit: 1739 owners / (\d+) declarations / (\d+) theorems / 0 offenders', text)
+          if len(matches) != 1 or int(matches[0][0]) == 0 or int(matches[0][1]) < 878:
+              raise SystemExit('missing complete captured full-data strict audit output')
+          oleans = {}
+          prefix = 'examples/pancake-div256/'
+          for name in before['source_paths']:
+              relative = name.removeprefix(prefix).removesuffix('.lean') + '.olean'
+              path = root / prefix / '.lake/build/lib/lean' / relative
+              if path.is_symlink() or not path.is_file() or path.resolve(strict=True) != path:
+                  raise SystemExit('missing/aliased freshly built full-data object')
+              oleans[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+          if len(oleans) != 1740:
+              raise SystemExit('wrong checked local artifact inventory')
+          report = {
+              'kind': 'hosted captured backend07 full-data Kernel checkpoint; Root acceptance review pending',
+              'certificate': False, 'active': False, 'checkout_commit': before['checkout_commit'],
+              'sources_before_sha256': hashlib.sha256((evidence / 'sources-before.json').read_bytes()).hexdigest(),
+              'build_log_sha256': hashlib.sha256((evidence / 'build.log').read_bytes()).hexdigest(),
+              'selected_owners': 1739, 'declarations': int(matches[0][0]), 'theorems': int(matches[0][1]),
+              'unexpected_axiom_offenders': 0, 'fresh_local_objects': oleans,
+              'Word_to_Stack_equality': 'not established', 'whole_target_bytes_equality': 'not established',
+              'whole_program_certificate': False, 'runtime_mirror_or_IR_in_evidence': False,
+          }
+          (evidence / 'checked-artifacts.json').write_text(json.dumps(report, indent=2) + '\n')
+          print('Captured full-data checkpoint complete; actual Native/target/byte bindings remain separate')
+          PYTHON
+      - name: Preserve focused full-data evidence and selected proof objects
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captured-backend07-full-data-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            backend07-full-data-evidence/sources-before.json
+            backend07-full-data-evidence/build.log
+            backend07-full-data-evidence/checked-artifacts.json
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07FullDataChecks.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/RawInfoFacts.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/StackProjection.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Stack.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/Stubs.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/ProjectionCore.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/LowerInput/CapturedRawInfo.olean
