@@ -1,3 +1,4 @@
+import PancakeDiv256.Compiler.Allocation.Config
 import Flapjack.Pancake.Proofs.PanToTarget.ExecutableCompileProgMaxDepth
 import Flapjack.Compiler.Backend.RiscVConfig.Executable
 import Flapjack.Compiler.Encoders.RiscV.Target.Configuration
@@ -10,12 +11,9 @@ namespace PancakeDiv256.Compiler.Allocation
 open Flapjack Flapjack.Compiler.Backend Flapjack.Compiler.Encoders.RiscV.Target
 open Lean
 abbrev WordProgram := Nat × Nat × WordLangProgHOL (BitVec 64)
-abbrev Tape := List (Option (Spt Nat))
 abbrev RawTape := List (Option (List (Nat × Nat)))
 
-def withTape (tape : Tape) : Backend.Config :=
-  {RiscVConfig.pancakeRiscVBackendConfig with wordToWordConf :=
-    {RiscVConfig.pancakeRiscVBackendConfig.wordToWordConf with colOracle := tape}}
+
 
 def decode (json : Json) : Except String Tape := do
   let version ← json.getObjValAs? Nat "version"
@@ -23,14 +21,11 @@ def decode (json : Json) : Except String Tape := do
   let raw : RawTape ← json.getObjValAs? RawTape "entries"
   pure (raw.map (Option.map sptFromAList))
 
-theorem withTape_only_colOracle (tape : Tape) :
-    {withTape tape with wordToWordConf := RiscVConfig.pancakeRiscVBackendConfig.wordToWordConf} =
-      RiscVConfig.pancakeRiscVBackendConfig := rfl
 
-theorem withTape_colOracle (tape : Tape) : (withTape tape).wordToWordConf.colOracle = tape := rfl
 
-theorem withTape_regAlg (tape : Tape) : (withTape tape).wordToWordConf.regAlg =
-    RiscVConfig.pancakeRiscVBackendConfig.wordToWordConf.regAlg := rfl
+
+
+
 
 /-- Exactly the optimization prefix of fullCompileSingleWith, before colors. -/
 def prepare (entry : WordProgram) : WordProgram :=

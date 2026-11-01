@@ -79,6 +79,7 @@ def verify(manifest_path, expected_sha, consumer, sdk):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description='Check exact projection proof SOURCE dependency closure; no compiler/evaluator call.')
     parser.add_argument('--manifest-sha256',required=True)
+    parser.add_argument('--manifest-basename',choices=['backend07-config-projection-source-manifest.json','allocation-config-legacy-source-manifest.json'],default='backend07-config-projection-source-manifest.json')
     args=parser.parse_args();consumer=Path(__file__).resolve().parent
     lean=Path(subprocess.check_output(['elan','which','lean'],cwd=consumer,text=True).strip()).resolve(strict=True)
-    print(json.dumps(verify(consumer/'backend07-config-projection-source-manifest.json',args.manifest_sha256,consumer,lean.parent.parent)))
+    print(json.dumps(verify(consumer/args.manifest_basename,args.manifest_sha256,consumer,lean.parent.parent)))

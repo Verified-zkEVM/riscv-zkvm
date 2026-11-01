@@ -24,7 +24,7 @@ import PancakeDiv256.Compiler.Stages.Colors.Chunk022
 import PancakeDiv256.Compiler.Stages.Colors.Chunk023
 import PancakeDiv256.Compiler.Stages.Colors.Chunk024
 import PancakeDiv256.Compiler.Stages.Colors.Chunk025
-import PancakeDiv256.Compiler.Allocation
+import PancakeDiv256.Compiler.Allocation.Config
 
 /-! Literal color tape from the actual selected compiler configuration.
 This input is validated again by the unchanged compiler; it carries no

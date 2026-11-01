@@ -140,9 +140,9 @@ jobs:
           set -euo pipefail
           mkdir -p .lake/build
           {
-            python3 check-backend07-config-projection-sources.py --manifest-sha256 08fdd8695199399457a1e14bcc0faddb88cdd460b30a2448e1553588de6b9dda
+            python3 check-backend07-config-projection-sources.py --manifest-sha256 971845fda593242e829d6095698220800dbad717ec0601139221e5543b89c680
             lake --fail-fast build PancakeDiv256.Compiler.Backend07ConfigProjectionChecks
-            python3 check-backend07-config-projection-sources.py --manifest-sha256 08fdd8695199399457a1e14bcc0faddb88cdd460b30a2448e1553588de6b9dda
+            python3 check-backend07-config-projection-sources.py --manifest-sha256 971845fda593242e829d6095698220800dbad717ec0601139221e5543b89c680
           } 2>&1 | tee .lake/build/backend07-config-projection-checks.log
       - name: Reject changed projected GC, register counts and retained config
         if: matrix.directory == 'pancake-div256'
@@ -179,6 +179,8 @@ jobs:
             examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/ConfigProjection07/RuntimeInputs.olean
             examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/ConfigProjection07/BindingGoals.olean
             examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Backend07ConfigProjectionChecks.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Allocation/Config.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/AllocationConfigChecks.olean
       - name: Check exact bitmap trace and compositional handler rule
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
