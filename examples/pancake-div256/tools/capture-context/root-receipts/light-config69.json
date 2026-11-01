@@ -1,0 +1,63 @@
+{
+  "status": "ACCEPTED focused light allocation-config and original direct-fromStack projection ONLY; parent in progress",
+  "head": "891f1b422902282ed295209164f0cfd79b4c1964",
+  "run": 41300511109,
+  "job": 124830266320,
+  "artifact": 13081347020,
+  "archive_sha256": "6224c419bdf0d996c24b879a14b2451c2e8cf26a2c95796d7dc4ec247023e6fa",
+  "parent_run_conclusion": null,
+  "focused_required_steps_all_success": true,
+  "census": {
+    "owners": 2,
+    "declarations": 34,
+    "theorems": 15,
+    "unexpected_axioms": 0
+  },
+  "fixed_consumers": 11,
+  "named_theorem_guards": 11,
+  "typed_negatives": 4,
+  "committed_primary_sources": {
+    "examples/pancake-div256/PancakeDiv256/Compiler/Backend07/ConfigProjection07/RuntimeInputs.lean": "b808e6bf36104ec96879b52a6031228a31016bbd67222d6d31c62d9ac85d081c",
+    "examples/pancake-div256/PancakeDiv256/Compiler/Backend07/ConfigProjection07/BindingGoals.lean": "8cf662c94f1dbab79bac7a4f66412272c500b085681ef1e4d36a74a5c3503db4",
+    "examples/pancake-div256/PancakeDiv256/Compiler/Backend07ConfigProjectionChecks.lean": "3b349b9595b3967d5b64bea3eef88334b5bbcff97857598d623f1cb97e39765b",
+    "examples/pancake-div256/PancakeDiv256/Compiler/Allocation/Config.lean": "fe8128509615e3aa576cb486f4a85934ca7abe63ab6bb3dbf8054f1474ab2f65",
+    "examples/pancake-div256/PancakeDiv256/Compiler/AllocationConfigChecks.lean": "89d1f1fdf78c713d7f41a74d362b5fe1637438c17c5bcef9c16ba07a27f14977"
+  },
+  "downloaded_object_digests": {
+    ".lake/build/lib/lean/PancakeDiv256/Compiler/Backend07ConfigProjectionChecks.olean": "c5425648431fb05e6bb7b7d7d2c921298af17d742f62f7aba8c04f07e7f58eef",
+    ".lake/build/lib/lean/PancakeDiv256/Compiler/AllocationConfigChecks.olean": "9c7a5762776b3f6b17fa01d6d7856a7d1d36f7ff84d2b5e1160d1a226e3cbfea",
+    ".lake/build/lib/lean/PancakeDiv256/Compiler/Allocation/Config.olean": "8f89a4adef9182ee3747c9bdeb6d9fb87accdcdb7db2c76c54afc3ee1cb71f13",
+    ".lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/ConfigProjection07/BindingGoals.olean": "ccb0b98444de085f7ac6d677bbb2ac07c6b5b236744537e298a95f925588aa71",
+    ".lake/build/lib/lean/PancakeDiv256/Compiler/Backend07/ConfigProjection07/RuntimeInputs.olean": "f2499e8da38e5da6ff4bf8b153bfe0b126dd81fcfc2d01dafed960bf2d054309"
+  },
+  "full_object_inventory_available": false,
+  "downloaded_objects_bound_by_official_artifact_digest_and_exact_job_build": true,
+  "local_Lean_replay": false,
+  "whole815_final_bytes_or_deployment": false,
+  "limitation": "ordinary CI has no separate complete object/SDK receipt; no such inventory verification claimed",
+  "source_graph_buffers_rechecked": 2869,
+  "configuration_pins_rechecked": 30,
+  "direct_fromStack_API_only": true,
+  "new_data_owner_audit": {
+    "owners": 1,
+    "declarations": 5,
+    "theorems": 3,
+    "unexpected_axioms": 0
+  },
+  "new_data_fixed_type_consumers": 5,
+  "data_named_theorem_guards": 3,
+  "source_manifest_sha256": "971845fda593242e829d6095698220800dbad717ec0601139221e5543b89c680",
+  "parent_workflow_job_still_in_progress_at_review": true,
+  "all_required_focused_steps_success": true,
+  "time": 1793532900.832034,
+  "Root_IO_sha256": "e1be252110e5a7b32b2f661efad6f77cd57f20081370aeb98b9df08a7f06190b",
+  "independent_review_sha256": "ee18d0c9af33198864fbe7e22b502d58250bac1b4c1d1f80f02bfe01c775f92d",
+  "allowed_axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "no_overall_workflow_legacy_helper_runtime_acceptance": true,
+  "official_checkout_step_success_and_head_metadata": true,
+  "complete_checkout_log_available": false
+}

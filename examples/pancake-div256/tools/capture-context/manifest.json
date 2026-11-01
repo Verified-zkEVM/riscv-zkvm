@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "source_only": true,
+  "capture_executed": false,
+  "kernel_checked": false,
+  "certificate": false,
+  "files": {
+    "Launch.lean": "21d4f8250d692562db42b27f4527d32a73d5a139fffc50eb57c72aa20964ef77",
+    "README.md": "06d81215f17cd0949945896cd31322dc72c47431124f0a6636c34cf8fcca4374",
+    "accepted-prerequisites.isolated-hosted.template.json": "a42d368256851421bd65c573ca0345c5ed84fe0ad3f508f70ff928c7edd8910a",
+    "accepted-prerequisites.template.json": "91e29e96132eed4f68ba87df821fc48eeb2f073e8b306d24ffddf4c0a3faf70d",
+    "artifacts.py": "72b185a828c8d11c5ae94384eadcb39e8adff041624ff989a723e0c827b63c42",
+    "atomic_report.py": "cd4bb711d4b4fc0a99e8defe3440e0d3797b5e7e4caba7b8c40a6c47e8320701",
+    "bounded_capture.py": "6463c56ba8c5088c2487a5fde867da383f92361b0292712ac8a00e2ced093691",
+    "controller.py": "f3b421bf8976ef021756fea05e2ae5c6bb1d9ffa73d8d86d422100da0427794c",
+    "driver.py": "ecc53475cfebdbad861f4bca666a6721b92d8a274191fcedb6efbc12ca27c41f",
+    "policy.json": "4f382a26a355ac68a401d636c71f957566cd5e89a7fef26ebb5ca9fe4b28db27",
+    "providers.py": "e5f6ff74ebc497937c55e5caada3d65d7d0870b54ed6af60d265664dcc938efa",
+    "root-receipts/light-config69.json": "40aaa1dcd1613ddccf6f397a3dd2d8eee608c840b5aa6745f2935b4bf2b7d3b5",
+    "root-receipts/quotation66.json": "26adc2cc011e490098e9b3ae4d3c9bd98828e7ed1ff21ba80ae0aa64e4dbd634"
+  },
+  "source_record_is_separate_trusted_Root_assertion_data": true,
+  "helper_runtime_accepted_flags_false": true,
+  "config69_quote66_accepted_only_in_separate_record": true
+}

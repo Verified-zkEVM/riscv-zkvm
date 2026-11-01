@@ -1,0 +1,143 @@
+# SOURCE CANDIDATE ONLY: role/source evidence remains incomplete.
+name: Bounded UNTRUSTED actual07 context capture
+'on':
+  push:
+    branches:
+    - feat/div256-real-context-capture
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  bounded-real-capture:
+    name: bounded-real-capture
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      LEAN_NUM_THREADS: '1'
+    steps:
+    - uses: actions/checkout@v4
+    - name: Require independently accepted roles and reviewed official job
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: 'set -euo pipefail
+
+        mkdir -p real-capture-evidence
+
+        printf ''%s\n'' ''UNTRUSTED preparation incomplete; no certificate.'' > real-capture-evidence/INCOMPLETE
+
+        python3 examples/pancake-div256/tools/capture-context/controller.py precheck --evidence
+        "$GITHUB_WORKSPACE/real-capture-evidence" 2>&1 | tee real-capture-evidence/eligibility.log'
+    - uses: leanprover/lean-action@v1
+      with:
+        auto-config: false
+        build: false
+        test: false
+        lint: false
+        use-github-cache: false
+        use-mathlib-cache: false
+    - name: Fetch isolated Mathlib cache
+      working-directory: examples/pancake-div256
+      run: 'cmp ../../lean-toolchain lean-toolchain
+
+        lake exe cache get
+
+        '
+    - name: Apply recorded Flapjack compatibility patch
+      working-directory: examples/pancake-div256
+      run: python3 prepare-flapjack.py
+    - name: Verify pinned external cache source roots
+      working-directory: examples/pancake-div256
+      run: "python3 - <<'PYTHON'\nimport json, os, subprocess\nfrom pathlib import Path\n\
+        workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)\nmanifest =\
+        \ json.loads(Path('lake-manifest.json').read_text())\npins = {p['name']: p['rev']\
+        \ for p in manifest['packages'] if p['type'] == 'git'}\nfor name in ['Guest', 'flapjack']:\n\
+        \    root = (Path('.lake/packages') / name).resolve(strict=True)\n    if not root.is_relative_to(workspace):\n\
+        \        raise SystemExit(f'external cache package escapes CI workspace: {name}')\n\
+        \    actual = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'],\
+        \ text=True).strip()\n    if actual != pins[name]:\n        raise SystemExit(f'wrong\
+        \ pinned package revision: {name}')\nguest = Path('.lake/packages/Guest')\ndirty =\
+        \ subprocess.check_output(['git', '-C', str(guest), 'status', '--porcelain', '--untracked-files=no'])\n\
+        if dirty:\n    raise SystemExit('Guest tracked sources changed before cache restore')\n\
+        PYTHON\n"
+    - name: Restore completed DIV deployment dependencies
+      id: div-dependency-complete-cache
+      continue-on-error: true
+      uses: actions/cache/restore@v4
+      with:
+        enableCrossOsArchive: false
+        path: 'examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+
+          '
+        key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain',
+          'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json',
+          'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch')
+          }}-complete-deployment-proofs-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: 'div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles(''lean-toolchain'',
+          ''lake-manifest.json'', ''examples/pancake-div256/lean-toolchain'', ''examples/pancake-div256/lake-manifest.json'',
+          ''examples/pancake-div256/prepare-flapjack.py'', ''examples/pancake-div256/patches/flapjack-lean435-compat.patch'')
+          }}-complete-deployment-proofs-
+
+          '
+    - name: Restore DIV dependency progress fallback
+      if: steps.div-dependency-complete-cache.outputs.cache-matched-key == ''
+      id: div-dependency-cache
+      continue-on-error: true
+      uses: actions/cache/restore@v4
+      with:
+        enableCrossOsArchive: false
+        path: 'examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+
+          '
+        key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain',
+          'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json',
+          'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch')
+          }}-progress-${{ github.run_id }}-${{ github.run_attempt }}-final
+        restore-keys: 'div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles(''lean-toolchain'',
+          ''lake-manifest.json'', ''examples/pancake-div256/lean-toolchain'', ''examples/pancake-div256/lake-manifest.json'',
+          ''examples/pancake-div256/prepare-flapjack.py'', ''examples/pancake-div256/patches/flapjack-lean435-compat.patch'')
+          }}-progress-
+
+          div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles(''lean-toolchain'',
+          ''lake-manifest.json'', ''examples/pancake-div256/lean-toolchain'', ''examples/pancake-div256/lake-manifest.json'',
+          ''examples/pancake-div256/prepare-flapjack.py'', ''examples/pancake-div256/patches/flapjack-lean435-compat.patch'')
+          }}-
+
+          '
+    - name: Compile exact accepted runtime and snapshot same-job source objects and IR
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: 'set -euo pipefail
+
+        python3 examples/pancake-div256/tools/capture-context/controller.py prepare --evidence
+        "$GITHUB_WORKSPACE/real-capture-evidence" 2>&1 | tee real-capture-evidence/prepare.log'
+    - name: One bounded direct-Python actual07 untrusted capture
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: 'set -euo pipefail
+
+        python3 examples/pancake-div256/tools/capture-context/controller.py capture --evidence
+        "$GITHUB_WORKSPACE/real-capture-evidence" 2>&1 | tee real-capture-evidence/capture-driver.log'
+    - name: List bounded diagnostics and untrusted witnesses
+      id: inventory
+      if: always()
+      run: python3 examples/pancake-div256/tools/capture-context/artifacts.py --evidence "$GITHUB_WORKSPACE/real-capture-evidence"
+    - name: Preserve bounded UNTRUSTED evidence only
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: UNTRUSTED-context-capture-${{ github.run_id }}-${{ github.run_attempt }}
+        if-no-files-found: error
+        path: ${{ steps.inventory.outputs.paths }}
