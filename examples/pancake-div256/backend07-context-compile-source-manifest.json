@@ -14,7 +14,7 @@
     {
       "path": "examples/pancake-div256/PancakeDiv256/Compiler/Backend07/ContextProposal/ContextCapture.lean",
       "module": "PancakeDiv256.Compiler.Backend07.ContextProposal.ContextCapture",
-      "sha256": "f6fa122f1803561337c1e5d19cd9ab7021d0f63854a01065952dba841f798be9",
+      "sha256": "9205a1a6326646126a0b04fda263e46d47c42af0c16ebecc83bdbdfbc776d392",
       "role": "untrusted_compile_prototype"
     },
     {

@@ -118,7 +118,7 @@ def capture (config : Backend.Config) (stack : List (Nat × StackLang.HolProg 64
   let currentFfis := LabToTarget.findFfiNames filtered
   let (ffis,ffisOk) := match config.labConf.ffiNames with
     | none => (currentFfis,true)
-    | some ffis => (ffis,LabToTarget.listSubset currentFfis ffis)
+    | some ffis => (ffis,_root_.Flapjack.Misc.listSubset currentFfis ffis)
   let encoded := LabToTarget.encSecList riscvConfig.encode filtered
   let (iterations,result) := if ffisOk then
     captureLoop config.labConf.initClock config.labConf.pos config.labConf.labels ffis encoded

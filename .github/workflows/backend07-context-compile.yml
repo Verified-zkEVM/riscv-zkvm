@@ -107,7 +107,7 @@ jobs:
               return hashlib.sha256(raw).hexdigest()
           manifest_name = 'examples/pancake-div256/backend07-context-compile-source-manifest.json'
           manifest_raw = (root / manifest_name).read_bytes()
-          if digest(manifest_raw) != '7e86261c7aa562a9f33cb2f5c0a15ffb49c08b1dd48e162bbd6fbc44e708df52':
+          if digest(manifest_raw) != '3c34fa9ca111f92bf170f0a9b85db6968354c7d464ace76b2a4eaac4b48e4c15':
               raise SystemExit('reviewed compile-only source manifest changed')
           source_manifest = json.loads(manifest_raw)
           if source_manifest['compile_only'] is not True or source_manifest['runtime_execution'] is not False or source_manifest['mathematical_axiom_audit'] is not False:
