@@ -387,6 +387,12 @@ combined421 checkpoint is independently accepted:896 fresh project modules,
 All907 source/policy records and70 selected proof objects were verified;826
 objects are represented by the reviewed inventory. Ordinary imports remain unchanged.
 
+`Compiler.Header07AllocationFirstFourChecks` extends the accepted64 pilot with
+three candidate cells66,67 and68 at actual color-tape positions2,3 and4.
+It checks four complete allocation endpoints and32 named bridge lemmas with
+a four-owner audit, plus four typed oracle/index/label/arity mutations.
+These three new cells await Kernel validation; whole815 allocation remains open.
+
 `Compiler.Header07Allocation64Checks` checks the first actual color-tape cell,
 the original optimizer oracle and the complete captured allocation tuple. This
 one-function reuse pilot is independently accepted, including three typed
