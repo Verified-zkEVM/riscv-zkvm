@@ -22,8 +22,10 @@ checked transitively through these theorems; this is not a fresh whole-Guest aud
 Three typed negatives target a missing oracle, wrong output label and wrong arity.
 One worker is requested, without a memory cap or a promise of fit.
 
-These sources await actual Kernel/CI validation. Source sameness is not a proof
-of oracle or optimized-output equality: those are explicit `kernel_rfl` obligations.
+The focused hosted Kernel result is independently accepted: all eight bridge
+lemmas and all three typed negatives passed, with both fresh proof objects checked.
+Oracle and optimized-output equality were established by the explicit `kernel_rfl`
+proofs; source sameness alone was not used as evidence.
 The source proposal adds no assumptions or trusted compiler callbacks. Remaining
 unchanged allocation cells, the three changed functions, complete tape consumption,
 Native/lowering/bytes/resources and the final deployment certificate stay separate.
