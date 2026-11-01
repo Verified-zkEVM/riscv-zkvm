@@ -131,6 +131,79 @@ jobs:
           restore-keys: |
             div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-
             div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+      - name: Check eight captured Native conditional and loop functions
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -o pipefail
+          mkdir -p .lake/build
+          lake --fail-fast build PancakeDiv256.Compiler.NativeBranchSmallChecks 2>&1 | tee .lake/build/native-branch-eight-checks.log
+      - name: Reject changed eight-branch frame and loop bitmap state
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -o pipefail
+          lake env python3 - <<'PYEIGHT' 2>&1 | tee .lake/build/native-branch-eight-negatives.log
+          from pathlib import Path
+          import re
+          import subprocess
+          import tempfile
+          with tempfile.TemporaryDirectory(prefix="native-branch-eight-negatives-") as directory:
+              for name, witness in [("WrongFrame539", "function539_eq"), ("WrongLoopOffset270", "compiled270_54_eq"), ("WrongLoopTree270", "compiled270_54_eq")]:
+                  output = Path(directory) / (name + ".olean")
+                  result = subprocess.run(["lean", "-o", str(output), "tests/native-branch-eight/" + name + ".lean"], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
+                  diagnostic = result.stdout
+                  print(name + ": actual exit=" + str(result.returncode) + "; expected typed rejection\n" + diagnostic[-20000:])
+                  lower = diagnostic.lower()
+                  if result.returncode != 1 or output.exists() or output.is_symlink() or lower.count("error:") != 1 or "type mismatch" not in lower or re.search(r"(?<![\w'])" + re.escape(witness) + r"(?![\w'])", diagnostic) is None or any(text in lower for text in ["unknown identifier", "unknown constant", "unknown module", "object file", "unexpected token", "expected token", "unexpected end of input", "unterminated", "parser error", "invalid syntax", "failed to synthesize"]):
+                      raise SystemExit(name + ": expected typed proof mismatch without output")
+          PYEIGHT
+      - name: Preserve eight Native branch proof objects
+        if: always() && matrix.directory == 'pancake-div256'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-branch-eight-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            examples/pancake-div256/.lake/build/native-branch-eight-checks.log
+            examples/pancake-div256/.lake/build/native-branch-eight-negatives.log
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated270.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated337.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated475.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated539.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated636.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated640.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated707.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated841.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot270/Data.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot270/Function.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot270/Proof.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot337/Data.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot337/Function.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot337/Proof.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot475/Data.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot475/Function.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot475/Proof.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot539/Data.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot539/Function.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot539/Proof.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot636/Data.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot636/Function.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot636/Proof.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot640/Data.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot640/Function.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot640/Proof.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot707/Data.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot707/Function.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot707/Proof.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot841/Data.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot841/Function.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot841/Proof.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/NativeBranchSmallChecks.olean
       - name: Check three captured Native conditional and loop functions
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256

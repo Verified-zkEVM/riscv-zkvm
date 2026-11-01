@@ -361,10 +361,17 @@ not establish the broader sequence frontier, frontend allocation, complete
 Native compilation, compiler-byte bindings or deployment resources; ordinary
 imports and the combined Native checkpoint imports remain unchanged.
 
+`Compiler.NativeBranchSmallChecks` is a separate bounded candidate for eight
+functions:270,337,475,539,636,640,707 and841. It checks eight complete
+Native tuples and35 owning modules, with three typed frame/loop-state mutations.
+The source proposal is independently reviewed; Kernel validation remains pending.
+It does not establish the broader conditional/loop frontier or a432-result aggregate.
+
 `Compiler.NativeBranchPilotChecks` is an opt-in candidate for functions255,406
 and448, including conditional ordering and an actual loop bitmap insertion.
 Its three full-tuple consumers,15-owner audit and three typed rejection tests
-await Kernel validation; see [the branch pilot](README-branch-pilot.md). This
+passed independently reviewed focused Kernel validation; see
+[the branch pilot](README-branch-pilot.md). This
 small candidate does not establish the broader conditional/loop frontier.
 
 `Compiler.Native31Checks` adds a separate candidate for the 31 remaining small
@@ -375,11 +382,15 @@ focused Kernel evidence is independently accepted; see [the checks](README-nativ
 results and the accepted390. It checks421 complete endpoints and891 owning
 modules. The separate `Captured Native421 checkpoint` workflow builds all896
 local sources afresh and preserves provenance and proof-object evidence. The
-combined checkpoint awaits Kernel validation; ordinary imports remain unchanged.
+combined421 checkpoint is independently accepted:896 fresh project modules,
+891 owners,210311 declarations,25574 theorems and zero unexpected axioms.
+All907 source/policy records and70 selected proof objects were verified;826
+objects are represented by the reviewed inventory. Ordinary imports remain unchanged.
 
 `Compiler.Header07Allocation64Checks` checks the first actual color-tape cell,
 the original optimizer oracle and the complete captured allocation tuple. This
-one-function reuse pilot awaits Kernel validation; see [its checks](README-allocation64.md).
+one-function reuse pilot is independently accepted, including three typed
+rejections; see [its checks](README-allocation64.md).
 It does not establish the whole 815-function allocation result.
 
 `Compiler.Backend07InputChecks` is an opt-in candidate for four actual07
