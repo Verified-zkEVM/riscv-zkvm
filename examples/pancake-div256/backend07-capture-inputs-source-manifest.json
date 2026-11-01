@@ -31817,7 +31817,7 @@
     "PancakeDiv256.Compiler.Backend07.ContextInputsProposal.OriginalViewGoals": {
       "provider": "consumer",
       "path": "PancakeDiv256/Compiler/Backend07/ContextInputsProposal/OriginalViewGoals.lean",
-      "sha256": "41be717046c4aa0b508777775ccd900134038d5f8a985b9adcd2a1e784cebfd0",
+      "sha256": "c9ff45776c6e323c49c153f4e98ed3e4876bc2bcd753ba5f2dfb63d9463f522b",
       "imports": [
         "PancakeDiv256.Compiler.Backend07.ContextInputsProposal.CaptureInputs",
         "PancakeDiv256.Compiler.Backend07.ConfigProjection07.BindingGoals"
@@ -45325,7 +45325,7 @@
     }
   ],
   "source_count": 3601,
-  "source_bytes": 87980479,
+  "source_bytes": 87980537,
   "same_Native_generator_caps": true,
   "no_ordinary_runtime_execution": true,
   "negative_sources": [

@@ -43,8 +43,9 @@ theorem captureInputs_ofOriginal (original : Backend.Config)
     (stack : List (Nat × StackLang.HolProg 64)) :
     captureInputs (ConfigProjection07.ofOriginal riscvConfig original) stack =
       ContextProposal.capture original stack := by
-  simp only [captureInputs, ConfigProjection07.ofOriginal,
-    ContextProposal.capture, captureLoopWith_riscv]
+  dsimp only [captureInputs, ConfigProjection07.ofOriginal, ContextProposal.capture]
+  cases original.labConf.ffiNames <;>
+    simp only [captureLoopWith_riscv] <;> rfl
 
 /-- Uses the separate exact original-field binding, not a default config or
 Native's returned word configuration. This is still just trace-refactor equality. -/
