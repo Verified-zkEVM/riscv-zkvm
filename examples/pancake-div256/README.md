@@ -412,6 +412,12 @@ one-function reuse pilot is independently accepted, including three typed
 rejections; see [its checks](README-allocation64.md).
 It does not establish the whole 815-function allocation result.
 
+`Compiler.Backend07ContextPrototypeChecks` is a separate untrusted-tooling
+compile-only candidate,with874 modules in its local closure. Its isolated gate
+performs no capture,evaluation or mathematical audit; see [the scope and
+prerequisites](README-backend07-context-compile.md). Successful compilation
+would not prove config,quotation,target or byte correctness.
+
 `Compiler.Backend07FullDataChecks` is a separate opt-in candidate for the full
 817-entry captured Stack data and RawInfo projection, with1,739 owning modules.
 Its isolated build records1,740 object hashes and awaits Kernel validation; see
