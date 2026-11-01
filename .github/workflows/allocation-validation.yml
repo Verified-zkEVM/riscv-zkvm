@@ -1,0 +1,260 @@
+name: Dedicated next-eight and alias79 allocation validation
+'on':
+  workflow_dispatch: null
+  push:
+    branches:
+    - feat/div256-allocation-validation
+permissions:
+  contents: read
+jobs:
+  allocation-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      LEAN_NUM_THREADS: '1'
+    steps:
+    - uses: actions/checkout@v4
+    - uses: leanprover/lean-action@v1
+      with:
+        auto-config: false
+        build: false
+        test: false
+        lint: false
+        use-github-cache: false
+        use-mathlib-cache: false
+    - name: Fetch isolated Mathlib cache
+      working-directory: examples/pancake-div256
+      run: |
+        cmp ../../lean-toolchain lean-toolchain
+        lake exe cache get
+    - name: Apply recorded Flapjack compatibility patch
+      working-directory: examples/pancake-div256
+      run: python3 prepare-flapjack.py
+    - name: Verify pinned external cache source roots
+      working-directory: examples/pancake-div256
+      run: |
+        python3 - <<'PYTHON'
+        import json, os, subprocess
+        from pathlib import Path
+        workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+        manifest = json.loads(Path('lake-manifest.json').read_text())
+        pins = {p['name']: p['rev'] for p in manifest['packages'] if p['type'] == 'git'}
+        for name in ['Guest', 'flapjack']:
+            root = (Path('.lake/packages') / name).resolve(strict=True)
+            if not root.is_relative_to(workspace):
+                raise SystemExit(f'external cache package escapes CI workspace: {name}')
+            actual = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+            if actual != pins[name]:
+                raise SystemExit(f'wrong pinned package revision: {name}')
+        guest = Path('.lake/packages/Guest')
+        dirty = subprocess.check_output(['git', '-C', str(guest), 'status', '--porcelain', '--untracked-files=no'])
+        if dirty:
+            raise SystemExit('Guest tracked sources changed before cache restore')
+        PYTHON
+    - name: Restore completed DIV deployment dependencies
+      id: div-dependency-complete-cache
+      continue-on-error: true
+      uses: actions/cache/restore@v4
+      with:
+        enableCrossOsArchive: false
+        path: |
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+        key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain',
+          'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch')
+          }}-complete-deployment-proofs-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-
+    - name: Restore DIV dependency progress fallback
+      if: steps.div-dependency-complete-cache.outputs.cache-matched-key == ''
+      id: div-dependency-cache
+      continue-on-error: true
+      uses: actions/cache/restore@v4
+      with:
+        enableCrossOsArchive: false
+        path: |
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+        key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain',
+          'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch')
+          }}-progress-${{ github.run_id }}-${{ github.run_attempt }}-final
+        restore-keys: |
+          div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-
+          div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+    - name: Pin fresh two-scope allocation validation basis
+      run: |
+        python3 - <<'PYTHON'
+        import hashlib, json, os, subprocess
+        from pathlib import Path
+        root=Path.cwd().resolve(strict=True); example=root/'examples/pancake-div256'
+        evidence=root/'allocation-validation-evidence'
+        if evidence.exists()or evidence.is_symlink():raise SystemExit('refuse existing phase evidence')
+        local=example/'.lake/build/lib/lean/PancakeDiv256'
+        for parent in [local,*local.parents]:
+            if parent==root:break
+            if parent.is_symlink():raise SystemExit('proof namespace alias')
+        if local.exists()and any(p.is_symlink()or p.suffix=='.olean'for p in local.rglob('*')):raise SystemExit('project proof objects already exist')
+        manifest_name='examples/pancake-div256/allocation-validation-source-manifest.json'
+        raw=(root/manifest_name).read_bytes()
+        if hashlib.sha256(raw).hexdigest()!='f1aaf80ecddac861a7a33687b74021f8e3d10a17cfde24e8687ce5a7fffca7b3':raise SystemExit('phase source manifest changed')
+        data=json.loads(raw); selection={'local_modules':data['local_modules']}; expected={}
+        repository_modules=sorted(n for n,row in data['modules'].items()if row['provider']=='repository')
+        for name in repository_modules:
+            target=root/'.lake/build/lib/lean'/(name.replace('.','/')+'.olean')
+            if target.exists()or target.is_symlink():raise SystemExit('repository dependency object already exists')
+        for name,row in data['modules'].items():
+            if row['provider']=='consumer':expected['examples/pancake-div256/'+row['path']]=row['sha256']
+            elif row['provider']=='repository':expected[row['path']]=row['sha256']
+        for row in data['negative_sources']:expected['examples/pancake-div256/'+row['path']]=row['sha256']
+        policy=['.github/workflows/allocation-validation.yml','lean-toolchain','lakefile.toml','lake-manifest.json',
+            'examples/pancake-div256/lean-toolchain','examples/pancake-div256/lakefile.toml',
+            'examples/pancake-div256/lake-manifest.json','examples/pancake-div256/prepare-flapjack.py',
+            'examples/pancake-div256/patches/flapjack-lean435-compat.patch',manifest_name,
+            'examples/pancake-div256/check-backend07-config-projection-sources.py']
+        paths=sorted(set(expected)|set(policy)); blobs={}
+        for line in subprocess.check_output(['git','ls-tree','-r','HEAD','--',*paths],text=True).splitlines():
+            metadata,name=line.split('\t',1);mode,kind,oid=metadata.split()
+            if kind!='blob'or mode not in ['100644','100755']:raise SystemExit('nonregular committed source')
+            blobs[name]=oid
+        if set(blobs)!=set(paths):raise SystemExit('uncommitted phase source/policy')
+        records={}
+        for name in paths:
+            path=root/name
+            if path.is_symlink()or path.resolve(strict=True)!=path:raise SystemExit('source alias')
+            content=path.read_bytes(); h=hashlib.sha256(content).hexdigest(); oid=hashlib.sha1(b'blob '+str(len(content)).encode()+b'\0'+content).hexdigest()
+            if oid!=blobs[name]or(name in expected and h!=expected[name]):raise SystemExit('source differs from committed/reviewed bytes')
+            records[name]={'sha256':h,'git_blob':oid}
+        sdk={}
+        for tool in ['lean','lake']:
+            path=Path(subprocess.check_output(['elan','which',tool],cwd=example,text=True).strip()).resolve(strict=True)
+            sdk[tool]={'path':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
+              'version':subprocess.check_output([str(path),'--version'],text=True).strip()}
+        packages={}
+        for name in ['Guest','flapjack']:
+            path=(example/'.lake/packages'/name).resolve(strict=True)
+            packages[name]={'path':str(path),'commit':subprocess.check_output(['git','-C',str(path),'rev-parse','HEAD'],text=True).strip(),
+              'diff_sha256':hashlib.sha256(subprocess.check_output(['git','-C',str(path),'diff','--binary','HEAD','--'])).hexdigest()}
+        evidence.mkdir()
+        report={'phase':'allocation-validation','certificate':False,'active':False,'checkout':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+         'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),'files':records,'sdk':sdk,'prepared_packages':packages,
+         'source_manifest_sha256':'f1aaf80ecddac861a7a33687b74021f8e3d10a17cfde24e8687ce5a7fffca7b3','local_modules':selection['local_modules'],'repository_modules':repository_modules,'fresh_local_namespace':True,
+         'runtime_execution':False,'compiler_correctness_claim':False,
+         'run_metadata':{k:os.environ.get(k)for k in ['GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_SHA','GITHUB_REF']}}
+        (evidence/'sources-before.json').write_text(json.dumps(report,indent=2)+'\n')
+        print('Fresh two-scope allocation validation basis pinned:',len(selection['local_modules']),'local sources')
+        PYTHON
+    - name: Build existing next-eight and alias79 checks through import-only root
+      working-directory: examples/pancake-div256
+      run: |
+        set -euo pipefail
+        {
+        python3 - <<'PYSOURCE'
+        from pathlib import Path
+        import json,runpy,subprocess
+        consumer=Path.cwd().resolve(strict=True)
+        lean=Path(subprocess.check_output(['elan','which','lean'],text=True).strip()).resolve(strict=True)
+        verify=runpy.run_path(str(consumer/'check-backend07-config-projection-sources.py'))['verify']
+        print(json.dumps(verify(consumer/'allocation-validation-source-manifest.json','f1aaf80ecddac861a7a33687b74021f8e3d10a17cfde24e8687ce5a7fffca7b3',consumer,lean.parent.parent)))
+        PYSOURCE
+        lake --fail-fast build PancakeDiv256.Compiler.AllocationValidationChecks
+        python3 - <<'PYSOURCE'
+        from pathlib import Path
+        import json,runpy,subprocess
+        consumer=Path.cwd().resolve(strict=True)
+        lean=Path(subprocess.check_output(['elan','which','lean'],text=True).strip()).resolve(strict=True)
+        verify=runpy.run_path(str(consumer/'check-backend07-config-projection-sources.py'))['verify']
+        print(json.dumps(verify(consumer/'allocation-validation-source-manifest.json','f1aaf80ecddac861a7a33687b74021f8e3d10a17cfde24e8687ce5a7fffca7b3',consumer,lean.parent.parent)))
+        PYSOURCE
+        } 2>&1 | tee ../../allocation-validation-evidence/build.log
+    - name: Reject exact four next-eight and four alias79 mutations
+      working-directory: examples/pancake-div256
+      run: |
+        set -euo pipefail
+        lake env python3 - <<'PYNEG' 2>&1 | tee ../../allocation-validation-evidence/negatives.log
+        from pathlib import Path
+        import re,subprocess,tempfile
+        with tempfile.TemporaryDirectory(prefix='allocation-validation-negatives-')as directory:
+            for group,relative,witness in [('next', 'tests/allocation-next-eight/WrongTapeIndex80.lean', 'selected_oracle80_eq_original'), ('next', 'tests/allocation-next-eight/WrongOracle80.lean', 'selected_oracle80_eq_original'), ('next', 'tests/allocation-next-eight/WrongLabel80.lean', 'compiled80_actual_oracle_eq'), ('next', 'tests/allocation-next-eight/WrongArity81.lean', 'compiled81_actual_oracle_eq'), ('alias', 'tests/allocation-alias79/WrongTapeIndex79.lean', 'selected_oracle79_eq_original'), ('alias', 'tests/allocation-alias79/WrongOracle79.lean', 'selected_oracle79_eq_original'), ('alias', 'tests/allocation-alias79/WrongLabel79.lean', 'compiled79_actual_oracle_eq'), ('alias', 'tests/allocation-alias79/WrongArity79.lean', 'compiled79_actual_oracle_eq')]:
+                name=Path(relative).stem
+                output=Path(directory)/(name+'.olean')
+                result=subprocess.run(['lean','-o',str(output),relative],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=300)
+                diagnostic=result.stdout;lower=diagnostic.lower()
+                print(group+'/'+name+': actual exit='+str(result.returncode)+'; expected typed rejection\n'+diagnostic[-20000:])
+                if result.returncode!=1 or output.exists()or output.is_symlink()or lower.count('error:')!=1 or'type mismatch'not in lower or re.search(r"(?<![\w'])"+re.escape(witness)+r"(?![\w'])",diagnostic)is None or any(value in lower for value in ['unknown identifier','unknown constant','unknown module','object file','unexpected token','expected token','unexpected end of input','unterminated','parser error','invalid syntax','failed to synthesize','maximum recursion','maximum heartbeats','maximum number of heartbeats','out of memory','interrupted','timed out','timeout exceeded']):
+                    raise SystemExit(name+': expected single intended type mismatch without output')
+        PYNEG
+    - name: Recheck complete source provenance, separate audits and fresh object inventory
+      run: |
+        python3 - <<'PYTHON'
+        import hashlib,json,re,subprocess
+        from pathlib import Path
+        root=Path.cwd().resolve(strict=True);evidence=root/'allocation-validation-evidence'
+        before=json.loads((evidence/'sources-before.json').read_bytes())
+        if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=before['checkout']or subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip()!=before['tree']:raise SystemExit('checkout changed')
+        for name,row in before['files'].items():
+            path=root/name
+            if path.is_symlink()or path.resolve(strict=True)!=path or hashlib.sha256(path.read_bytes()).hexdigest()!=row['sha256']:raise SystemExit('phase source/policy changed')
+        for tool,row in before['sdk'].items():
+            path=Path(subprocess.check_output(['elan','which',tool],cwd=root/'examples/pancake-div256',text=True).strip()).resolve(strict=True)
+            if str(path)!=row['path']or hashlib.sha256(path.read_bytes()).hexdigest()!=row['sha256']or subprocess.check_output([str(path),'--version'],text=True).strip()!=row['version']:raise SystemExit('SDK changed')
+        for row in before['prepared_packages'].values():
+            commit=subprocess.check_output(['git','-C',row['path'],'rev-parse','HEAD'],text=True).strip();diff=subprocess.check_output(['git','-C',row['path'],'diff','--binary','HEAD','--'])
+            if commit!=row['commit']or hashlib.sha256(diff).hexdigest()!=row['diff_sha256']:raise SystemExit('prepared dependency changed')
+        text=(evidence/'build.log').read_text()
+        rows=re.findall(r'Allocation generated-cells bridge audit: (\d+) owners / (\d+) declarations / (\d+) theorems / (\d+) offenders',text)
+        if len(rows)!=2:raise SystemExit('expected two separate allocation audit rows')
+        audit=[]
+        for owners,guards,label in [(9,72,'next-eight'),(2,16,'alias79')]:
+            selected=[row for row in rows if int(row[0])==owners]
+            if len(selected)!=1 or int(selected[0][1])==0 or int(selected[0][2])<guards or int(selected[0][3])!=0:raise SystemExit('missing separate allocation owner audit: '+label)
+            audit.append({'scope':label,'owners':owners,'named_guards':guards,'declarations':int(selected[0][1]),'theorems':int(selected[0][2]),'unexpected_axioms':0})
+        objects={}
+        for name in before['local_modules']:
+            relative=name.replace('.','/')+'.olean';path=root/'examples/pancake-div256/.lake/build/lib/lean'/relative
+            if not path.is_file()or path.is_symlink()or path.resolve(strict=True)!=path:raise SystemExit('missing/aliased compiled phase object')
+            objects[relative]=hashlib.sha256(path.read_bytes()).hexdigest()
+        if len(objects)!=53:raise SystemExit('wrong local phase inventory')
+        repository_objects={}
+        for name in before['repository_modules']:
+            relative=name.replace('.','/')+'.olean';path=root/'.lake/build/lib/lean'/relative
+            if not path.is_file()or path.is_symlink()or path.resolve(strict=True)!=path:raise SystemExit('missing/aliased repository dependency object')
+            repository_objects[relative]=hashlib.sha256(path.read_bytes()).hexdigest()
+        if len(repository_objects)!=0:raise SystemExit('repository object inventory changed')
+        negative_log=(evidence/'negatives.log').read_text()
+        for group,name in [('next', 'WrongTapeIndex80'), ('next', 'WrongOracle80'), ('next', 'WrongLabel80'), ('next', 'WrongArity81'), ('alias', 'WrongTapeIndex79'), ('alias', 'WrongOracle79'), ('alias', 'WrongLabel79'), ('alias', 'WrongArity79')]:
+            if negative_log.count(group+'/'+name+': actual exit=1; expected typed rejection')!=1:raise SystemExit('missing actual typed negative')
+        report={'phase':'allocation-validation','certificate':False,'active':False,'source_before_sha256':hashlib.sha256((evidence/'sources-before.json').read_bytes()).hexdigest(),
+         'build_log_sha256':hashlib.sha256((evidence/'build.log').read_bytes()).hexdigest(),'audit':audit,'objects':objects,'repository_objects':repository_objects,'typed_negative_leaves':8,'negative_groups':{'next':4,'alias':4},'audit_counts_not_summed':True,'negatives_log_sha256':hashlib.sha256((evidence/'negatives.log').read_bytes()).hexdigest(),
+         'runtime_execution':False,'whole815_allocation_and_compiler_image_remain_open':True,'compiler_or_byte_certificate':False,'Root_acceptance':'pending'}
+        (evidence/'checked-artifacts.json').write_text(json.dumps(report,indent=2)+'\n')
+        print('Separate9/72 and2/16 allocation scopes checked; whole815/image/resource premises remain open')
+        PYTHON
+    - name: Preserve bounded two-scope allocation validation evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: allocation-validation-${{ github.run_id }}-${{ github.run_attempt }}
+        if-no-files-found: error
+        path: |-
+          allocation-validation-evidence/sources-before.json
+          allocation-validation-evidence/build.log
+          allocation-validation-evidence/negatives.log
+          allocation-validation-evidence/checked-artifacts.json
+          examples/pancake-div256/allocation-validation-source-manifest.json
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation64.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation79.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation80.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation81.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation82.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation83.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation84.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation85.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation86.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation87.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07AllocationNextEightChecks.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07AllocationAlias79Checks.olean
+          examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/AllocationValidationChecks.olean
