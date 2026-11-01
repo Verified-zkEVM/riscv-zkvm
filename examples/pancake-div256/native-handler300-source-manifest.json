@@ -1,0 +1,88 @@
+{
+  "source_only_basis": true,
+  "certificate": false,
+  "labels": [
+    300
+  ],
+  "sources": [
+    {
+      "path": "examples/pancake-div256/PancakeDiv256/Compiler/BackendNativeComposition.lean",
+      "module": "PancakeDiv256.Compiler.BackendNativeComposition",
+      "sha256": "49ca8b4922c725be86168da2619d3f793512b762ea877a1aa5e469f6af02e1b2",
+      "role": "existing_generic_proof_helper"
+    },
+    {
+      "path": "examples/pancake-div256/PancakeDiv256/Compiler/BackendNativeHandlerTrace.lean",
+      "module": "PancakeDiv256.Compiler.BackendNativeHandlerTrace",
+      "sha256": "4d72f710cc157a30e8d4f905cbb622f65b67f407bb5ef6d2eddee857ba692d83",
+      "role": "positive_compiler_input_data_or_proof"
+    },
+    {
+      "path": "examples/pancake-div256/PancakeDiv256/Compiler/BackendNativePrimitives.lean",
+      "module": "PancakeDiv256.Compiler.BackendNativePrimitives",
+      "sha256": "b65ca62fb2245fb1d09723827662a44193f6c9f0f1e32101bfe0319fc039a9d1",
+      "role": "existing_generic_proof_helper"
+    },
+    {
+      "path": "examples/pancake-div256/PancakeDiv256/Compiler/BackendNativeSequence.lean",
+      "module": "PancakeDiv256.Compiler.BackendNativeSequence",
+      "sha256": "53c86dd76ae9d7730b8fea53961673e9f71cf40b841c6047d05a82c096a427a6",
+      "role": "existing_generic_proof_helper"
+    },
+    {
+      "path": "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated300.lean",
+      "module": "PancakeDiv256.Compiler.BackendStages.Allocated300",
+      "sha256": "f70746aa241da7c884cb21c6eb35f86d447cf2327ff3bd5891f061fc5f312cf0",
+      "role": "positive_compiler_input_data_or_proof"
+    },
+    {
+      "path": "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeHandlerPilot300/Data.lean",
+      "module": "PancakeDiv256.Compiler.BackendStages.NativeHandlerPilot300.Data",
+      "sha256": "5f32141200adcb208d45634229ebbeffe453c2e5ae38a9e6ed6337b9fd69e060",
+      "role": "positive_compiler_input_data_or_proof"
+    },
+    {
+      "path": "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeHandlerPilot300/Function.lean",
+      "module": "PancakeDiv256.Compiler.BackendStages.NativeHandlerPilot300.Function",
+      "sha256": "3960a7bbbf2f273b425cfd6434dfdef494b5c44fc03e2367d37d40f116337a35",
+      "role": "positive_compiler_input_data_or_proof"
+    },
+    {
+      "path": "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeHandlerPilot300/Proof.lean",
+      "module": "PancakeDiv256.Compiler.BackendStages.NativeHandlerPilot300.Proof",
+      "sha256": "4893e613f89104d6ae627118c5de5ba2efdc0b430be6781a9870371db438f2f8",
+      "role": "positive_compiler_input_data_or_proof"
+    },
+    {
+      "path": "examples/pancake-div256/PancakeDiv256/Compiler/NativeHandler300Checks.lean",
+      "module": "PancakeDiv256.Compiler.NativeHandler300Checks",
+      "sha256": "6f71a856f41b242276a5980e9ddffa236b45b37be174deaa62422c3d9194d3bc",
+      "role": "positive_compiler_input_data_or_proof"
+    }
+  ],
+  "negative_sources": [
+    {
+      "path": "examples/pancake-div256/tests/native-handler300/WrongImmediate300.lean",
+      "sha256": "e29c9a634cff50fae1fe85839e4f4b1c51e50378b4d9d03ce12685b2f812bc6e",
+      "witness": "compiled300_23_eq",
+      "name": "WrongImmediate300"
+    },
+    {
+      "path": "examples/pancake-div256/tests/native-handler300/WrongHandlerOffset300.lean",
+      "sha256": "8c6f22fd337e86027d3235c598e7e3d62e27a2badda3407da61a9df771d9e314",
+      "witness": "compiled300_28_eq",
+      "name": "WrongHandlerOffset300"
+    },
+    {
+      "path": "examples/pancake-div256/tests/native-handler300/WrongHandlerTree300.lean",
+      "sha256": "c354305133487101132baa258b6afa0d0b3aed8d341dec8e97d043e43ded4a67",
+      "witness": "compiled300_28_eq",
+      "name": "WrongHandlerTree300"
+    }
+  ],
+  "existing_generic_helpers": 3,
+  "positive_function_files_and_checker": 6,
+  "strict_math_owner_scope": 8,
+  "fixed_endpoints": 1,
+  "basis_handler300_freeze_sha256": "497b65c6794d54bce64a7758bab5f55e70cd857884dd7815f4ec9da3bd94672e"
+}

@@ -366,6 +366,12 @@ composition for the existing four-premise handler rule, two boundary checks
 and three typed negatives. Kernel validation is pending; no larger handler is
 enabled. See [the handler trace candidate](README-native-handler-trace.md).
 
+`Compiler.NativeHandler300Checks` proposes one complete actual function using
+compositional child proofs for its larger handler, including a real immediate-one
+comparison. Its eight-owner audit and three typed negatives await Kernel
+validation. See [the function 300 candidate](README-native-handler300.md); no
+broader handler support or whole-program result is accepted by source generation.
+
 `Compiler.NativeBranchImmediateChecks` is a candidate for468,544 and829
 using direct canonical immediate comparisons and unspilled left operands.
 All three actual captures compare against zero; nonzero boundaries have only
