@@ -6,7 +6,7 @@
   "certificate": false,
   "files": {
     "Launch.lean": "21d4f8250d692562db42b27f4527d32a73d5a139fffc50eb57c72aa20964ef77",
-    "README.md": "06d81215f17cd0949945896cd31322dc72c47431124f0a6636c34cf8fcca4374",
+    "README.md": "069ddead707add4b1b1b9e9a8536f0f938ffe750fe182b2ec873a4f1aaa79956",
     "accepted-prerequisites.isolated-hosted.template.json": "a42d368256851421bd65c573ca0345c5ed84fe0ad3f508f70ff928c7edd8910a",
     "accepted-prerequisites.template.json": "91e29e96132eed4f68ba87df821fc48eeb2f073e8b306d24ffddf4c0a3faf70d",
     "artifacts.py": "72b185a828c8d11c5ae94384eadcb39e8adff041624ff989a723e0c827b63c42",
@@ -16,10 +16,12 @@
     "driver.py": "ecc53475cfebdbad861f4bca666a6721b92d8a274191fcedb6efbc12ca27c41f",
     "policy.json": "4f382a26a355ac68a401d636c71f957566cd5e89a7fef26ebb5ca9fe4b28db27",
     "providers.py": "e5f6ff74ebc497937c55e5caada3d65d7d0870b54ed6af60d265664dcc938efa",
+    "root-receipts/capture-inputs-helper72.json": "290c719906d8826abdd374ba4ddac93b744ef7736b136a6093fc9164e32dd2d8",
+    "root-receipts/capture-inputs-runtime72.json": "c5642b905607f23c1f76c1dac9eb25f97e3cf426b635ed2a50a224d3a01684db",
     "root-receipts/light-config69.json": "40aaa1dcd1613ddccf6f397a3dd2d8eee608c840b5aa6745f2935b4bf2b7d3b5",
     "root-receipts/quotation66.json": "26adc2cc011e490098e9b3ae4d3c9bd98828e7ed1ff21ba80ae0aa64e4dbd634"
   },
   "source_record_is_separate_trusted_Root_assertion_data": true,
-  "helper_runtime_accepted_flags_false": true,
-  "config69_quote66_accepted_only_in_separate_record": true
+  "all_four_prerequisite_roles_have_separate_Root_acceptance_receipts": true,
+  "actual_capture_and_fullcompiler_result_not_accepted": true
 }

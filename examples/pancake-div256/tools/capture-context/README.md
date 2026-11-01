@@ -1,12 +1,14 @@
 # Same-job actual07 capture — SOURCE CANDIDATE, NOT RUN
 
-This controller implements precheck/prepare/capture plus a bounded artifact list.
-No local SDK, Lean/Lake, network/API, IR or capture command was executed during
-preparation. Dormant source publication uses a distinct branch; do not trigger
-execution until all roles and this source/workflow are independently accepted. The default Root source record
-is deliberately source_review_complete:false. Focused lightconfig971845 and finitequote75b3 have actual accepted Root
-receipts40aaa/26adc. Helper/runtime2d546164 remain false. Complete helper/runtime role acceptance
-is pending; this source-data migration enables no execution. Historicalcapture03 and hosted01/source-role data are preserved in validation.
+This is a REVIEW-ONLY current-authority data revision for the exact reviewed
+controller. Four prerequisite roles have Root and independent acceptance:
+config971845/receipt40aaa, finitequote75b3/receipt26adc, helper2d546/receipt290c,
+and runtime compile-only2d546/receiptc564. source_review_complete now records
+Root's acceptance of the exact operational source, not a Kernel or compiler fact.
+This data must be independently reviewed and committed before Root separately
+schedules the execution branch. No capture has been run or accepted here. Future
+capture outputs remain UNTRUSTED proposals, with all original-carrier/complete
+compiler/byte/Native/resource/deployment proof obligations still open.
 
 The trusted Root source record is a reviewed acceptance assertion, not a proof
 verifier. Receipt JSON is parsed/hash/commit-pinned; its semantic claims are not
