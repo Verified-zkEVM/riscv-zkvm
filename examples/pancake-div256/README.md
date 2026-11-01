@@ -361,6 +361,13 @@ not establish the broader sequence frontier, frontend allocation, complete
 Native compilation, compiler-byte bindings or deployment resources; ordinary
 imports and the combined Native checkpoint imports remain unchanged.
 
+`Compiler.NativeBranchImmediateChecks` is a candidate for468,544 and829
+using direct canonical immediate comparisons and unspilled left operands.
+All three actual captures compare against zero; nonzero boundaries have only
+synthetic source controls. Three complete endpoints,15-owner audit and three
+typed immediate/operand/bitmap mutations await Kernel validation. No broader
+immediate-comparison or Native coverage is established by this small candidate.
+
 `Compiler.NativeBranchSmallChecks` is a separate bounded candidate for eight
 functions:270,337,475,539,636,640,707 and841. It checks eight complete
 Native tuples and35 owning modules, with three typed frame/loop-state mutations.
@@ -405,8 +412,9 @@ Native computation theorems. It also checks the captured 817 numeric entry
 records, actual stubs 5/6, their RawInfo tree and six small alignment controls,
 with a strict 16-owner standard-three axiom audit. Build explicitly with
 `LEAN_NUM_THREADS=1 lake --fail-fast build PancakeDiv256.Compiler.Backend07InputChecks`.
-This requests one worker and does not impose a memory cap. These new checks
-await Kernel validation. The whole 815-function Stack projection remains an
+This requests one worker and does not impose a memory cap. The focused Kernel
+gate and all three typed rejections are independently accepted:17 fresh objects,
+16 owners,3769 declarations,45 theorems and zero unexpected axioms. The whole 815-function Stack projection remains an
 explicit premise; the numeric fixture does not prove that projection, full
 Native/compiler correctness, linked bytes or deployment resources. Ordinary
 roots remain unchanged.
