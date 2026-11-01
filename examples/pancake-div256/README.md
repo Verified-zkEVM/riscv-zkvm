@@ -365,6 +365,11 @@ imports and the combined Native checkpoint imports remain unchanged.
 Native functions, with exact full-tuple consumers and a 62-owner audit. It awaits
 Kernel validation; see [the candidate checks](README-native31.md).
 
+`Compiler.Header07Allocation64Checks` checks the first actual color-tape cell,
+the original optimizer oracle and the complete captured allocation tuple. This
+one-function reuse pilot awaits Kernel validation; see [its checks](README-allocation64.md).
+It does not establish the whole 815-function allocation result.
+
 `Compiler.Backend07InputChecks` is an opt-in candidate for four actual07
 Stack bodies (64, 65, 500 and 878), their entries and exact links to the existing
 Native computation theorems. It also checks the captured 817 numeric entry
