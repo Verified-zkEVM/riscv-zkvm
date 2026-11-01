@@ -1,5 +1,5 @@
-import Flapjack.Compiler.Backend.WordToStack.NativeTopCompile
-open Flapjack Flapjack.Compiler.Backend Flapjack.Compiler.Encoders.RiscV.Target
+import Flapjack.Compiler.Backend.StackLang.Prog
+open Flapjack Flapjack.Compiler.Backend
 namespace PancakeDiv256.Compiler.Backend07.LowerInput
 noncomputable def stackBody64_0 : StackLang.HolProg 64 :=
 Flapjack.Compiler.Backend.StackLang.Prog.stackAlloc 0

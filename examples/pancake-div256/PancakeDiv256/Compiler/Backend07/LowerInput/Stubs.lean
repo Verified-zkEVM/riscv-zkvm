@@ -1,4 +1,4 @@
-import Flapjack.Compiler.Backend.RiscVConfig.Executable
+import Flapjack.Compiler.Encoders.RiscV.Target.Configuration
 import Flapjack.Compiler.Backend.WordToStack.NativeTopCompile
 open Flapjack Flapjack.Compiler.Backend Flapjack.Compiler.Encoders.RiscV.Target
 namespace PancakeDiv256.Compiler.Backend07.LowerInput
