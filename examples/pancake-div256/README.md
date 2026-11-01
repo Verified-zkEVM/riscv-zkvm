@@ -406,6 +406,12 @@ one-function reuse pilot is independently accepted, including three typed
 rejections; see [its checks](README-allocation64.md).
 It does not establish the whole 815-function allocation result.
 
+`Compiler.Backend07FullDataChecks` is a separate opt-in candidate for the full
+817-entry captured Stack data and RawInfo projection, with1,739 owning modules.
+Its isolated build records1,740 object hashes and awaits Kernel validation; see
+[the full-data checks](README-backend07-full-data.md). This is a captured-data
+checkpoint, not the whole Word-to-Stack or final target/byte result.
+
 `Compiler.Backend07InputChecks` is an opt-in candidate for four actual07
 Stack bodies (64, 65, 500 and 878), their entries and exact links to the existing
 Native computation theorems. It also checks the captured 817 numeric entry
