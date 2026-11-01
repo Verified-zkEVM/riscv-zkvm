@@ -1,3 +1,4 @@
+import PancakeDiv256.Compiler.AllocationConfigChecks
 import Lean
 import Flapjack.Pancake.Proofs.PanToTarget.ExecutableCompileDefinitions
 import PancakeDiv256.Compiler.Backend07.ConfigProjection07.BindingGoals

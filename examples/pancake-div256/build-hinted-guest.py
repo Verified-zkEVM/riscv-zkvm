@@ -81,7 +81,7 @@ def elf_bytes(image: bytes, address: int, size: int) -> bytes:
 
 def input_files(guest: Path, proposals: Path | None = None) -> list[Path]:
     paths = [HERE / name for name in ["CompileHintedGuest.lean", "build-hinted-guest.py",
-        "import-allocation-proposals.py", "PancakeDiv256/Compiler/Allocation.lean", "PancakeDiv256/Compiler/DepthShape.lean",
+        "import-allocation-proposals.py", "PancakeDiv256/Compiler/Allocation.lean", "PancakeDiv256/Compiler/Allocation/Config.lean", "PancakeDiv256/Compiler/DepthShape.lean",
         "PancakeDiv256/Compiler/DepthCertificate.lean", "PancakeDiv256/Compiler/DepthCheck.lean",
         "PancakeDiv256/Compiler/DepthCompress.lean",
         "PancakeDiv256/Deployment/HeaderAdaptedSource.lean",

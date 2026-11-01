@@ -472,6 +472,13 @@ that distinct supplied configuration. Kernel validation is pending. See
 [the configuration projection](README-backend07-config-projection.md). No
 runtime capture or compiler/image byte identity is established by this gate.
 
+`Allocation.Config` now provides the same named tape/config declarations through
+an explicit lightweight import. The old `Allocation` entry retains all tooling;
+`ReflectionConfig` no longer incidentally reexports that tooling. The light
+configuration target adds a separate moved-owner audit, while legacy/API and
+actual64/72 compatibility checks stay in a dedicated opt-in heavy target.
+Migration Kernel validation is pending; see [the import split](README-allocation-config-light.md).
+
 `Compiler.Backend07InputChecks` is an opt-in candidate for four actual07
 Stack bodies (64, 65, 500 and 878), their entries and exact links to the existing
 Native computation theorems. It also checks the captured 817 numeric entry
