@@ -50,7 +50,7 @@
     {
       "path": "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeHandlerPilot300/Proof.lean",
       "module": "PancakeDiv256.Compiler.BackendStages.NativeHandlerPilot300.Proof",
-      "sha256": "4893e613f89104d6ae627118c5de5ba2efdc0b430be6781a9870371db438f2f8",
+      "sha256": "4c58b95c499f7db189e335e9cb159b5f041cb62626bb6f4e6d3d7a40a9b8b6d5",
       "role": "positive_compiler_input_data_or_proof"
     },
     {
@@ -84,5 +84,7 @@
   "positive_function_files_and_checker": 6,
   "strict_math_owner_scope": 8,
   "fixed_endpoints": 1,
-  "basis_handler300_freeze_sha256": "497b65c6794d54bce64a7758bab5f55e70cd857884dd7815f4ec9da3bd94672e"
+  "basis_handler300_freeze_sha256": "497b65c6794d54bce64a7758bab5f55e70cd857884dd7815f4ec9da3bd94672e",
+  "source_bytes": 191839,
+  "source_byte_scope": "all9 positive local source modules including sharedhelpers; negative fixtures excluded"
 }

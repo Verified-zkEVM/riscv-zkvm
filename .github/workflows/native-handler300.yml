@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feat/div256-native-handler300
+      - feat/div256-native-handler300-repair
 
 permissions:
   contents: read
@@ -107,7 +108,7 @@ jobs:
               return hashlib.sha256(raw).hexdigest()
           manifest_name = 'examples/pancake-div256/native-handler300-source-manifest.json'
           manifest_raw = (root / manifest_name).read_bytes()
-          if digest(manifest_raw) != '77c7266d21c0b937b669b9906709ded39d62d50901d9dae90b14c6c1f83fd3bc':
+          if digest(manifest_raw) != 'b1bebbd7cd1067ba7b7eb9e89a5c8a3b6b22bedc6d5eb6c4a48ac3ae386035b2':
               raise SystemExit('reviewed Native handler300 source manifest changed')
           source_manifest = json.loads(manifest_raw)
           expected = {}
