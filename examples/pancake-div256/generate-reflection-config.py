@@ -40,7 +40,7 @@ def main():
     p.add_argument('--chunks-dir',type=Path,required=True)
     p.add_argument('--module-prefix',default='PancakeDiv256.Compiler.Stages.Colors')
     args=p.parse_args()
-    if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_.]*',args.module_prefix):
+    if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*',args.module_prefix):
         p.error('invalid module prefix')
     if args.output.exists() or args.output.is_symlink() or args.chunks_dir.exists():
         p.error('output file and chunks directory must both be NEW')
