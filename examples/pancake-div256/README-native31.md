@@ -14,8 +14,10 @@ arbitrary bitmap prefix and its original incoming offset, and a strict audit of
 62 input/proof owners including private/generated declarations. It allows only
 Lean's standard three axioms and requires every named Native theorem.
 
-This is a source-only proposal awaiting actual Kernel/CI validation and independent
-evidence review. It does not yet extend the accepted390 checkpoint. A combined421
+The focused31-endpoint Kernel result is independently accepted:62 owning modules,
+5892 declarations,62 theorems and zero unexpected axioms. All63 fresh project proof
+objects were downloaded, and actual checkout provenance matches the reviewed source.
+This does not yet extend the separately accepted390 combined checkpoint. A combined421
 checkpoint would require its own full audit/provenance review. The separate Native575
 work is not counted here. Whole-program allocation, Native composition, later
 lowering, bytes, resource bindings and the private V1 certificate remain open.

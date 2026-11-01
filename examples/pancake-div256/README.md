@@ -362,8 +362,14 @@ Native compilation, compiler-byte bindings or deployment resources; ordinary
 imports and the combined Native checkpoint imports remain unchanged.
 
 `Compiler.Native31Checks` adds a separate candidate for the 31 remaining small
-Native functions, with exact full-tuple consumers and a 62-owner audit. It awaits
-Kernel validation; see [the candidate checks](README-native31.md).
+Native functions, with exact full-tuple consumers and a 62-owner audit. Its
+focused Kernel evidence is independently accepted; see [the checks](README-native31.md).
+
+`Compiler.Native421Checks` is the combined checkpoint candidate for those31
+results and the accepted390. It checks421 complete endpoints and891 owning
+modules. The separate `Captured Native421 checkpoint` workflow builds all896
+local sources afresh and preserves provenance and proof-object evidence. The
+combined checkpoint awaits Kernel validation; ordinary imports remain unchanged.
 
 `Compiler.Header07Allocation64Checks` checks the first actual color-tape cell,
 the original optimizer oracle and the complete captured allocation tuple. This
