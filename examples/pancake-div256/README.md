@@ -571,3 +571,10 @@ silently narrowing the audit. Its negative tests compile isolated temporary
 modules and verify that an unused private axiom is rejected. The standalone
 consumer allows only the three standard Lean axioms; the parent retains its
 separate documented seven-axiom audit.
+
+`Deployment.Image07.ConditionalV1` is a candidate for finite-provider V1
+integration through the actual bootstrap. The full original compiler tuple and
+actual stack-resource bound remain explicit premises; no closed certificate is
+asserted. The ordinary proof front door imports it, with a separate one-owner,
+three-theorem audit/fixed consumer and four typed-negative fixtures. Hosted
+Kernel validation is pending; see [the conditional V1 gate](README-conditional-v1.md).
