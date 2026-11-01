@@ -533,6 +533,49 @@ jobs:
             examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation86.olean
             examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation87.olean
             examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07AllocationNextEightChecks.olean
+      - name: Check exact alias79 allocation with cell64 regression
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -o pipefail
+          mkdir -p .lake/build
+          lake --fail-fast build PancakeDiv256.Compiler.Header07AllocationAlias79Checks 2>&1 | tee .lake/build/allocation-alias79-checks.log
+      - name: Reject changed alias79 index, oracle and tuple
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -o pipefail
+          lake env python3 - <<'PYALIAS79' 2>&1 | tee .lake/build/allocation-alias79-negatives.log
+          from pathlib import Path
+          import re
+          import subprocess
+          import tempfile
+          with tempfile.TemporaryDirectory(prefix="allocation-alias79-negatives-") as directory:
+              for name, witness in [("WrongTapeIndex79", "selected_oracle79_eq_original"), ("WrongOracle79", "selected_oracle79_eq_original"), ("WrongLabel79", "compiled79_actual_oracle_eq"), ("WrongArity79", "compiled79_actual_oracle_eq")]:
+                  output = Path(directory) / (name + ".olean")
+                  result = subprocess.run(["lean", "-o", str(output), "tests/allocation-alias79/" + name + ".lean"], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
+                  diagnostic = result.stdout
+                  print(name + ": actual exit=" + str(result.returncode) + "; expected typed rejection\n" + diagnostic[-20000:])
+                  lower = diagnostic.lower()
+                  if result.returncode != 1 or output.exists() or output.is_symlink() or lower.count("error:") != 1 or "type mismatch" not in lower or re.search(r"(?<![\w'])" + re.escape(witness) + r"(?![\w'])", diagnostic) is None or any(text in lower for text in ["unknown identifier", "unknown constant", "unknown module", "object file", "unexpected token", "expected token", "unexpected end of input", "unterminated", "parser error", "invalid syntax", "failed to synthesize"]):
+                      raise SystemExit(name + ": expected typed proof mismatch without output")
+          PYALIAS79
+      - name: Preserve exact alias79 allocation proof objects
+        if: always() && matrix.directory == 'pancake-div256'
+        uses: actions/upload-artifact@v4
+        with:
+          name: allocation-alias79-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            examples/pancake-div256/.lake/build/allocation-alias79-checks.log
+            examples/pancake-div256/.lake/build/allocation-alias79-negatives.log
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation64.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation79.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07AllocationAlias79Checks.olean
       - name: Check fourteen actual allocation and captured color cells
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
