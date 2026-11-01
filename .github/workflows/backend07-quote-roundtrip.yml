@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feat/div256-target-quotation-roundtrip
+      - feat/div256-target-quotation-repair
 
 permissions:
   contents: read
@@ -95,7 +96,7 @@ jobs:
           root=Path.cwd().resolve(strict=True).parent.parent
           path=Path('context-quote-source-manifest.json')
           raw=path.read_bytes()
-          if hashlib.sha256(raw).hexdigest() != '3c2ef801edd3f532d76814745eda563e8a860375829652742c28cd96e547fae8':
+          if hashlib.sha256(raw).hexdigest() != '75b3d4a5b97912360300bd045e3d2b69c7312090a7c7de2f1f238e16702282a8':
               raise SystemExit('reviewed quotation source manifest drift')
           data=json.loads(raw)
           if data['source_only'] is not True or data['producer_run'] is not False:
@@ -116,6 +117,7 @@ jobs:
           LEAN_NUM_THREADS: 1
         run: |
           set -euo pipefail
+          python3 -B test-context-quote-source-paths.py
           lake env python3 test-context-quote-roundtrip.py "$GITHUB_WORKSPACE/context-quote-evidence"
       - name: Preserve bounded quotation fixture evidence
         if: always()
