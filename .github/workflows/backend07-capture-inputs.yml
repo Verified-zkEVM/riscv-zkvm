@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/div256-capture-inputs
+      - feat/div256-capture-inputs-repair
 permissions:
   contents: read
 jobs:
@@ -98,7 +99,7 @@ jobs:
           if local.exists()and any(p.is_symlink()or p.suffix=='.olean'for p in local.rglob('*')):raise SystemExit('project proof objects already exist')
           manifest_name='examples/pancake-div256/backend07-capture-inputs-source-manifest.json'
           raw=(root/manifest_name).read_bytes()
-          if hashlib.sha256(raw).hexdigest()!='a683ac2cb420deabd5400f014b7e7ce07b3ed17a2b28081d896e8f195c4fa2a6':raise SystemExit('phase source manifest changed')
+          if hashlib.sha256(raw).hexdigest()!='85c981dd577369eb0cc1b34c6f4eee333cbbe84f6df7b28d63b71ae1e9a65590':raise SystemExit('phase source manifest changed')
           data=json.loads(raw); selection=data['phases']['helper']; expected={}
           for name in selection['local_modules']:
               row=data['modules'][name]; expected['examples/pancake-div256/'+row['path']]=row['sha256']
@@ -134,7 +135,7 @@ jobs:
           evidence.mkdir()
           report={'phase':'helper','certificate':False,'active':False,'checkout':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
            'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),'files':records,'sdk':sdk,'prepared_packages':packages,
-           'source_manifest_sha256':'a683ac2cb420deabd5400f014b7e7ce07b3ed17a2b28081d896e8f195c4fa2a6','local_modules':selection['local_modules'],'fresh_local_namespace':True,
+           'source_manifest_sha256':'85c981dd577369eb0cc1b34c6f4eee333cbbe84f6df7b28d63b71ae1e9a65590','local_modules':selection['local_modules'],'fresh_local_namespace':True,
            'runtime_execution':False,'compiler_correctness_claim':False,
            'run_metadata':{k:os.environ.get(k)for k in ['GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_SHA','GITHUB_REF']}}
           (evidence/'sources-before.json').write_text(json.dumps(report,indent=2)+'\n')
@@ -145,9 +146,9 @@ jobs:
         run: |
           set -euo pipefail
           {
-            python3 check-backend07-capture-inputs-sources.py --phase helper --manifest-sha256 a683ac2cb420deabd5400f014b7e7ce07b3ed17a2b28081d896e8f195c4fa2a6
+            python3 check-backend07-capture-inputs-sources.py --phase helper --manifest-sha256 85c981dd577369eb0cc1b34c6f4eee333cbbe84f6df7b28d63b71ae1e9a65590
             lake --fail-fast build PancakeDiv256.Compiler.Backend07CaptureInputsRefactorChecks
-            python3 check-backend07-capture-inputs-sources.py --phase helper --manifest-sha256 a683ac2cb420deabd5400f014b7e7ce07b3ed17a2b28081d896e8f195c4fa2a6
+            python3 check-backend07-capture-inputs-sources.py --phase helper --manifest-sha256 85c981dd577369eb0cc1b34c6f4eee333cbbe84f6df7b28d63b71ae1e9a65590
           } 2>&1 | tee ../../capture-inputs-helper-evidence/build.log
       - name: Reject changed encoder, FFI order, original view and row counter
         working-directory: examples/pancake-div256
@@ -308,7 +309,7 @@ jobs:
           if local.exists()and any(p.is_symlink()or p.suffix=='.olean'for p in local.rglob('*')):raise SystemExit('project proof objects already exist')
           manifest_name='examples/pancake-div256/backend07-capture-inputs-source-manifest.json'
           raw=(root/manifest_name).read_bytes()
-          if hashlib.sha256(raw).hexdigest()!='a683ac2cb420deabd5400f014b7e7ce07b3ed17a2b28081d896e8f195c4fa2a6':raise SystemExit('phase source manifest changed')
+          if hashlib.sha256(raw).hexdigest()!='85c981dd577369eb0cc1b34c6f4eee333cbbe84f6df7b28d63b71ae1e9a65590':raise SystemExit('phase source manifest changed')
           data=json.loads(raw); selection=data['phases']['runtime']; expected={}
           for name in selection['local_modules']:
               row=data['modules'][name]; expected['examples/pancake-div256/'+row['path']]=row['sha256']
@@ -344,7 +345,7 @@ jobs:
           evidence.mkdir()
           report={'phase':'runtime','certificate':False,'active':False,'checkout':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
            'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),'files':records,'sdk':sdk,'prepared_packages':packages,
-           'source_manifest_sha256':'a683ac2cb420deabd5400f014b7e7ce07b3ed17a2b28081d896e8f195c4fa2a6','local_modules':selection['local_modules'],'fresh_local_namespace':True,
+           'source_manifest_sha256':'85c981dd577369eb0cc1b34c6f4eee333cbbe84f6df7b28d63b71ae1e9a65590','local_modules':selection['local_modules'],'fresh_local_namespace':True,
            'runtime_execution':False,'compiler_correctness_claim':False,
            'run_metadata':{k:os.environ.get(k)for k in ['GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_SHA','GITHUB_REF']}}
           (evidence/'sources-before.json').write_text(json.dumps(report,indent=2)+'\n')
@@ -355,9 +356,9 @@ jobs:
         run: |
           set -euo pipefail
           {
-            python3 check-backend07-capture-inputs-sources.py --phase runtime --manifest-sha256 a683ac2cb420deabd5400f014b7e7ce07b3ed17a2b28081d896e8f195c4fa2a6
+            python3 check-backend07-capture-inputs-sources.py --phase runtime --manifest-sha256 85c981dd577369eb0cc1b34c6f4eee333cbbe84f6df7b28d63b71ae1e9a65590
             lake --fail-fast build PancakeDiv256.Compiler.Backend07CaptureInputsRuntimeChecks
-            python3 check-backend07-capture-inputs-sources.py --phase runtime --manifest-sha256 a683ac2cb420deabd5400f014b7e7ce07b3ed17a2b28081d896e8f195c4fa2a6
+            python3 check-backend07-capture-inputs-sources.py --phase runtime --manifest-sha256 85c981dd577369eb0cc1b34c6f4eee333cbbe84f6df7b28d63b71ae1e9a65590
           } 2>&1 | tee ../../capture-inputs-runtime-evidence/build.log
       - name: Recheck runtime provenance and inventory
         run: |
