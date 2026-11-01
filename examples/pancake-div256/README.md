@@ -446,6 +446,12 @@ and nine typed negatives plus a weakened-theorem check. Its bounded private
 replay has passed source/fake-process review; actual rendering and Kernel
 validation remain pending. It does not run a context capture.
 
+The [explicit-input capture adapter](README-capture-inputs.md) threads the full
+supplied assembler through the old untrusted trace. Its five refactor goals and
+four typed negatives precede a separate runtime compile-only job. Source review
+and 52 controls pass; hosted proof/compile results remain pending. No capture
+or trace-to-compiler correctness follows from those refactor identities.
+
 `Compiler.Backend07ConfigProjectionChecks` is a candidate for eleven original
 configuration and direct-fromStack attachment goals, with a two-owner audit
 and four typed negatives. It retains GC None, StackToLab parameter 24 and the
