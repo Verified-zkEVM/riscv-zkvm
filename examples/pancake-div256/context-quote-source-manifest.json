@@ -29771,10 +29771,11 @@
     "examples/pancake-div256/lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
     "examples/pancake-div256/patches/flapjack-lean435-compat.patch": "fa218e60078281c5bde6a1ca542938a5fc821e4b210be608ca49316fe943be25",
     "examples/pancake-div256/prepare-flapjack.py": "5942cfca4d1b311fa082dbabd26285e28ce932e22601ae6e54d7ea531914d737",
-    "examples/pancake-div256/test-context-quote-roundtrip.py": "28d61db52b87ad956b310655d90e68b5ba362942399da2a6cae7f38bbea6910f",
+    "examples/pancake-div256/test-context-quote-roundtrip.py": "c787d76b6c260d8dddebc0185d88b68107103274fe270c450eb2e432d8d6a3ae",
     "lake-manifest.json": "e908a3cbe3a110d49afd28abcb9f9b14f6ab589e9b7f66cce8fe84f66dd5d0e6",
     "lakefile.toml": "0578ce3ceac01bbab050fc3f073e933525aa215ed370170e1ebfb47fc842eaca",
-    "lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c"
+    "lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c",
+    "examples/pancake-div256/test-context-quote-source-paths.py": "dd4b1d0b491623c7d871f2b2254d03b41d8610caa6ccd1e6d921eba8846199fc"
   },
   "runtime_import_graph_must_match_frozen_source_graph": true,
   "implicit_prelude_root": "Init",

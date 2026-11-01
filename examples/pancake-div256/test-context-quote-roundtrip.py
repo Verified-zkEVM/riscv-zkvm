@@ -45,6 +45,33 @@ def external_paths(values,local,namespace):
    'unexpected project namespace provider')
   result.append(value)
  return result
+def pinned_external_source_roots(spec,sysroot):
+ # Source roots differ from object roots: a real package source root is often
+ # below PROJECT/.lake/packages. Only frozen graph providers may survive.
+ result={str((sysroot/'src/lean').resolve(strict=False)),
+         str((sysroot/'src/lean/lake').resolve(strict=False))}
+ for key,row in spec['provider_definitions'].items():
+  if row['kind']!='package':continue
+  name=row['name']
+  require(key=='package:'+name and name and '/'not in name and name not in['.','..'],
+   'invalid pinned source provider')
+  result.add(str((PROJECT/'.lake/packages'/name).resolve(strict=True)))
+ return result
+
+def external_source_paths(values,project,namespace,allowed):
+ result=[];project=project.resolve(strict=True)
+ for value in values:
+  root=Path(value).resolve(strict=False)
+  if root==project:continue
+  # Refuse namespace fallback BEFORE dropping any unused Lake source root.
+  candidates=[root/namespace,root/(namespace+'.lean')]
+  require(not any(p.exists()or p.is_symlink()for p in candidates),
+   'unexpected project source namespace provider')
+  if str(root)not in allowed:continue
+  require(root.is_dir(),'missing pinned external source root')
+  if str(root)not in result:result.append(str(root))
+ return result
+
 def typed_refusal(result,log,witness,output,weak=False):
  text=log.read_text();lower=text.lower()
  require(type(result['returncode'])is int and result['returncode']==1,
@@ -128,7 +155,8 @@ def main(argument):
   x.name.endswith(('.olean','.olean.private','.olean.server','.ir'))for x in local.rglob('*')),
   'fresh entire project namespace required')
  external=external_paths(search,normal,'PancakeDiv256')
- external_src=external_paths(sources,PROJECT,'PancakeDiv256')
+ external_src=external_source_paths(sources,PROJECT,'PancakeDiv256',
+  pinned_external_source_roots(spec,sysroot))
  checkout=subprocess.check_output(['git','rev-parse','HEAD'],text=True,timeout=30).strip()
  tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True,timeout=30).strip()
  own=[]
