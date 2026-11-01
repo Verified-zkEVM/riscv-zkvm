@@ -4,6 +4,7 @@ name: Allocation config migration compatibility (separate heavy gate)
   push:
     branches:
     - feat/div256-allocation-config-light
+    - feat/div256-allocation-legacy-consumer-repair
 permissions:
   contents: read
 jobs:
@@ -100,7 +101,7 @@ jobs:
         if local.exists()and any(p.is_symlink()or p.suffix=='.olean'for p in local.rglob('*')):raise SystemExit('project proof objects already exist')
         manifest_name='examples/pancake-div256/allocation-config-legacy-source-manifest.json'
         raw=(root/manifest_name).read_bytes()
-        if hashlib.sha256(raw).hexdigest()!='4d39b76020621543326e87668d78fb5a63fb4c7f7b6fbe0e54d769a6f02dc575':raise SystemExit('phase source manifest changed')
+        if hashlib.sha256(raw).hexdigest()!='3ca8ff28330f4b035e90266ca39a4a074608a77532b7ca6d34aa32830cc1819a':raise SystemExit('phase source manifest changed')
         data=json.loads(raw); selection={'local_modules':data['local_modules']}; expected={}
         for name in selection['local_modules']:
             row=data['modules'][name]; expected['examples/pancake-div256/'+row['path']]=row['sha256']
@@ -136,7 +137,7 @@ jobs:
         evidence.mkdir()
         report={'phase':'legacy','certificate':False,'active':False,'checkout':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
          'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),'files':records,'sdk':sdk,'prepared_packages':packages,
-         'source_manifest_sha256':'4d39b76020621543326e87668d78fb5a63fb4c7f7b6fbe0e54d769a6f02dc575','local_modules':selection['local_modules'],'fresh_local_namespace':True,
+         'source_manifest_sha256':'3ca8ff28330f4b035e90266ca39a4a074608a77532b7ca6d34aa32830cc1819a','local_modules':selection['local_modules'],'fresh_local_namespace':True,
          'runtime_execution':False,'compiler_correctness_claim':False,
          'run_metadata':{k:os.environ.get(k)for k in ['GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_SHA','GITHUB_REF']}}
         (evidence/'sources-before.json').write_text(json.dumps(report,indent=2)+'\n')
@@ -147,9 +148,9 @@ jobs:
       run: |
         set -euo pipefail
         {
-          python3 check-backend07-config-projection-sources.py --manifest-basename allocation-config-legacy-source-manifest.json --manifest-sha256 4d39b76020621543326e87668d78fb5a63fb4c7f7b6fbe0e54d769a6f02dc575
+          python3 check-backend07-config-projection-sources.py --manifest-basename allocation-config-legacy-source-manifest.json --manifest-sha256 3ca8ff28330f4b035e90266ca39a4a074608a77532b7ca6d34aa32830cc1819a
           lake --fail-fast build PancakeDiv256.Compiler.AllocationLegacyChecks
-          python3 check-backend07-config-projection-sources.py --manifest-basename allocation-config-legacy-source-manifest.json --manifest-sha256 4d39b76020621543326e87668d78fb5a63fb4c7f7b6fbe0e54d769a6f02dc575
+          python3 check-backend07-config-projection-sources.py --manifest-basename allocation-config-legacy-source-manifest.json --manifest-sha256 3ca8ff28330f4b035e90266ca39a4a074608a77532b7ca6d34aa32830cc1819a
         } 2>&1 | tee ../../allocation-config-compatibility-evidence/build.log
     - name: Recheck legacy compatibility provenance and objects
       run: |

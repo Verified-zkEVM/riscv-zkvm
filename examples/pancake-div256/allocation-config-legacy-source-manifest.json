@@ -77916,7 +77916,7 @@
     "PancakeDiv256.Compiler.AllocationLegacyChecks": {
       "provider": "consumer",
       "path": "PancakeDiv256/Compiler/AllocationLegacyChecks.lean",
-      "sha256": "eef2133b902eb60446ae925be80dfb1829e494721a68c82aabd1cb5c163a1c19",
+      "sha256": "537a3b241ab73080dfa27438ddb461d942a622221aafe61e317adbfb0728f35d",
       "imports": [
         "Lean",
         "PancakeDiv256.Compiler.Allocation",
@@ -84029,7 +84029,7 @@
     }
   },
   "source_count": 8061,
-  "exact_source_bytes": 100134937,
+  "exact_source_bytes": 100134939,
   "not_a_runtime_or_IR_closure": true,
   "local_modules": [
     "PancakeDiv256.Compiler.Allocation",

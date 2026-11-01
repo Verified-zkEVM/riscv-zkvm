@@ -11,7 +11,7 @@ set_option maxHeartbeats 0
 migration gate intentionally imports the old heavy module. No execution occurs. -/
 example : Allocation.Tape = List (Option (Spt Nat)) := rfl
 example : Allocation.RawTape = List (Option (List (Nat × Nat))) := rfl
-example : Allocation.WordProgram = Nat × Nat × WordLangProgHOL (BitVec 64) := rfl
+example : Allocation.WordProgram = (Nat × Nat × WordLangProgHOL (BitVec 64)) := rfl
 example (cfg : Backend.Config) (program : List Allocation.WordProgram) :
     Allocation.mapped cfg program =
       WordToWord.compileWith RegAlloc.regAllocExecutable cfg.wordToWordConf riscvConfig program :=
