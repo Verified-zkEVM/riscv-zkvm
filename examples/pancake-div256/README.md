@@ -379,6 +379,11 @@ Its 87-owner audit, three typed negatives and 88-object fresh build await Kernel
 validation. See [the focused gate](README-native-immediate21.md); source-survey
 support does not establish additional verified coverage.
 
+`Compiler.NativeCoverageBatch000Checks` is the first separate bounded batch
+of eleven more conditional/loop functions, with 47 audited owners, three typed
+negatives and a fresh 48-object gate. Source review and 69 controls pass; Kernel
+validation is pending. See [the bounded batch](README-native-coverage000.md).
+
 `Compiler.NativeBranchSmallChecks` is a separate bounded candidate for eight
 functions:270,337,475,539,636,640,707 and841. It checks eight complete
 Native tuples and35 owning modules, with three typed frame/loop-state mutations.
