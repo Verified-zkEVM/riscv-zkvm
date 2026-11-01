@@ -1,0 +1,41 @@
+{
+  "status": "ACCEPTED Root+independent hosted helper role",
+  "head": "2ff13191e384c37b4444cd3e11ffda95f3162ee8",
+  "run": 41306396683,
+  "job": 124847558523,
+  "artifact": 13084175561,
+  "archive_sha256": "623f50ea6d2a03b6ef250339265b17aa3b722c5047926d11228c778f7da217ee",
+  "archive_bytes": 197821,
+  "members": 7,
+  "census": {
+    "owners": 2,
+    "declarations": 45,
+    "theorems": 30,
+    "unexpected_axioms": 0
+  },
+  "fixed_consumers": 5,
+  "typed_negatives": 4,
+  "source_graph_buffers_rechecked": 2728,
+  "configuration_pins_rechecked": 30,
+  "committed_Git_records": 51,
+  "fresh_local_modules": 36,
+  "downloaded_objects": {
+    "PancakeDiv256/Compiler/Backend07CaptureInputsRefactorChecks.olean": "dfc91fcdba709259f8ba2edaa4fb97a5fe073066e57f95a328ce841058e56d89",
+    "PancakeDiv256/Compiler/Backend07/ContextInputsProposal/CaptureInputs.olean": "ee5911bd51c1caf38cc2ac6ca5a75eec5cc770f105e28425b903a6b542db50da",
+    "PancakeDiv256/Compiler/Backend07/ContextInputsProposal/OriginalViewGoals.olean": "510853414130a38c29e35295956da3e5b4fc35bf653249171505e8da7bfd26de"
+  },
+  "inventory_only_objects": 33,
+  "source_sdk_package_checkout_prepost_job_success": true,
+  "local_Lean_SDK_runtime_capture": false,
+  "scope": "old-untrusted-trace-refactor-identities",
+  "role_acceptance_pending_independent_review": false,
+  "accepted": true,
+  "acceptance_time": 1793537111.7585156,
+  "source_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
+  "role": "helper63",
+  "independent_review_sha256": "041f22ef6821c1164a87b8f9c310f8e84b5204d2063927371d048817f8f0103a",
+  "SDK_binary_hashes_independently_checked_readonly": true,
+  "prepared_package_diff": "canonical full-index equals recorded fa218 patch; abbrev8 reproduces hosted digest",
+  "runtime_role_accepted": false,
+  "whole_run_accepted": false
+}

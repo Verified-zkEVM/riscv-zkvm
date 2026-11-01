@@ -1,24 +1,24 @@
 {
   "schema": 1,
-  "source_review_complete": false,
+  "source_review_complete": true,
   "repository": "Verified-zkEVM/riscv-zkvm",
   "workflow_path": ".github/workflows/backend07-real-context-capture.yml",
   "job_name": "bounded-real-capture",
   "job_id": "bounded-real-capture",
   "source_files": {
-    ".github/workflows/allocation-config-compatibility.yml": "575c46f0dfa1ccda13dcb224cd615e17e991056b30444b9c48bdc1a3f65cc9ef",
+    ".github/workflows/allocation-config-compatibility.yml": "68b8a6b15af084a000db81ba69e7a20be3fb2dd39565fa5aa7e0efb74156f83f",
     ".github/workflows/backend07-capture-inputs.yml": "70e4d4bcd13bf74ac35eb10577ea3f28d0a4d25f49e5e9f2aca007f21e848933",
     ".github/workflows/backend07-real-context-capture.yml": "37fbbe81c6388b0ea57895f35196b67d78966cca042625782fe3048593515f5a",
-    ".github/workflows/hints.yml": "e2de254e1e05b2a6def65049477c1f20d4955565732ce69d167de79da34027da",
+    ".github/workflows/hints.yml": "466096a8d623c5a08f3b959d70055d1e07e10b4261bd64d89cf899ec8f0c7b99",
     "examples/pancake-div256/PancakeDiv256/Compiler/Allocation.lean": "2370f7b2cf744fdbfadb2e8ae64a4a1d98595b6d4df9efccd9ddb8e8d9be278d",
     "examples/pancake-div256/PancakeDiv256/Compiler/Allocation/Config.lean": "fe8128509615e3aa576cb486f4a85934ca7abe63ab6bb3dbf8054f1474ab2f65",
     "examples/pancake-div256/PancakeDiv256/Compiler/AllocationConfigChecks.lean": "89d1f1fdf78c713d7f41a74d362b5fe1637438c17c5bcef9c16ba07a27f14977",
-    "examples/pancake-div256/PancakeDiv256/Compiler/AllocationLegacyChecks.lean": "eef2133b902eb60446ae925be80dfb1829e494721a68c82aabd1cb5c163a1c19",
+    "examples/pancake-div256/PancakeDiv256/Compiler/AllocationLegacyChecks.lean": "537a3b241ab73080dfa27438ddb461d942a622221aafe61e317adbfb0728f35d",
     "examples/pancake-div256/PancakeDiv256/Compiler/Backend07ConfigProjectionChecks.lean": "3b349b9595b3967d5b64bea3eef88334b5bbcff97857598d623f1cb97e39765b",
     "examples/pancake-div256/PancakeDiv256/Compiler/ReflectionConfig.lean": "87cfd417a37912b1765516e0ff5fcf387acb2f7d49ca9b7feb0336e73fccf1d8",
     "examples/pancake-div256/README-allocation-config-light.md": "5e86d0db16a5a2da855407e0e8ced66c46f19d202ebdde112917a2ff8952e417",
     "examples/pancake-div256/README.md": "88d05ca7bdffdb6f9671dc27e9038ef2f6de9f558fdc4b4dba5863f0d8d6c92a",
-    "examples/pancake-div256/allocation-config-legacy-source-manifest.json": "4d39b76020621543326e87668d78fb5a63fb4c7f7b6fbe0e54d769a6f02dc575",
+    "examples/pancake-div256/allocation-config-legacy-source-manifest.json": "3ca8ff28330f4b035e90266ca39a4a074608a77532b7ca6d34aa32830cc1819a",
     "examples/pancake-div256/backend07-capture-inputs-source-manifest.json": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
     "examples/pancake-div256/backend07-config-projection-source-manifest.json": "971845fda593242e829d6095698220800dbad717ec0601139221e5543b89c680",
     "examples/pancake-div256/build-hinted-guest.py": "f5ed7073d5415a7536218d3d664feabcd49f5f52d2a69ff914f46257a3abe1b1",
@@ -32,7 +32,7 @@
     "examples/pancake-div256/patches/flapjack-lean435-compat.patch": "fa218e60078281c5bde6a1ca542938a5fc821e4b210be608ca49316fe943be25",
     "examples/pancake-div256/prepare-flapjack.py": "5942cfca4d1b311fa082dbabd26285e28ce932e22601ae6e54d7ea531914d737",
     "examples/pancake-div256/tools/capture-context/Launch.lean": "21d4f8250d692562db42b27f4527d32a73d5a139fffc50eb57c72aa20964ef77",
-    "examples/pancake-div256/tools/capture-context/README.md": "06d81215f17cd0949945896cd31322dc72c47431124f0a6636c34cf8fcca4374",
+    "examples/pancake-div256/tools/capture-context/README.md": "069ddead707add4b1b1b9e9a8536f0f938ffe750fe182b2ec873a4f1aaa79956",
     "examples/pancake-div256/tools/capture-context/accepted-prerequisites.isolated-hosted.template.json": "a42d368256851421bd65c573ca0345c5ed84fe0ad3f508f70ff928c7edd8910a",
     "examples/pancake-div256/tools/capture-context/accepted-prerequisites.template.json": "91e29e96132eed4f68ba87df821fc48eeb2f073e8b306d24ffddf4c0a3faf70d",
     "examples/pancake-div256/tools/capture-context/artifacts.py": "72b185a828c8d11c5ae94384eadcb39e8adff041624ff989a723e0c827b63c42",
@@ -40,9 +40,11 @@
     "examples/pancake-div256/tools/capture-context/bounded_capture.py": "6463c56ba8c5088c2487a5fde867da383f92361b0292712ac8a00e2ced093691",
     "examples/pancake-div256/tools/capture-context/controller.py": "f3b421bf8976ef021756fea05e2ae5c6bb1d9ffa73d8d86d422100da0427794c",
     "examples/pancake-div256/tools/capture-context/driver.py": "ecc53475cfebdbad861f4bca666a6721b92d8a274191fcedb6efbc12ca27c41f",
-    "examples/pancake-div256/tools/capture-context/manifest.json": "9630de868136606b567c7260ed8dc8a41c92d6cf32030a721662e86a18a32091",
+    "examples/pancake-div256/tools/capture-context/manifest.json": "dfe4028aa520a6380adedddb9483044e3f032dab22cf9865b338db91b318822a",
     "examples/pancake-div256/tools/capture-context/policy.json": "4f382a26a355ac68a401d636c71f957566cd5e89a7fef26ebb5ca9fe4b28db27",
     "examples/pancake-div256/tools/capture-context/providers.py": "e5f6ff74ebc497937c55e5caada3d65d7d0870b54ed6af60d265664dcc938efa",
+    "examples/pancake-div256/tools/capture-context/root-receipts/capture-inputs-helper72.json": "290c719906d8826abdd374ba4ddac93b744ef7736b136a6093fc9164e32dd2d8",
+    "examples/pancake-div256/tools/capture-context/root-receipts/capture-inputs-runtime72.json": "c5642b905607f23c1f76c1dac9eb25f97e3cf426b635ed2a50a224d3a01684db",
     "examples/pancake-div256/tools/capture-context/root-receipts/light-config69.json": "40aaa1dcd1613ddccf6f397a3dd2d8eee608c840b5aa6745f2935b4bf2b7d3b5",
     "examples/pancake-div256/tools/capture-context/root-receipts/quotation66.json": "26adc2cc011e490098e9b3ae4d3c9bd98828e7ed1ff21ba80ae0aa64e4dbd634",
     "lake-manifest.json": "e908a3cbe3a110d49afd28abcb9f9b14f6ab589e9b7f66cce8fe84f66dd5d0e6",
@@ -72,17 +74,31 @@
     "helper63": {
       "source_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
       "scope": "old-untrusted-trace-refactor-identities",
-      "accepted": false,
-      "commit": null,
-      "receipt": null
+      "accepted": true,
+      "commit": "2ff13191e384c37b4444cd3e11ffda95f3162ee8",
+      "receipt": {
+        "relative": "examples/pancake-div256/tools/capture-context/root-receipts/capture-inputs-helper72.json",
+        "sha256": "290c719906d8826abdd374ba4ddac93b744ef7736b136a6093fc9164e32dd2d8"
+      }
     },
     "runtime63": {
       "source_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
       "scope": "runtime-compile-only",
-      "accepted": false,
-      "commit": null,
-      "receipt": null
+      "accepted": true,
+      "commit": "2ff13191e384c37b4444cd3e11ffda95f3162ee8",
+      "receipt": {
+        "relative": "examples/pancake-div256/tools/capture-context/root-receipts/capture-inputs-runtime72.json",
+        "sha256": "c5642b905607f23c1f76c1dac9eb25f97e3cf426b635ed2a50a224d3a01684db"
+      }
     }
   },
-  "note": "Dormant publication source-data revision atop2ff13191. Config971845 and finitequote75b3 accepted data preserved; helper/runtime2d546164 remain FALSE and source_review_complete FALSE. No workflow/capture execution or whole-program certificate."
+  "note": "REVIEW-ONLY authority data. Four prerequisite roles accepted at their exact scopes; operational source reviewed. This data must be independently reviewed and committed before Root schedules the execution branch. Actual capture and its untrusted outputs are NOT accepted; no wholecompiler/byte/Native/resource/deployment theorem follows.",
+  "source_review_basis": {
+    "reviewed_operational_commit": "c9875200bec8cd20a52022aa3cef60e37dc94983",
+    "independent_code_and_applied_review_sha256": "716c011492dc21831c8843d18f4fff1f3b76b698e502f0291d051adbe5885a56",
+    "reviewed04_source_sha256": "a959c59a5be5153d81215854393cba577dcb3da42a517f248cd471afc65fd3e2",
+    "current_authority_base": "425b09f12b11cbf599accc90594e49b398814437",
+    "scope": "Root assertion about exact reviewed operational source; not Kernel/fullcompiler/capture correctness",
+    "actual_capture_accepted": false
+  }
 }
