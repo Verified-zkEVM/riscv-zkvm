@@ -368,6 +368,12 @@ synthetic source controls. Three complete endpoints,15-owner audit and three
 typed immediate/operand/bitmap mutations await Kernel validation. No broader
 immediate-comparison or Native coverage is established by this small candidate.
 
+`Compiler.NativeImmediate21Checks` is a separate opt-in candidate for 21 actual
+zero-immediate functions, reusing the three-function pilot and adding 18 families.
+Its 87-owner audit, three typed negatives and 88-object fresh build await Kernel
+validation. See [the focused gate](README-native-immediate21.md); source-survey
+support does not establish additional verified coverage.
+
 `Compiler.NativeBranchSmallChecks` is a separate bounded candidate for eight
 functions:270,337,475,539,636,640,707 and841. It checks eight complete
 Native tuples and35 owning modules, with three typed frame/loop-state mutations.
