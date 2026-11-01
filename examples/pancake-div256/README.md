@@ -416,6 +416,12 @@ combined421 checkpoint is independently accepted:896 fresh project modules,
 All907 source/policy records and70 selected proof objects were verified;826
 objects are represented by the reviewed inventory. Ordinary imports remain unchanged.
 
+`Compiler.Header07AllocationFourteenChecks` adds seven actual cells 72–78 at
+tape positions 8–14, retaining the earlier seven cells unchanged. Fourteen
+full-tuple consumers, 112 guarded bridge names and four typed negatives await
+Kernel validation. Source review and 128 controls pass; see
+[the fourteen-cell candidate](README-allocation-fourteen.md).
+
 `Compiler.Header07AllocationSevenChecks` is a candidate adding only
 cells69,70 and71 at actual tape positions5,6 and7. It checks seven complete
 endpoints and56 named bridge lemmas with seven owning modules and four typed

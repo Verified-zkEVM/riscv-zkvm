@@ -481,6 +481,61 @@ jobs:
             examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Allocated689.olean
             examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/BackendStages/Function689.olean
             examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Native31Checks.olean
+      - name: Check fourteen actual allocation and captured color cells
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -o pipefail
+          mkdir -p .lake/build
+          lake --fail-fast build PancakeDiv256.Compiler.Header07AllocationFourteenChecks 2>&1 | tee .lake/build/allocation-fourteen-checks.log
+      - name: Reject changed fourteen-cell index, oracle and tuple
+        if: matrix.directory == 'pancake-div256'
+        working-directory: examples/pancake-div256
+        env:
+          LEAN_NUM_THREADS: 1
+        run: |
+          set -o pipefail
+          lake env python3 - <<'PYSEVEN' 2>&1 | tee .lake/build/allocation-fourteen-negatives.log
+          from pathlib import Path
+          import re
+          import subprocess
+          import tempfile
+          with tempfile.TemporaryDirectory(prefix="allocation-fourteen-negatives-") as directory:
+              for name, witness in [("WrongTapeIndex72", "selected_oracle72_eq_original"), ("WrongOracle72", "selected_oracle72_eq_original"), ("WrongLabel72", "compiled72_actual_oracle_eq"), ("WrongArity73", "compiled73_actual_oracle_eq")]:
+                  output = Path(directory) / (name + ".olean")
+                  result = subprocess.run(["lean", "-o", str(output), "tests/allocation-fourteen/" + name + ".lean"], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
+                  diagnostic = result.stdout
+                  print(name + ": actual exit=" + str(result.returncode) + "; expected typed rejection\n" + diagnostic[-20000:])
+                  lower = diagnostic.lower()
+                  if result.returncode != 1 or output.exists() or output.is_symlink() or lower.count("error:") != 1 or "type mismatch" not in lower or re.search(r"(?<![\w'])" + re.escape(witness) + r"(?![\w'])", diagnostic) is None or any(text in lower for text in ["unknown identifier", "unknown constant", "unknown module", "object file", "unexpected token", "expected token", "unexpected end of input", "unterminated", "parser error", "invalid syntax", "failed to synthesize"]):
+                      raise SystemExit(name + ": expected typed proof mismatch without output")
+          PYSEVEN
+      - name: Preserve fourteen allocation cell proof objects
+        if: always() && matrix.directory == 'pancake-div256'
+        uses: actions/upload-artifact@v4
+        with:
+          name: allocation-fourteen-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            examples/pancake-div256/.lake/build/allocation-fourteen-checks.log
+            examples/pancake-div256/.lake/build/allocation-fourteen-negatives.log
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation64.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation66.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation67.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation68.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation69.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation70.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation71.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation72.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation73.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation74.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation75.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation76.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation77.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07Allocation78.olean
+            examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256/Compiler/Header07AllocationFourteenChecks.olean
       - name: Check seven actual allocation and captured color cells
         if: matrix.directory == 'pancake-div256'
         working-directory: examples/pancake-div256
