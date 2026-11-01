@@ -430,6 +430,14 @@ Its isolated build records1,740 object hashes and awaits Kernel validation; see
 [the full-data checks](README-backend07-full-data.md). This is a captured-data
 checkpoint, not the whole Word-to-Stack or final target/byte result.
 
+`Compiler.Backend07ConfigProjectionChecks` is a candidate for eleven original
+configuration and direct-fromStack attachment goals, with a two-owner audit
+and four typed negatives. It retains GC None, StackToLab parameter 24 and the
+real assembler; the generic fromWord route updates wordConf first and requires
+that distinct supplied configuration. Kernel validation is pending. See
+[the configuration projection](README-backend07-config-projection.md). No
+runtime capture or compiler/image byte identity is established by this gate.
+
 `Compiler.Backend07InputChecks` is an opt-in candidate for four actual07
 Stack bodies (64, 65, 500 and 878), their entries and exact links to the existing
 Native computation theorems. It also checks the captured 817 numeric entry
