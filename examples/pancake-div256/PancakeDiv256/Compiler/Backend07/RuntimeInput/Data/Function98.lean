@@ -1,0 +1,305 @@
+import Flapjack.Compiler.Backend.StackLang.Prog
+open Flapjack Flapjack.Compiler.Backend
+namespace PancakeDiv256.Compiler.Backend07.RuntimeInput
+def stackBody98_0 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackAlloc 2
+
+def stackBody98_1 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+def stackBody98_2 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.get 1 Flapjack.Compiler.Backend.StackLang.StoreName.heapLength
+
+def stackBody98_3 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst
+  (Flapjack.Compiler.Encoders.Asm.HolInst.arith
+    (Flapjack.Compiler.Encoders.Asm.HolArith.shift Flapjack.Shift.lsl 1 1
+      (Flapjack.Compiler.Encoders.Asm.HolRegImm.imm (BitVec.ofNat 64 1))))
+
+def stackBody98_4 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.opCurrHeap Flapjack.BinOp.add 1 1
+
+def stackBody98_5 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst
+  (Flapjack.Compiler.Encoders.Asm.HolInst.mem Flapjack.WordMemOp.load 1
+    (Flapjack.Compiler.Encoders.Asm.HolAddr.addr 1 (BitVec.ofNat 64 18446744073709551576)))
+
+def stackBody98_6 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst (Flapjack.Compiler.Encoders.Asm.HolInst.const 2 (BitVec.ofNat 64 0))
+
+def stackBody98_7 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.tick
+
+def stackBody98_8 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst (Flapjack.Compiler.Encoders.Asm.HolInst.const 1 (BitVec.ofNat 64 640))
+
+def stackBody98_9 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackStore 0 1
+
+def stackBody98_10 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+def stackBody98_11 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst (Flapjack.Compiler.Encoders.Asm.HolInst.const 22 (BitVec.ofNat 64 43))
+
+def stackBody98_12 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackStore 22 0
+
+def stackBody98_13 : StackLang.HolProg 64 :=
+.seq stackBody98_11 stackBody98_12
+
+def stackBody98_14 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackAlloc 3
+
+def stackBody98_15 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst (Flapjack.Compiler.Encoders.Asm.HolInst.const 22 (BitVec.ofNat 64 1))
+
+def stackBody98_16 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackStore 22 0
+
+def stackBody98_17 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.locValue 22 98 3
+
+def stackBody98_18 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackStore 22 1
+
+def stackBody98_19 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.get 22 Flapjack.Compiler.Backend.StackLang.StoreName.handler
+
+def stackBody98_20 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackStore 22 2
+
+def stackBody98_21 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+def stackBody98_22 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackGetSize 22
+
+def stackBody98_23 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.set Flapjack.Compiler.Backend.StackLang.StoreName.handler 22
+
+def stackBody98_24 : StackLang.HolProg 64 :=
+.seq stackBody98_22 stackBody98_23
+
+def stackBody98_25 : StackLang.HolProg 64 :=
+.seq stackBody98_21 stackBody98_24
+
+def stackBody98_26 : StackLang.HolProg 64 :=
+.seq stackBody98_20 stackBody98_25
+
+def stackBody98_27 : StackLang.HolProg 64 :=
+.seq stackBody98_19 stackBody98_26
+
+def stackBody98_28 : StackLang.HolProg 64 :=
+.seq stackBody98_18 stackBody98_27
+
+def stackBody98_29 : StackLang.HolProg 64 :=
+.seq stackBody98_17 stackBody98_28
+
+def stackBody98_30 : StackLang.HolProg 64 :=
+.seq stackBody98_16 stackBody98_29
+
+def stackBody98_31 : StackLang.HolProg 64 :=
+.seq stackBody98_15 stackBody98_30
+
+def stackBody98_32 : StackLang.HolProg 64 :=
+.seq stackBody98_14 stackBody98_31
+
+def stackBody98_33 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackAlloc 0
+
+def stackBody98_34 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+def stackBody98_35 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+def stackBody98_36 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackLoad 22 2
+
+def stackBody98_37 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.set Flapjack.Compiler.Backend.StackLang.StoreName.handler 22
+
+def stackBody98_38 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackFree 3
+
+def stackBody98_39 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst
+  (Flapjack.Compiler.Encoders.Asm.HolInst.arith
+    (Flapjack.Compiler.Encoders.Asm.HolArith.binop Flapjack.BinOp.or 2 1
+      (Flapjack.Compiler.Encoders.Asm.HolRegImm.reg 1)))
+
+def stackBody98_40 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackLoad 0 1
+
+def stackBody98_41 : StackLang.HolProg 64 :=
+.seq stackBody98_39 stackBody98_40
+
+def stackBody98_42 : StackLang.HolProg 64 :=
+.seq stackBody98_38 stackBody98_41
+
+def stackBody98_43 : StackLang.HolProg 64 :=
+.seq stackBody98_37 stackBody98_42
+
+def stackBody98_44 : StackLang.HolProg 64 :=
+.seq stackBody98_36 stackBody98_43
+
+def stackBody98_45 : StackLang.HolProg 64 :=
+.seq stackBody98_35 stackBody98_44
+
+def stackBody98_46 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackLoad 0 1
+
+def stackBody98_47 : StackLang.HolProg 64 :=
+.call none (Sum.inl 5) none
+
+def stackBody98_48 : StackLang.HolProg 64 :=
+.seq stackBody98_46 stackBody98_47
+
+def stackBody98_49 : StackLang.HolProg 64 :=
+.call (some (stackBody98_45, 0, 98, 2)) (Sum.inl 68) (some (stackBody98_48, 98, 3))
+
+def stackBody98_50 : StackLang.HolProg 64 :=
+.seq stackBody98_34 stackBody98_49
+
+def stackBody98_51 : StackLang.HolProg 64 :=
+.seq stackBody98_33 stackBody98_50
+
+def stackBody98_52 : StackLang.HolProg 64 :=
+.seq stackBody98_32 stackBody98_51
+
+def stackBody98_53 : StackLang.HolProg 64 :=
+.seq stackBody98_13 stackBody98_52
+
+def stackBody98_54 : StackLang.HolProg 64 :=
+.seq stackBody98_10 stackBody98_53
+
+def stackBody98_55 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.tick
+
+def stackBody98_56 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.get 1 Flapjack.Compiler.Backend.StackLang.StoreName.heapLength
+
+def stackBody98_57 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst
+  (Flapjack.Compiler.Encoders.Asm.HolInst.arith
+    (Flapjack.Compiler.Encoders.Asm.HolArith.shift Flapjack.Shift.lsl 1 1
+      (Flapjack.Compiler.Encoders.Asm.HolRegImm.imm (BitVec.ofNat 64 1))))
+
+def stackBody98_58 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.opCurrHeap Flapjack.BinOp.add 1 1
+
+def stackBody98_59 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst
+  (Flapjack.Compiler.Encoders.Asm.HolInst.arith
+    (Flapjack.Compiler.Encoders.Asm.HolArith.binop Flapjack.BinOp.add 1 1
+      (Flapjack.Compiler.Encoders.Asm.HolRegImm.imm (BitVec.ofNat 64 18446744073709551576))))
+
+def stackBody98_60 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+def stackBody98_61 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst
+  (Flapjack.Compiler.Encoders.Asm.HolInst.mem Flapjack.WordMemOp.store 2
+    (Flapjack.Compiler.Encoders.Asm.HolAddr.addr 1 (BitVec.ofNat 64 0)))
+
+def stackBody98_62 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+def stackBody98_63 : StackLang.HolProg 64 :=
+.seq stackBody98_61 stackBody98_62
+
+def stackBody98_64 : StackLang.HolProg 64 :=
+.seq stackBody98_60 stackBody98_63
+
+def stackBody98_65 : StackLang.HolProg 64 :=
+.seq stackBody98_59 stackBody98_64
+
+def stackBody98_66 : StackLang.HolProg 64 :=
+.seq stackBody98_58 stackBody98_65
+
+def stackBody98_67 : StackLang.HolProg 64 :=
+.seq stackBody98_57 stackBody98_66
+
+def stackBody98_68 : StackLang.HolProg 64 :=
+.seq stackBody98_56 stackBody98_67
+
+def stackBody98_69 : StackLang.HolProg 64 :=
+.seq stackBody98_55 stackBody98_68
+
+def stackBody98_70 : StackLang.HolProg 64 :=
+.seq stackBody98_54 stackBody98_69
+
+def stackBody98_71 : StackLang.HolProg 64 :=
+.seq stackBody98_9 stackBody98_70
+
+def stackBody98_72 : StackLang.HolProg 64 :=
+.seq stackBody98_8 stackBody98_71
+
+def stackBody98_73 : StackLang.HolProg 64 :=
+.seq stackBody98_7 stackBody98_72
+
+def stackBody98_74 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.tick
+
+def stackBody98_75 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+def stackBody98_76 : StackLang.HolProg 64 :=
+.seq stackBody98_74 stackBody98_75
+
+def stackBody98_77 : StackLang.HolProg 64 :=
+.ite (Flapjack.Cmp.equal) 1 (Flapjack.Compiler.Encoders.Asm.HolRegImm.reg 2) stackBody98_73 stackBody98_76
+
+def stackBody98_78 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.tick
+
+def stackBody98_79 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.inst (Flapjack.Compiler.Encoders.Asm.HolInst.const 1 (BitVec.ofNat 64 0))
+
+def stackBody98_80 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+def stackBody98_81 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.stackFree 2
+
+def stackBody98_82 : StackLang.HolProg 64 :=
+Flapjack.Compiler.Backend.StackLang.Prog.ret 0
+
+def stackBody98_83 : StackLang.HolProg 64 :=
+.seq stackBody98_81 stackBody98_82
+
+def stackBody98_84 : StackLang.HolProg 64 :=
+.seq stackBody98_80 stackBody98_83
+
+def stackBody98_85 : StackLang.HolProg 64 :=
+.seq stackBody98_79 stackBody98_84
+
+def stackBody98_86 : StackLang.HolProg 64 :=
+.seq stackBody98_78 stackBody98_85
+
+def stackBody98_87 : StackLang.HolProg 64 :=
+.seq stackBody98_77 stackBody98_86
+
+def stackBody98_88 : StackLang.HolProg 64 :=
+.seq stackBody98_6 stackBody98_87
+
+def stackBody98_89 : StackLang.HolProg 64 :=
+.seq stackBody98_5 stackBody98_88
+
+def stackBody98_90 : StackLang.HolProg 64 :=
+.seq stackBody98_4 stackBody98_89
+
+def stackBody98_91 : StackLang.HolProg 64 :=
+.seq stackBody98_3 stackBody98_90
+
+def stackBody98_92 : StackLang.HolProg 64 :=
+.seq stackBody98_2 stackBody98_91
+
+def stackBody98_93 : StackLang.HolProg 64 :=
+.seq stackBody98_1 stackBody98_92
+
+def stackBody98_94 : StackLang.HolProg 64 :=
+.seq stackBody98_0 stackBody98_93
+def program98 : Nat × StackLang.HolProg 64 := (98, stackBody98_94)
+end PancakeDiv256.Compiler.Backend07.RuntimeInput
