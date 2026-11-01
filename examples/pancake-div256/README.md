@@ -361,6 +361,11 @@ not establish the broader sequence frontier, frontend allocation, complete
 Native compilation, compiler-byte bindings or deployment resources; ordinary
 imports and the combined Native checkpoint imports remain unchanged.
 
+`Compiler.NativeHandlerTraceChecks` proposes exact ordered bitmap-trace
+composition for the existing four-premise handler rule, two boundary checks
+and three typed negatives. Kernel validation is pending; no larger handler is
+enabled. See [the handler trace candidate](README-native-handler-trace.md).
+
 `Compiler.NativeBranchImmediateChecks` is a candidate for468,544 and829
 using direct canonical immediate comparisons and unspilled left operands.
 All three actual captures compare against zero; nonzero boundaries have only
