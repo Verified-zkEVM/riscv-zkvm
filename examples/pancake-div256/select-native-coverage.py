@@ -1,7 +1,7 @@
 """Bounded SOURCE-gate selection; registry eligibility is never Kernel acceptance."""
 from pathlib import Path
 import hashlib,json,os,re
-REGISTRY_SHA='9c888907688ea8122b2c87cfb8c2afcf970bf0a7847196a67c1d0775a2dc7c8d'
+REGISTRY_SHA='f9c88f3ee8c7e655a69eb37a1f50e8c255b3bedc301b9599618747ca45a43929'
 PREFIX='examples/pancake-div256/'
 def require(ok,why):
  if not ok:raise ValueError(why)

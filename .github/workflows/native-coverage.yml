@@ -124,7 +124,7 @@ jobs:
         if re.fullmatch(r'[0-9]{3}',batch)is None:raise SystemExit('invalid batch identifier')
         registry_name='examples/pancake-div256/native-coverage-registry.json'
         registry_raw=(root/registry_name).read_bytes()
-        if digest(registry_raw)!='9c888907688ea8122b2c87cfb8c2afcf970bf0a7847196a67c1d0775a2dc7c8d':raise SystemExit('reviewed batch registry changed')
+        if digest(registry_raw)!='f9c88f3ee8c7e655a69eb37a1f50e8c255b3bedc301b9599618747ca45a43929':raise SystemExit('reviewed batch registry changed')
         registry=json.loads(registry_raw);entry=registry['batches'][batch]
         if entry['source_review_complete']is not True:raise SystemExit('batch source review incomplete')
         if entry['target']!='PancakeDiv256.Compiler.NativeCoverageBatch'+batch+'Checks':raise SystemExit('exact registered target changed')
@@ -330,3 +330,4 @@ jobs:
   push:
     branches:
     - feat/div256-native-coverage
+    - feat/div256-native-coverage002
