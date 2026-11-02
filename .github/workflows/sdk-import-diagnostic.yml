@@ -1,7 +1,7 @@
-name: SDK-only bounded import diagnostic
+name: SDK-only bounded single-worker import diagnostic
 'on':
   push:
-    branches: [feat/div256-sdk-import-diagnostic]
+    branches: [feat/div256-sdk-import-diagnostic, feat/div256-sdk-import-j1-diagnostic]
     paths:
       - .github/workflows/sdk-import-diagnostic.yml
       - examples/pancake-div256/tools/sdk-import-diagnostic/**

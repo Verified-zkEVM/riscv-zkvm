@@ -33,8 +33,8 @@ with tempfile.TemporaryDirectory(prefix='sdk-import-diagnostic-fakes-')as t:
   scope['run']=fake_run;return scope
  M.load_scope=fake_scope
  try:
-  out=t/'positive';M.run_once(sdk,out,guard);report=json.loads((out/'report.json').read_bytes());check('ONE controlled fake import path uses unchanged4GiB and120s',len(events)==1 and events[0][0]==[str(sdk/'bin/lean'),str(P/'ImportLean.lean')]and events[0][2:]==(120,4*1024**2,4*1024**3))
-  check('record environment matches actual fake child environment',report['SDK_setting']==M.SDK_SETTING and all(events[0][1][k]==v for k,v in M.SDK_SETTING.items()))
+  out=t/'positive';M.run_once(sdk,out,guard);report=json.loads((out/'report.json').read_bytes());check('ONE controlled fake import path uses unchanged4GiB and120s',len(events)==1 and events[0][0]==[str(sdk/'bin/lean'),'-j1',str(P/'ImportLean.lean')]and events[0][2:]==(120,4*1024**2,4*1024**3))
+  check('record exact CLI flag and environment match actual fake child',report['Lean_CLI_flags']==['-j1']and report['SDK_setting']==M.SDK_SETTING and all(events[0][1][k]==v for k,v in M.SDK_SETTING.items()))
   check('pre/post bytes equal and no exclusive cause/runtime acceptance',report['carrier_bytes_unchanged']is True and report['reader_errno'].startswith('unknown')and report['runtime_or_capture_or_proof_accepted']is False)
   check('completed DIAGNOSTIC has no INCOMPLETE or proof marker',(out/'DIAGNOSTIC-COMPLETE').is_file()and not(out/'INCOMPLETE').exists()and not(out/'PASS').exists())
   refuses('existing output no additional attempt',lambda:M.run_once(sdk,out,guard));check('no second child after existing output refusal',len(events)==1)

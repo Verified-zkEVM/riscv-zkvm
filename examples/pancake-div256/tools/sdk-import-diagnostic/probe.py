@@ -6,6 +6,7 @@ GUARD_SHA='6463c56ba8c5088c2487a5fde867da383f92361b0292712ac8a00e2ced093691'
 PROBE_SHA=hashlib.sha256(b'import Lean\n#check Lean.Environment\n').hexdigest()
 LIMITS={'address_space_bytes':4*1024**3,'seconds':120,'child_log_bytes':4*1024**2,'admission_memory_bytes':5*1024**3,'live_memory_bytes':1024**3,'minimum_disk_bytes':20*1024**3,'samples':2048}
 SDK_SETTING={'LEAN_NUM_THREADS':'1','LEAN_STACK_SIZE_KB':'65536'}
+LEAN_FLAGS=['-j1']
 TARGET='lib/lean/Lean/Meta/Tactic/Grind/Arith/Linear/Search.olean'
 CARRIERS=[TARGET,TARGET+'.server',TARGET+'.private']
 STATUS={'VmPeak','VmSize','VmHWM','VmRSS','Threads'}
@@ -89,11 +90,11 @@ def run_once(sdk,output,guard):
  scope=load_scope(raw,guard);monitored_scope(scope,register)
  try:
   validate_snapshot(before)
-  result=scope['run']([str(sdk/'bin/lean'),str(probe)],output/'import.log',environment(sdk,os.environ),LIMITS['seconds'],LIMITS['child_log_bytes'],check=check,address_space_bytes=LIMITS['address_space_bytes'])
+  result=scope['run']([str(sdk/'bin/lean'),*LEAN_FLAGS,str(probe)],output/'import.log',environment(sdk,os.environ),LIMITS['seconds'],LIMITS['child_log_bytes'],check=check,address_space_bytes=LIMITS['address_space_bytes'])
  except BaseException as ex:error={'type':type(ex).__name__,'message':str(ex)[:4096]}
  # The unchanged helper always drains/reaps its owned group before returning/raising.
  after=snapshot(sdk);unchanged=after==before;own_after={str(p):file_pin(p)for p in [canonical(Path(__file__)),probe,guard]};source_unchanged=own_before==own_after;peak_after=resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
- report={'kind':'SDK import diagnostic only','source_commit':EXPECTED_COMMIT,'reader_errno':'unknown; original generic fallback-read diagnostic did not record it','comparison_local_private':LOCAL_COMPARISON,'hosted_private_matches_local_comparison':all(before[CARRIERS[-1]].get(k)==v for k,v in LOCAL_COMPARISON.items()),'runtime_or_capture_or_proof_accepted':False,'SDK_setting':SDK_SETTING,'limits':LIMITS,'probe_sha256':PROBE_SHA,'guard_sha256':GUARD_SHA,'source_before':own_before,'source_after':own_after,'source_bytes_unchanged':source_unchanged,'carriers_before':before,'carriers_after':after,'carrier_bytes_unchanged':unchanged,'leaf':result,'error':error,'sampled_owned_leader_maxima':maxima,'samples':samples,'rusage_children_maxrss_before_KiB':peak_before,'rusage_children_maxrss_after_KiB':peak_after,'rusage_scope':'OS RUSAGE_CHILDREN maximum; not an aggregate group RSS measurement','other_scope':'Passing direct import does not establish Lake --setup or full-runtime fit; no exclusive failure cause inferred','elapsed_seconds':time.monotonic()-started}
+ report={'kind':'SDK import diagnostic only','source_commit':EXPECTED_COMMIT,'reader_errno':'unknown; original generic fallback-read diagnostic did not record it','comparison_local_private':LOCAL_COMPARISON,'hosted_private_matches_local_comparison':all(before[CARRIERS[-1]].get(k)==v for k,v in LOCAL_COMPARISON.items()),'runtime_or_capture_or_proof_accepted':False,'SDK_setting':SDK_SETTING,'Lean_CLI_flags':LEAN_FLAGS,'limits':LIMITS,'probe_sha256':PROBE_SHA,'guard_sha256':GUARD_SHA,'source_before':own_before,'source_after':own_after,'source_bytes_unchanged':source_unchanged,'carriers_before':before,'carriers_after':after,'carrier_bytes_unchanged':unchanged,'leaf':result,'error':error,'sampled_owned_leader_maxima':maxima,'samples':samples,'rusage_children_maxrss_before_KiB':peak_before,'rusage_children_maxrss_after_KiB':peak_after,'rusage_scope':'OS RUSAGE_CHILDREN maximum; not an aggregate group RSS measurement','other_scope':'Passing direct import does not establish Lake --setup or full-runtime fit; no exclusive failure cause inferred','elapsed_seconds':time.monotonic()-started}
  serialized=json.dumps(report,indent=2).encode()+b'\n';require(len(serialized)<=4*1024**2,'bounded report');(output/'report.json').write_bytes(serialized)
  if error is not None:raise RuntimeError('diagnostic child/control failure; see bounded report')
  require(source_unchanged,'diagnostic source/helper drift');require(unchanged,'SDK carrier drift; diagnostic not stable');require(result['returncode']==0,'direct SDK import failed; see bounded diagnostics')
