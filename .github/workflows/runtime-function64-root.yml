@@ -4,6 +4,7 @@ name: Bounded Function64 runtime/original root proof pilot
   push:
     branches:
     - feat/div256-runtime-function64-root
+    - feat/div256-runtime-function64-root-mi64
 permissions:
   contents: read
 jobs:
@@ -13,6 +14,7 @@ jobs:
     env:
       LEAN_NUM_THREADS: '1'
       LEAN_STACK_SIZE_KB: '65536'
+      MIMALLOC_ARENA_RESERVE: 64M
     steps:
     - uses: actions/checkout@v4
     - uses: leanprover/lean-action@v1
@@ -156,6 +158,10 @@ jobs:
       working-directory: examples/pancake-div256
       run: |
         set -euo pipefail
+        while IFS= read -r variable; do
+          if [[ ${variable,,} == mimalloc_arena_reserve ]]; then unset "$variable"; fi
+        done < <(compgen -e)
+        export MIMALLOC_ARENA_RESERVE=64M
         {
         python3 - <<'PYSOURCE'
         from pathlib import Path
@@ -214,7 +220,7 @@ jobs:
             if negative_log.count(name+': actual exit=1\n')!=1:raise SystemExit('missing actual typed negative')
         bounded_raw=(evidence/'bounded-leaves.json').read_bytes();bounded=json.loads(bounded_raw)
         if bounded['verified_pending_workflow_postcheck']is not True or len(bounded['leaves'])!=5:raise SystemExit('incomplete bounded proof pilot')
-        expected_profile={'AS_bytes':4*1024**3,'Lean_heap_MiB':3072,'Lean_j':1,'requested_stack_KiB':65536,'LEAN_NUM_THREADS':'1','wall_seconds':900,'file_log_bytes':4*1024**2,'attempts':1,'peak_RSS_not_measured':True}
+        expected_profile={'AS_bytes':4*1024**3,'Lean_heap_MiB':3072,'Lean_j':1,'requested_stack_KiB':65536,'LEAN_NUM_THREADS':'1','MIMALLOC_ARENA_RESERVE':'64M','wall_seconds':900,'file_log_bytes':4*1024**2,'attempts':1,'peak_RSS_not_measured':True}
         if json.dumps(bounded['profile'],sort_keys=True)!=json.dumps(expected_profile,sort_keys=True):raise SystemExit('bounded profile metadata changed')
         if bounded['sources_before_sha256']!=hashlib.sha256((evidence/'sources-before.json').read_bytes()).hexdigest():raise SystemExit('bounded preflight binding changed')
         expected_leaves=['Function64Root','Backend07Function64RootChecks','WrongBody64','WrongFrame64','WrongLabel64']

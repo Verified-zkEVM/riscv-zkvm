@@ -22,3 +22,14 @@ The strict one-owner audit includes private/generated declarations, both theorem
 names and only propext, Classical.choice, Quot.sound. Three actual typed negatives
 must independently reject a dropped entry, stack frame change and label change.
 The pilot evaluates no compiler, RuntimeInput program, capture writer or guest.
+
+This successor pilot additionally forces MIMALLOC_ARENA_RESERVE=64M after removing
+all inherited case-insensitive spellings, both for proof preparation and direct
+proof children. The exact reviewed provider/policy/guard files remain unchanged.
+The SDK-only87 experiment completed with this request plus-j1/64MiB thread stacks;
+that establishes neither this Function64 proof's fit nor a full-runtime result.
+64M requests a64MiB base arena reservation, not a cap or fixed-size increment:
+arenas are shared, may grow and accommodate larger requests, and can fall back.
+The4GiB address-space/3GiB heap/900s/4MiB file-log/one-attempt and proof budgets are
+unchanged. New branch feat/div256-runtime-function64-root-mi64 preserves the old
+source-only execution head; do not retry the old no-mimalloc profile as this pilot.

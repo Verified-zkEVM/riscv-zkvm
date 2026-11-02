@@ -25,6 +25,11 @@ def load_buffer(name,path,want):
 def typed_negative(result,diagnostic,output,witness):
  lower=diagnostic.lower()
  return result['returncode']==1 and not output.exists()and not output.is_symlink()and lower.count('error:')==1 and'type mismatch'in lower and re.search(r"(?<![\w'])"+re.escape(witness)+r"(?![\w'])",diagnostic)is not None and not any(s in lower for s in ['unknown identifier','unknown constant','unknown module','object file','unexpected token','expected token','unexpected end of input','unterminated','parser error','invalid syntax','failed to synthesize','maximum recursion','maximum heartbeats','maximum number of heartbeats','out of memory','interrupted','timed out','timeout exceeded','failed to create thread','stack overflow','allocation failed'])
+def environment(policy,base,providers):
+ # Unix mimalloc uses case-insensitive first-match environment lookup. Remove
+ # every spelling before installing the one reviewed experiment value.
+ clean={key:value for key,value in base.items()if key.casefold()!='mimalloc_arena_reserve'}
+ result=providers.sdk_environment(policy,clean);result['MIMALLOC_ARENA_RESERVE']='64M';return result
 def main():
  consumer=HERE;root=consumer.parent.parent;evidence=root/'runtime-function64-root-evidence';regular(evidence/'sources-before.json')
  before_raw=(evidence/'sources-before.json').read_bytes();before=json.loads(before_raw)
@@ -32,7 +37,7 @@ def main():
  helpers=consumer/'tools/capture-context';buffers={n:regular(helpers/n).read_bytes()for n in PINNED}
  require(all(digest(buffers[n])==want for n,want in PINNED.items()),'operational A hash drift')
  policy=json.loads(buffers['policy.json']);providers=load_buffer('function64_reviewed_providers',helpers/'providers.py',PINNED['providers.py']);guard=load_buffer('function64_reviewed_guard',helpers/'bounded_capture.py',PINNED['bounded_capture.py'])
- env=providers.sdk_environment(policy,os.environ);env.pop('GH_TOKEN',None);env.pop('GITHUB_TOKEN',None)
+ env=environment(policy,os.environ,providers);env.pop('GH_TOKEN',None);env.pop('GITHUB_TOKEN',None)
  lean=regular(Path(before['sdk']['lean']['path']));require(digest(lean.read_bytes())==before['sdk']['lean']['sha256'],'pinned Lean binary changed')
  def pins():
   require((evidence/'sources-before.json').read_bytes()==before_raw,'source preflight report changed')
@@ -54,6 +59,6 @@ def main():
  for module in [OWNER,CHECKER]:leaf(module.rsplit('.',1)[-1],consumer/(module.replace('.','/')+'.lean'),local/(module.replace('.','/')+'.olean'))
  for name,witness in NEGATIVES:leaf(name,consumer/'tests/runtime-function64-root'/(name+'.lean'),evidence/(name+'.olean'),witness)
  pins()
- report={'kind':'bounded Function64 pilot leaves complete; final workflow provenance still pending','certificate':False,'active':False,'verified_pending_workflow_postcheck':True,'profile':{'AS_bytes':4*1024**3,'Lean_heap_MiB':3072,'Lean_j':1,'requested_stack_KiB':65536,'LEAN_NUM_THREADS':'1','wall_seconds':900,'file_log_bytes':4*1024**2,'attempts':1,'peak_RSS_not_measured':True},'sources_before_sha256':digest(before_raw),'leaves':results,'whole817_Native_resource_bytes_not_established':True}
+ report={'kind':'bounded Function64 pilot leaves complete; final workflow provenance still pending','certificate':False,'active':False,'verified_pending_workflow_postcheck':True,'profile':{'AS_bytes':4*1024**3,'Lean_heap_MiB':3072,'Lean_j':1,'requested_stack_KiB':65536,'LEAN_NUM_THREADS':'1','MIMALLOC_ARENA_RESERVE':'64M','wall_seconds':900,'file_log_bytes':4*1024**2,'attempts':1,'peak_RSS_not_measured':True},'sources_before_sha256':digest(before_raw),'leaves':results,'whole817_Native_resource_bytes_not_established':True}
  raw=(json.dumps(report,indent=2)+'\n').encode();pins();target=evidence/'bounded-leaves.json';require(not target.exists()and not target.is_symlink(),'fresh leaf report required');target.write_bytes(raw)
 if __name__=='__main__':main()
