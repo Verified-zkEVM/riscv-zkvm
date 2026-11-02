@@ -5,7 +5,7 @@ HERE=Path(__file__).resolve().parent
 GUARD_SHA='6463c56ba8c5088c2487a5fde867da383f92361b0292712ac8a00e2ced093691'
 PROBE_SHA=hashlib.sha256(b'import Lean\n#check Lean.Environment\n').hexdigest()
 LIMITS={'address_space_bytes':4*1024**3,'seconds':120,'child_log_bytes':4*1024**2,'admission_memory_bytes':5*1024**3,'live_memory_bytes':1024**3,'minimum_disk_bytes':20*1024**3,'samples':2048}
-SDK_SETTING={'LEAN_NUM_THREADS':'1','LEAN_STACK_SIZE_KB':'65536'}
+SDK_SETTING={'LEAN_NUM_THREADS':'1','LEAN_STACK_SIZE_KB':'65536','MIMALLOC_ARENA_RESERVE':'64M'}
 LEAN_FLAGS=['-j1']
 TARGET='lib/lean/Lean/Meta/Tactic/Grind/Arith/Linear/Search.olean'
 CARRIERS=[TARGET,TARGET+'.server',TARGET+'.private']
@@ -58,7 +58,7 @@ def limit_fields(text):
 def memory_available():
  return next(int(x.split()[1])*1024 for x in Path('/proc/meminfo').read_text().splitlines()if x.startswith('MemAvailable:'))
 def environment(sdk,base):
- result=dict(base);result.update(SDK_SETTING,LEAN_SYSROOT=str(sdk),LEAN_PATH=str(sdk/'lib/lean'),LEAN_SRC_PATH=str(sdk/'src/lean'));result.pop('GH_TOKEN',None);result.pop('GITHUB_TOKEN',None);return result
+ result={key:value for key,value in base.items()if key.casefold()!='mimalloc_arena_reserve'};result.update(SDK_SETTING,LEAN_SYSROOT=str(sdk),LEAN_PATH=str(sdk/'lib/lean'),LEAN_SRC_PATH=str(sdk/'src/lean'));result.pop('GH_TOKEN',None);result.pop('GITHUB_TOKEN',None);return result
 def monitored_scope(scope,register):
  # Only this verified helper's module globals are changed; no global Popen patch.
  real=scope['subprocess']

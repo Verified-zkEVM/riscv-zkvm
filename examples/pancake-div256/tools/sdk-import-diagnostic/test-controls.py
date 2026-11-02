@@ -10,9 +10,10 @@ def refuses(n,fn):
 check('status values retain byte and count units',M.status_fields('Name: secret\nVmSize: 7 kB\nVmRSS: 2 kB\nThreads: 3\n')=={'VmSize_bytes':7168,'VmRSS_bytes':2048,'Threads':3})
 refuses('unexpected status unit',lambda:M.status_fields('VmSize: 7 MB\n'));refuses('non-numeric status',lambda:M.status_fields('Threads: nope\n'))
 check('safe limits only exact fixed numeric fields',M.limit_fields('Max address space         4294967296           4294967296           bytes\nMax processes             unlimited            unlimited            processes\nSecret user info abc\n')=={'Max address space':{'soft':'4294967296','hard':'4294967296','units':'bytes'},'Max processes':{'soft':'unlimited','hard':'unlimited','units':'processes'}})
-base={'LEAN_STACK_SIZE_KB':'BAD','LEAN_NUM_THREADS':'999','LEAN_PATH':'BAD','LEAN_SRC_PATH':'BAD','GH_TOKEN':'SECRET','GITHUB_TOKEN':'SECRET','PATH':'KEEP'};env=M.environment(Path('/FAKE'),base)
-check('same fixed stack/pool, no external source or token fallback',env=={'LEAN_STACK_SIZE_KB':'65536','LEAN_NUM_THREADS':'1','LEAN_PATH':'/FAKE/lib/lean','LEAN_SRC_PATH':'/FAKE/src/lean','PATH':'KEEP','LEAN_SYSROOT':'/FAKE'})
-check('environment caller unchanged',base['LEAN_STACK_SIZE_KB']=='BAD')
+base={'LEAN_STACK_SIZE_KB':'BAD','LEAN_NUM_THREADS':'999','LEAN_PATH':'BAD','LEAN_SRC_PATH':'BAD','GH_TOKEN':'SECRET','GITHUB_TOKEN':'SECRET','PATH':'KEEP','MIMALLOC_ARENA_RESERVE':'8M','mimalloc_arena_reserve':'BAD','MiMaLlOc_ArEnA_ReSeRvE':'BAD'};env=M.environment(Path('/FAKE'),base)
+check('same fixed stack/pool, no external source or token fallback',env=={'LEAN_STACK_SIZE_KB':'65536','LEAN_NUM_THREADS':'1','LEAN_PATH':'/FAKE/lib/lean','LEAN_SRC_PATH':'/FAKE/src/lean','PATH':'KEEP','LEAN_SYSROOT':'/FAKE','MIMALLOC_ARENA_RESERVE':'64M'})
+check('environment caller unchanged',base['LEAN_STACK_SIZE_KB']=='BAD'and base['mimalloc_arena_reserve']=='BAD')
+check('case-insensitive firstmatch aliases removed before exact64M injection',[key for key in env if key.casefold()=='mimalloc_arena_reserve']==['MIMALLOC_ARENA_RESERVE']and env['MIMALLOC_ARENA_RESERVE']=='64M')
 with tempfile.TemporaryDirectory(prefix='sdk-import-diagnostic-fakes-')as t:
  t=Path(t);sdk=t/'sdk';(sdk/'bin').mkdir(parents=True);(sdk/'bin/lean').write_bytes(b'FAKE_SDK_NEVER_EXECUTE');(sdk/'bin/lake').write_bytes(b'FAKE_SDK_NEVER_EXECUTE')
  header=b'olean'+bytes([2,1])+b'4.35.0'.ljust(33,b'\0')+M.EXPECTED_COMMIT.encode()+bytes(16)

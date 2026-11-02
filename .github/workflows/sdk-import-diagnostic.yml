@@ -1,7 +1,7 @@
-name: SDK-only bounded single-worker import diagnostic
+name: SDK-only bounded small-arena import diagnostic
 'on':
   push:
-    branches: [feat/div256-sdk-import-diagnostic, feat/div256-sdk-import-j1-diagnostic]
+    branches: [feat/div256-sdk-import-diagnostic, feat/div256-sdk-import-j1-diagnostic, feat/div256-sdk-import-small-arena-diagnostic]
     paths:
       - .github/workflows/sdk-import-diagnostic.yml
       - examples/pancake-div256/tools/sdk-import-diagnostic/**
@@ -15,6 +15,7 @@ jobs:
     env:
       LEAN_NUM_THREADS: '1'
       LEAN_STACK_SIZE_KB: '65536'
+      MIMALLOC_ARENA_RESERVE: '64M'
     steps:
       - uses: actions/checkout@v4
       - name: Check diagnostic controls without SDK execution
