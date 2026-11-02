@@ -149,7 +149,7 @@ class Controller:
   verify=lambda:scope['verify'](spec_path,self.policy['runtime_source_manifest']['sha256'],PROJECT,sdk,'runtime')
   fresh_namespace(PROJECT);before=verify();self.write('runtime-source-before.json',before)
   roots,paths,sources=material_paths(spec,PROJECT,sdk)
-  env=dict(os.environ);env.update(LEAN_NUM_THREADS='1',LEAN_PATH=os.pathsep.join(paths),LEAN_SRC_PATH=os.pathsep.join(sources));env.pop('GH_TOKEN',None);env.pop('GITHUB_TOKEN',None)
+  env=self.provider['sdk_environment'](self.policy,os.environ);env.update(LEAN_PATH=os.pathsep.join(paths),LEAN_SRC_PATH=os.pathsep.join(sources));env.pop('GH_TOKEN',None);env.pop('GITHUB_TOKEN',None)
   self.run('build-runtime-only',[str(lake),'--fail-fast','build','PancakeDiv256.Compiler.Backend07CaptureInputsRuntimeChecks'],3600,env=env);after=verify();require(after==before,'runtime source verification changed');self.write('runtime-source-after.json',after)
   require(all(sha(Path(pin['path']))==pin['sha256']for pin in tool_pins.values()),'SDK binary changed during preparation')
   def headers(binary,files):
@@ -164,15 +164,16 @@ class Controller:
   material={'source_manifest_sha256':self.policy['runtime_source_manifest']['sha256'],'object_paths':paths,'source_paths':sources,'modules':normalized};mp=self.write('runtime-materials.json',material)
   require(time.monotonic()-self.started<=5400,'preparation deadline after material scan')
   snapshots={p.name:sha(p)for p in self.evidence.iterdir()if p.is_file()and p.name!='INCOMPLETE'}
-  result={'preparation_file_sha256':snapshots,'checkout':checkout,'source_record_sha256':hashlib.sha256(self.source_record_raw).hexdigest(),'tools':tool_pins,'sdk':str(sdk),'material_pin':{'path':str(mp),'sha256':sha(mp)},'runtime_root_objects':876,'used_modules':3567,'used_local_objects':875,'roles_are_prior_Root_assertions_not_inferred_from_build':True,'actual_capture_started':False};self.write('prepared.json',result)
+  result={'preparation_file_sha256':snapshots,'checkout':checkout,'source_record_sha256':hashlib.sha256(self.source_record_raw).hexdigest(),'tools':tool_pins,'sdk':str(sdk),'material_pin':{'path':str(mp),'sha256':sha(mp)},'sdk_environment':{k:env[k]for k in self.policy['sdk_environment']},'runtime_root_objects':876,'used_modules':3567,'used_local_objects':875,'roles_are_prior_Root_assertions_not_inferred_from_build':True,'actual_capture_started':False};self.write('prepared.json',result)
  def capture(self):
   checkout,run,job=self.current_job();prepared=strict_json((self.evidence/'prepared.json').read_bytes());require(prepared['checkout']==checkout and prepared['source_record_sha256']==hashlib.sha256(self.source_record_raw).hexdigest(),'preparation/source record differs');require(sha(Path(prepared['material_pin']['path']))==prepared['material_pin']['sha256'],'material index drift')
   for name,want in prepared['preparation_file_sha256'].items():require(sha(canonical(self.evidence/name))==want,'preparation record drift')
+  require(prepared['sdk_environment']==self.policy['sdk_environment'],'prepared SDK environment differs')
   template=strict_json((HERE/'accepted-prerequisites.isolated-hosted.template.json').read_bytes());template.update(proposal_manifest_sha256=sha(HERE/'manifest.json'),runtime_materials=prepared['material_pin'],tools=prepared['tools']);template['hosted_execution']={k:os.environ[k]for k in['GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_JOB']}|{'dedicated_job':True,'isolated':True,'runner_label':'ubuntu-latest'}
   for role,row in self.record['role_assertions'].items():
    raw=self.receipt(row['receipt']);template['roles'][role]={k:row[k]for k in['source_manifest_sha256','scope','accepted','commit']};template['roles'][role]['receipt']={'path':str(canonical(REPO/row['receipt']['relative'])),'sha256':hashlib.sha256(raw).hexdigest()}
   rp=self.write('accepted-prerequisites.json',template);self.write('official-run-at-launch.json',run);self.write('official-job-at-launch.json',job)
-  env=dict(os.environ);env['PATH']=str(Path(prepared['tools']['lean']['path']).parent)+os.pathsep+env['PATH'];env.pop('GH_TOKEN',None);env.pop('GITHUB_TOKEN',None)
+  env=self.provider['sdk_environment'](self.policy,os.environ);env['PATH']=str(Path(prepared['tools']['lean']['path']).parent)+os.pathsep+env['PATH'];env.pop('GH_TOKEN',None);env.pop('GITHUB_TOKEN',None)
   # No preparation process survives a completed leaf. exec also discards this
   # controller's material dictionaries and avoids any resident Lake parent.
   os.execve(sys.executable,[sys.executable,str(HERE/'driver.py'),'--profile','isolated-hosted','--project',str(PROJECT),'--output',str(self.evidence/'attempt'),'--accepted-prerequisites',str(rp),'--prerequisites-sha256',sha(rp)],env)

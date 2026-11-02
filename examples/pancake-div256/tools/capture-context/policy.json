@@ -65,7 +65,7 @@
   "operational_files": {
     "Launch.lean": "21d4f8250d692562db42b27f4527d32a73d5a139fffc50eb57c72aa20964ef77",
     "bounded_capture.py": "6463c56ba8c5088c2487a5fde867da383f92361b0292712ac8a00e2ced093691",
-    "providers.py": "e5f6ff74ebc497937c55e5caada3d65d7d0870b54ed6af60d265664dcc938efa",
+    "providers.py": "fb2e1cf56b976cc150f432820ae18d10be4175f748fcaa95baa882c21c16c714",
     "atomic_report.py": "cd4bb711d4b4fc0a99e8defe3440e0d3797b5e7e4caba7b8c40a6c47e8320701"
   },
   "profiles": {
@@ -127,5 +127,10 @@
       "new_shared_manifest_sha256": "2d546164ef60434f61715ee2f9a473b9abfffa3597b1297ef78e6a6d2bffe94e",
       "helper_and_runtime_still_unaccepted": true
     }
-  }
+  },
+  "sdk_environment": {
+    "LEAN_NUM_THREADS": "1",
+    "LEAN_STACK_SIZE_KB": "65536"
+  },
+  "sdk_environment_scope": "Requested native base pool and per-Lean-thread stack reservation; not a total-thread count or RSS bound.4GiBVAS and all existing heap/time/disk/output/proof-recursion settings are unchanged."
 }

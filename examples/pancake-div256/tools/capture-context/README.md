@@ -1,14 +1,20 @@
-# Same-job actual07 capture — SOURCE CANDIDATE, NOT RUN
+# Fixed-stack operational source candidate — COMMIT A, DISABLED
 
-This is a REVIEW-ONLY current-authority data revision for the exact reviewed
-controller. Four prerequisite roles have Root and independent acceptance:
-config971845/receipt40aaa, finitequote75b3/receipt26adc, helper2d546/receipt290c,
-and runtime compile-only2d546/receiptc564. source_review_complete now records
-Root's acceptance of the exact operational source, not a Kernel or compiler fact.
-This data must be independently reviewed and committed before Root separately
-schedules the execution branch. No capture has been run or accepted here. Future
-capture outputs remain UNTRUSTED proposals, with all original-carrier/complete
-compiler/byte/Native/resource/deployment proof obligations still open.
+This operational change requests LEAN_STACK_SIZE_KB=65536 consistently for native
+Lake preparation, SDK header children, and the fresh direct driver/Lean--run
+capture environment. This requests 64 MiB per thread; the pinned runtime adds a 128 KiB safety
+buffer before pthread stack allocation. It is separate from the unchanged 4 GiB
+virtual-address cap, managed allocation, total thread count or RSS. Existing caps and proof recursion
+settings are unchanged. Fit is unmeasured; a smaller stack may refuse. No retry
+has run or been scheduled by this source packet.
+
+`source_review_complete` is deliberately false for changed code. Four prior Root
+prerequisite-role acceptances retain their exact scopes/source manifests. They
+do not review this wrapper change. Root first needs independent source/applied/
+committed review of commit A; a separate commit B then records exact A/current
+source hashes and re-enables before Root may schedule the execution branch.
+The earlier c987 review is historical only. No actual capture/compiler/byte/
+Native/resource/deployment certificate follows from those role assertions.
 
 The trusted Root source record is a reviewed acceptance assertion, not a proof
 verifier. Receipt JSON is parsed/hash/commit-pinned; its semantic claims are not

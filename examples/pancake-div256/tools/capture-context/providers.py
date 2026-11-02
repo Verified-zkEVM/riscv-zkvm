@@ -9,6 +9,12 @@ def require(ok,message):
 def sha(path):
  with Path(path).open('rb')as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
 
+def sdk_environment(policy,base):
+ # Explicit requested stack size, not an address-space/heap/total-thread cap.
+ expected={'LEAN_NUM_THREADS':'1','LEAN_STACK_SIZE_KB':'65536'}
+ require(policy.get('sdk_environment')==expected,'fixed reviewed SDK environment differs')
+ result=dict(base);result.update(expected);return result
+
 def file_pin(path):
  path=Path(path);require(path.is_file(),'missing pinned file:'+str(path));return {'lookup_path':str(path),'target':str(path.resolve(strict=True)),'symlink':os.readlink(path)if path.is_symlink()else None,'sha256':sha(path)}
 
