@@ -2,7 +2,7 @@
   "schema": 1,
   "kind": "accepted-prerequisites-for-untrusted-actual07-capture",
   "proposal_manifest_sha256": null,
-  "policy_sha256": "4f382a26a355ac68a401d636c71f957566cd5e89a7fef26ebb5ca9fe4b28db27",
+  "policy_sha256": "978e63a3acb008e9fca2141e234140345636855b96a93c8d1f1371ac87fe9311",
   "roles": {
     "config59": {
       "source_manifest_sha256": "971845fda593242e829d6095698220800dbad717ec0601139221e5543b89c680",

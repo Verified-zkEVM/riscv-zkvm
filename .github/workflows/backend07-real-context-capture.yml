@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 180
     env:
       LEAN_NUM_THREADS: '1'
+      LEAN_STACK_SIZE_KB: '65536'
     steps:
     - uses: actions/checkout@v4
     - name: Require independently accepted roles and reviewed official job

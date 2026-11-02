@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source_review_complete": true,
+  "source_review_complete": false,
   "repository": "Verified-zkEVM/riscv-zkvm",
   "workflow_path": ".github/workflows/backend07-real-context-capture.yml",
   "job_name": "bounded-real-capture",
@@ -8,7 +8,7 @@
   "source_files": {
     ".github/workflows/allocation-config-compatibility.yml": "68b8a6b15af084a000db81ba69e7a20be3fb2dd39565fa5aa7e0efb74156f83f",
     ".github/workflows/backend07-capture-inputs.yml": "70e4d4bcd13bf74ac35eb10577ea3f28d0a4d25f49e5e9f2aca007f21e848933",
-    ".github/workflows/backend07-real-context-capture.yml": "37fbbe81c6388b0ea57895f35196b67d78966cca042625782fe3048593515f5a",
+    ".github/workflows/backend07-real-context-capture.yml": "089d4c7ba93457e9b0ee667bcc08e4809bc4f5f2ea69e0fe440f23b2bb1d72da",
     ".github/workflows/hints.yml": "466096a8d623c5a08f3b959d70055d1e07e10b4261bd64d89cf899ec8f0c7b99",
     "examples/pancake-div256/PancakeDiv256/Compiler/Allocation.lean": "2370f7b2cf744fdbfadb2e8ae64a4a1d98595b6d4df9efccd9ddb8e8d9be278d",
     "examples/pancake-div256/PancakeDiv256/Compiler/Allocation/Config.lean": "fe8128509615e3aa576cb486f4a85934ca7abe63ab6bb3dbf8054f1474ab2f65",
@@ -32,17 +32,17 @@
     "examples/pancake-div256/patches/flapjack-lean435-compat.patch": "fa218e60078281c5bde6a1ca542938a5fc821e4b210be608ca49316fe943be25",
     "examples/pancake-div256/prepare-flapjack.py": "5942cfca4d1b311fa082dbabd26285e28ce932e22601ae6e54d7ea531914d737",
     "examples/pancake-div256/tools/capture-context/Launch.lean": "21d4f8250d692562db42b27f4527d32a73d5a139fffc50eb57c72aa20964ef77",
-    "examples/pancake-div256/tools/capture-context/README.md": "069ddead707add4b1b1b9e9a8536f0f938ffe750fe182b2ec873a4f1aaa79956",
-    "examples/pancake-div256/tools/capture-context/accepted-prerequisites.isolated-hosted.template.json": "a42d368256851421bd65c573ca0345c5ed84fe0ad3f508f70ff928c7edd8910a",
-    "examples/pancake-div256/tools/capture-context/accepted-prerequisites.template.json": "91e29e96132eed4f68ba87df821fc48eeb2f073e8b306d24ffddf4c0a3faf70d",
+    "examples/pancake-div256/tools/capture-context/README.md": "a29fefd26389ad53a98662e13eaad6afbf2fd057d75ec86b5f12c9a04aa88e57",
+    "examples/pancake-div256/tools/capture-context/accepted-prerequisites.isolated-hosted.template.json": "41b0c656068f74e6b0f9d9d0f8900ed76eba428f2c96895cddafd6853e28b771",
+    "examples/pancake-div256/tools/capture-context/accepted-prerequisites.template.json": "0d4de1e4bda71265195f7e27d62186b499fe548667c54cb0d4a759e0b77ba6f3",
     "examples/pancake-div256/tools/capture-context/artifacts.py": "72b185a828c8d11c5ae94384eadcb39e8adff041624ff989a723e0c827b63c42",
     "examples/pancake-div256/tools/capture-context/atomic_report.py": "cd4bb711d4b4fc0a99e8defe3440e0d3797b5e7e4caba7b8c40a6c47e8320701",
     "examples/pancake-div256/tools/capture-context/bounded_capture.py": "6463c56ba8c5088c2487a5fde867da383f92361b0292712ac8a00e2ced093691",
-    "examples/pancake-div256/tools/capture-context/controller.py": "f3b421bf8976ef021756fea05e2ae5c6bb1d9ffa73d8d86d422100da0427794c",
-    "examples/pancake-div256/tools/capture-context/driver.py": "ecc53475cfebdbad861f4bca666a6721b92d8a274191fcedb6efbc12ca27c41f",
-    "examples/pancake-div256/tools/capture-context/manifest.json": "dfe4028aa520a6380adedddb9483044e3f032dab22cf9865b338db91b318822a",
-    "examples/pancake-div256/tools/capture-context/policy.json": "4f382a26a355ac68a401d636c71f957566cd5e89a7fef26ebb5ca9fe4b28db27",
-    "examples/pancake-div256/tools/capture-context/providers.py": "e5f6ff74ebc497937c55e5caada3d65d7d0870b54ed6af60d265664dcc938efa",
+    "examples/pancake-div256/tools/capture-context/controller.py": "2ab0e4bf4c0ed99229cdedd67711659f224c55e1f1054d7afa7ccd0a597d6165",
+    "examples/pancake-div256/tools/capture-context/driver.py": "1d66fb41e669512983dbcfa84dcb72ad24b40e8cb19564071f5f58ea69e7a804",
+    "examples/pancake-div256/tools/capture-context/manifest.json": "51f9f63b3a788c3119be4108d5ec60aca146b1898c36b19b13e37f7462a6a407",
+    "examples/pancake-div256/tools/capture-context/policy.json": "978e63a3acb008e9fca2141e234140345636855b96a93c8d1f1371ac87fe9311",
+    "examples/pancake-div256/tools/capture-context/providers.py": "fb2e1cf56b976cc150f432820ae18d10be4175f748fcaa95baa882c21c16c714",
     "examples/pancake-div256/tools/capture-context/root-receipts/capture-inputs-helper72.json": "290c719906d8826abdd374ba4ddac93b744ef7736b136a6093fc9164e32dd2d8",
     "examples/pancake-div256/tools/capture-context/root-receipts/capture-inputs-runtime72.json": "c5642b905607f23c1f76c1dac9eb25f97e3cf426b635ed2a50a224d3a01684db",
     "examples/pancake-div256/tools/capture-context/root-receipts/light-config69.json": "40aaa1dcd1613ddccf6f397a3dd2d8eee608c840b5aa6745f2935b4bf2b7d3b5",
@@ -92,13 +92,19 @@
       }
     }
   },
-  "note": "REVIEW-ONLY authority data. Four prerequisite roles accepted at their exact scopes; operational source reviewed. This data must be independently reviewed and committed before Root schedules the execution branch. Actual capture and its untrusted outputs are NOT accepted; no wholecompiler/byte/Native/resource/deployment theorem follows.",
-  "source_review_basis": {
+  "note": "COMMIT A source-review-disabled operational fix candidate; four prior scoped prerequisite acceptances retained. New code needs independent applied/committed review. Commit B may re-enable only with exact A commit/current authority bytes. No retry or capture is authorized by this private packet.",
+  "prior_source_review_basis": {
     "reviewed_operational_commit": "c9875200bec8cd20a52022aa3cef60e37dc94983",
     "independent_code_and_applied_review_sha256": "716c011492dc21831c8843d18f4fff1f3b76b698e502f0291d051adbe5885a56",
     "reviewed04_source_sha256": "a959c59a5be5153d81215854393cba577dcb3da42a517f248cd471afc65fd3e2",
     "current_authority_base": "425b09f12b11cbf599accc90594e49b398814437",
     "scope": "Root assertion about exact reviewed operational source; not Kernel/fullcompiler/capture correctness",
+    "actual_capture_accepted": false
+  },
+  "source_review_basis": {
+    "pending_operational_source_review_and_A_commit": true,
+    "changed_setting": "explicit64MiB requested Lean stack for bounded SDK paths",
+    "prior_review_not_claimed_for_changed_code": true,
     "actual_capture_accepted": false
   }
 }
