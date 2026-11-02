@@ -1,20 +1,23 @@
-# Fixed-stack operational source candidate — COMMIT A, DISABLED
+# Fixed-stack operational capture — reviewed source, not a capture result
 
-This operational change requests LEAN_STACK_SIZE_KB=65536 consistently for native
-Lake preparation, SDK header children, and the fresh direct driver/Lean--run
-capture environment. This requests 64 MiB per thread; the pinned runtime adds a 128 KiB safety
-buffer before pthread stack allocation. It is separate from the unchanged 4 GiB
-virtual-address cap, managed allocation, total thread count or RSS. Existing caps and proof recursion
-settings are unchanged. Fit is unmeasured; a smaller stack may refuse. No retry
-has run or been scheduled by this source packet.
+This data-only update binds exact operational commit
+`611c820288c17cb8e8d901551b9ec88d7547cdd0` to independent source/applied and
+committed-byte reviews. `source_review_complete` records Root's assertion about
+that code. Four prerequisite-role acceptances retain their exact scopes and
+bytes. No actual capture or compiler/byte/Native/resource/deployment certificate
+is accepted by this update.
 
-`source_review_complete` is deliberately false for changed code. Four prior Root
-prerequisite-role acceptances retain their exact scopes/source manifests. They
-do not review this wrapper change. Root first needs independent source/applied/
-committed review of commit A; a separate commit B then records exact A/current
-source hashes and re-enables before Root may schedule the execution branch.
-The earlier c987 review is historical only. No actual capture/compiler/byte/
-Native/resource/deployment certificate follows from those role assertions.
+The reviewed code forces `LEAN_STACK_SIZE_KB=65536` across Lake preparation,
+SDK header children, the fresh driver handoff and direct Lean evaluation,
+while retaining `LEAN_NUM_THREADS=1`. This requests 64 MiB per thread plus the
+pinned runtime's 128 KiB safety buffer. Total threads and RSS are separate;
+all earlier virtual-address, managed-heap, time, file and proof-recursion limits
+remain unchanged. Hosted fit is unmeasured, and the smaller stack may fail.
+
+The failed first attempt is preserved. This source packet changes authority data
+and documentation only; it runs no controller, SDK or capture, and schedules no
+retry. A subsequent execution branch update remains a separate Root action
+under the user's existing instruction to complete the work.
 
 The trusted Root source record is a reviewed acceptance assertion, not a proof
 verifier. Receipt JSON is parsed/hash/commit-pinned; its semantic claims are not
