@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source_review_complete": false,
+  "source_review_complete": true,
   "repository": "Verified-zkEVM/riscv-zkvm",
   "workflow_path": ".github/workflows/backend07-real-context-capture.yml",
   "job_name": "bounded-real-capture",
@@ -32,7 +32,7 @@
     "examples/pancake-div256/patches/flapjack-lean435-compat.patch": "fa218e60078281c5bde6a1ca542938a5fc821e4b210be608ca49316fe943be25",
     "examples/pancake-div256/prepare-flapjack.py": "5942cfca4d1b311fa082dbabd26285e28ce932e22601ae6e54d7ea531914d737",
     "examples/pancake-div256/tools/capture-context/Launch.lean": "21d4f8250d692562db42b27f4527d32a73d5a139fffc50eb57c72aa20964ef77",
-    "examples/pancake-div256/tools/capture-context/README.md": "a29fefd26389ad53a98662e13eaad6afbf2fd057d75ec86b5f12c9a04aa88e57",
+    "examples/pancake-div256/tools/capture-context/README.md": "28b691318c2d652936802b23702c5a343442a2df8b1982372f245232b3e7905e",
     "examples/pancake-div256/tools/capture-context/accepted-prerequisites.isolated-hosted.template.json": "41b0c656068f74e6b0f9d9d0f8900ed76eba428f2c96895cddafd6853e28b771",
     "examples/pancake-div256/tools/capture-context/accepted-prerequisites.template.json": "0d4de1e4bda71265195f7e27d62186b499fe548667c54cb0d4a759e0b77ba6f3",
     "examples/pancake-div256/tools/capture-context/artifacts.py": "72b185a828c8d11c5ae94384eadcb39e8adff041624ff989a723e0c827b63c42",
@@ -40,7 +40,7 @@
     "examples/pancake-div256/tools/capture-context/bounded_capture.py": "6463c56ba8c5088c2487a5fde867da383f92361b0292712ac8a00e2ced093691",
     "examples/pancake-div256/tools/capture-context/controller.py": "2ab0e4bf4c0ed99229cdedd67711659f224c55e1f1054d7afa7ccd0a597d6165",
     "examples/pancake-div256/tools/capture-context/driver.py": "1d66fb41e669512983dbcfa84dcb72ad24b40e8cb19564071f5f58ea69e7a804",
-    "examples/pancake-div256/tools/capture-context/manifest.json": "51f9f63b3a788c3119be4108d5ec60aca146b1898c36b19b13e37f7462a6a407",
+    "examples/pancake-div256/tools/capture-context/manifest.json": "1f78e39bd02fc9727111f8397b27cced38fbe13d4c782f60e84680a74f88bb76",
     "examples/pancake-div256/tools/capture-context/policy.json": "978e63a3acb008e9fca2141e234140345636855b96a93c8d1f1371ac87fe9311",
     "examples/pancake-div256/tools/capture-context/providers.py": "fb2e1cf56b976cc150f432820ae18d10be4175f748fcaa95baa882c21c16c714",
     "examples/pancake-div256/tools/capture-context/root-receipts/capture-inputs-helper72.json": "290c719906d8826abdd374ba4ddac93b744ef7736b136a6093fc9164e32dd2d8",
@@ -92,7 +92,7 @@
       }
     }
   },
-  "note": "COMMIT A source-review-disabled operational fix candidate; four prior scoped prerequisite acceptances retained. New code needs independent applied/committed review. Commit B may re-enable only with exact A commit/current authority bytes. No retry or capture is authorized by this private packet.",
+  "note": "COMMIT B data-only current authority. Exact fixed-stack operational commit A and independent source/applied/committed reviews are bound here. Four prior scoped prerequisite acceptances remain verbatim. Operational code/resource caps are unchanged. Actual capture and all original-carrier/completecompiler/byte/Native/resource/deployment proof obligations remain open. Root schedules any subsequent execution separately.",
   "prior_source_review_basis": {
     "reviewed_operational_commit": "c9875200bec8cd20a52022aa3cef60e37dc94983",
     "independent_code_and_applied_review_sha256": "716c011492dc21831c8843d18f4fff1f3b76b698e502f0291d051adbe5885a56",
@@ -102,9 +102,12 @@
     "actual_capture_accepted": false
   },
   "source_review_basis": {
-    "pending_operational_source_review_and_A_commit": true,
-    "changed_setting": "explicit64MiB requested Lean stack for bounded SDK paths",
-    "prior_review_not_claimed_for_changed_code": true,
+    "reviewed_operational_commit": "611c820288c17cb8e8d901551b9ec88d7547cdd0",
+    "independent_code_and_applied_review_sha256": "5a4638c8c36ac678b92d084fae629fadbce5c4551b9b5aaf2f3c4092f5ce8c09",
+    "independent_committed_review_sha256": "097b2814f2fb19900f42f894071cdc312977c9831e6a6917b533565c6ceac4a1",
+    "reviewed_source_packet_sha256": "1c8d9ceffeb8ccd6b09bcc896cd4dd146502efed9115b3d30fd17f84407ae8d5",
+    "current_authority_base": "611c820288c17cb8e8d901551b9ec88d7547cdd0",
+    "scope": "Root assertion about exact independently reviewed operational source; not Kernel/fullcompiler/capture correctness",
     "actual_capture_accepted": false
   }
 }
