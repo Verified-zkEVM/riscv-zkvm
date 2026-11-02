@@ -1,0 +1,48 @@
+name: SDK-only bounded import diagnostic
+'on':
+  push:
+    branches: [feat/div256-sdk-import-diagnostic]
+    paths:
+      - .github/workflows/sdk-import-diagnostic.yml
+      - examples/pancake-div256/tools/sdk-import-diagnostic/**
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  sdk-import-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LEAN_NUM_THREADS: '1'
+      LEAN_STACK_SIZE_KB: '65536'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check diagnostic controls without SDK execution
+        run: python3 examples/pancake-div256/tools/sdk-import-diagnostic/test-controls.py
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: One direct SDK import under unchanged preparation limits
+        run: |
+          set -euo pipefail
+          SDK_ROOT="$(python3 -c 'import pathlib,subprocess; print(pathlib.Path(subprocess.check_output(["elan","which","lean"],text=True).strip()).resolve(strict=True).parent.parent)')"
+          python3 examples/pancake-div256/tools/sdk-import-diagnostic/probe.py \
+            --sdk "$SDK_ROOT" \
+            --guard "$GITHUB_WORKSPACE/examples/pancake-div256/tools/capture-context/bounded_capture.py" \
+            --output "$GITHUB_WORKSPACE/sdk-import-diagnostic"
+      - name: Preserve bounded diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SDK-import-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          path: |
+            sdk-import-diagnostic/report.json
+            sdk-import-diagnostic/import.log
+            sdk-import-diagnostic/INCOMPLETE
+            sdk-import-diagnostic/DIAGNOSTIC-COMPLETE
