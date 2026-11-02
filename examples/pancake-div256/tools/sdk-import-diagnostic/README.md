@@ -8,13 +8,13 @@ read errno and does not establish a missing SDK file or an exclusive memory caus
 This separate focused job attempts one legacy `import Lean`, with the existing
 4 GiB process virtual-address cap, requested 65536 KiB stack, base pool1, 5 GiB
 admission/1 GiB live memory floors and20 GiB disk floor. It has a tighter120second
-leaf deadline and4 MiB log bound. This revision retains Lean CLI `-j1`, setting its initial shell worker count
-to one, and adds only `MIMALLOC_ARENA_RESERVE=64M`. Every case-insensitive
-inherited spelling is removed before injecting that exact uppercase key, since
-the pinned Unix allocator takes the first matching environment entry. It does not change heap or recursion options. `LEAN_NUM_THREADS=1` is
-retained for native initialization; the CLI default otherwise uses hardware
-concurrency. Neither setting promises one total OS thread, since the runtime
-main thread and dedicated/blocked-task workers are separate.
+leaf deadline and4 MiB log bound. This revision removes only the explicit CLI `-j1` to measure the default shell
+worker count used by the current Lake preparation. It retains the successful
+experiment's `MIMALLOC_ARENA_RESERVE=64M`, base pool1, requested stack65536 KiB
+and every memory/disk/time bound. Every case-insensitive inherited spelling is
+removed before injecting the exact uppercase arena key. It changes no heap or
+recursion option. The default shell count comes from hardware concurrency; neither
+that nor the native base-pool environment promises a total OS-thread bound.
 The unchanged reviewed process helper owns, drains and reaps its private group.
 The proxy wraps only its private Popen binding to register that owned leader;
 it does not scan processes or signal unrelated work. Every sample comes from the
@@ -61,3 +61,10 @@ changes no OS cap: the same outer4 GiB address-space bound remains load-bearing.
 It has not been executed here; effects on footprint, fit and performance remain
 measurements for the single separately reviewed hosted diagnostic. No other
 allocator option or whole-runtime/capture retry is enabled.
+
+The preceding `-j1`+64M diagnostic passed one import under4 GiB with stable source
+and carrier hashes. This revision does not assume default workers have identical
+fit even though the prior samples showed five threads. A passing default-worker
+probe would still not establish Lake preparation, loaded runtime IR, or capture
+fit. Operational propagation and any whole-runtime attempt remain separate
+reviewed work; this source packet triggers no local SDK execution.

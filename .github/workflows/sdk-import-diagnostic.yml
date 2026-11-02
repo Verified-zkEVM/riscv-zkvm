@@ -1,7 +1,7 @@
-name: SDK-only bounded small-arena import diagnostic
+name: SDK-only default-worker small-arena diagnostic
 'on':
   push:
-    branches: [feat/div256-sdk-import-diagnostic, feat/div256-sdk-import-j1-diagnostic, feat/div256-sdk-import-small-arena-diagnostic]
+    branches: [feat/div256-sdk-import-diagnostic, feat/div256-sdk-import-j1-diagnostic, feat/div256-sdk-import-small-arena-diagnostic, feat/div256-sdk-import-default-small-arena-diagnostic]
     paths:
       - .github/workflows/sdk-import-diagnostic.yml
       - examples/pancake-div256/tools/sdk-import-diagnostic/**
