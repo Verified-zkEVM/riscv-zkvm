@@ -3,7 +3,7 @@
   "source_only_registration": true,
   "Kernel_acceptance_asserted": false,
   "active_batch_ids": [
-    "001"
+    "002"
   ],
   "batches": {
     "000": {
@@ -194,6 +194,106 @@
         "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot798/Function.lean",
         "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot798/Proof.lean",
         "examples/pancake-div256/PancakeDiv256/Compiler/NativeCoverageBatch001Checks.lean"
+      ]
+    },
+    "002": {
+      "labels": [
+        250,
+        254,
+        269,
+        278,
+        283,
+        288,
+        342,
+        385,
+        460,
+        627,
+        652,
+        732,
+        837
+      ],
+      "target": "PancakeDiv256.Compiler.NativeCoverageBatch002Checks",
+      "functions": 13,
+      "positive_files": 53,
+      "owners": 55,
+      "local_cone": 56,
+      "source_review_complete": true,
+      "source_manifest_relative": "examples/pancake-div256/native-coverage002-source-manifest.json",
+      "source_manifest_sha256": "02128a53c175c49ad784a4b7d4cdcbc0c341c1b934a5903caef8aead5541da23",
+      "negative_cases": [
+        {
+          "path": "examples/pancake-div256/tests/native-coverage002/WrongFrame254.lean",
+          "sha256": "5127a649bdd6e33aed6cba8f12091e77ad6e2443b6c40d95c4ce7e94a7679a24",
+          "witness": "function254_eq",
+          "name": "WrongFrame254"
+        },
+        {
+          "path": "examples/pancake-div256/tests/native-coverage002/WrongCounter460.lean",
+          "sha256": "6127851b536b87a491afb06cdba08d3ee8eb9e44aae72c67922ba9f300890f37",
+          "witness": "function460_eq",
+          "name": "WrongCounter460"
+        },
+        {
+          "path": "examples/pancake-div256/tests/native-coverage002/WrongTree288.lean",
+          "sha256": "2470e4e1121d5faa37e29d4024c37ea00ec8a7708bfe5217cf73668798d03284",
+          "witness": "function288_eq",
+          "name": "WrongTree288"
+        }
+      ],
+      "artifact_sources": [
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated250.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated254.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated269.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated278.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated283.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated288.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated342.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated385.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated460.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated627.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated652.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated732.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/Allocated837.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot250/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot250/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot250/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot254/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot254/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot254/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot269/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot269/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot269/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot278/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot278/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot278/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot283/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot283/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot283/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot288/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot288/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot288/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot342/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot342/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot342/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot385/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot385/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot385/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot460/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot460/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot460/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot627/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot627/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot627/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot652/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot652/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot652/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot732/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot732/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot732/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot837/Data.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot837/Function.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/BackendStages/NativeBranchPilot837/Proof.lean",
+        "examples/pancake-div256/PancakeDiv256/Compiler/NativeCoverageBatch002Checks.lean"
       ]
     }
   },
