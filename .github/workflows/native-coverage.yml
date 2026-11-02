@@ -1,0 +1,332 @@
+name: Reviewed Native coverage batch matrix
+permissions:
+  contents: read
+jobs:
+  select-batches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+    - uses: actions/checkout@v4
+    - id: select
+      env:
+        COVERAGE_SELECTION: ${{ inputs.selection || 'active' }}
+      run: |
+        python3 examples/pancake-div256/select-native-coverage.py
+  native-coverage:
+    needs: select-batches
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.select-batches.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      LEAN_NUM_THREADS: '1'
+      COVERAGE_BATCH: ${{ matrix.batch }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: leanprover/lean-action@v1
+      with:
+        auto-config: false
+        build: false
+        test: false
+        lint: false
+        use-github-cache: false
+        use-mathlib-cache: false
+    - name: Fetch isolated Mathlib cache
+      working-directory: examples/pancake-div256
+      run: |
+        cmp ../../lean-toolchain lean-toolchain
+        lake exe cache get
+    - name: Apply recorded Flapjack compatibility patch
+      working-directory: examples/pancake-div256
+      run: python3 prepare-flapjack.py
+    - name: Verify pinned external cache source roots
+      working-directory: examples/pancake-div256
+      run: |
+        python3 - <<'PYTHON'
+        import json, os, subprocess
+        from pathlib import Path
+        workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+        manifest = json.loads(Path('lake-manifest.json').read_text())
+        pins = {p['name']: p['rev'] for p in manifest['packages'] if p['type'] == 'git'}
+        for name in ['Guest', 'flapjack']:
+            root = (Path('.lake/packages') / name).resolve(strict=True)
+            if not root.is_relative_to(workspace):
+                raise SystemExit(f'external cache package escapes CI workspace: {name}')
+            actual = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+            if actual != pins[name]:
+                raise SystemExit(f'wrong pinned package revision: {name}')
+        guest = Path('.lake/packages/Guest')
+        dirty = subprocess.check_output(['git', '-C', str(guest), 'status', '--porcelain', '--untracked-files=no'])
+        if dirty:
+            raise SystemExit('Guest tracked sources changed before cache restore')
+        PYTHON
+    - name: Restore completed DIV deployment dependencies
+      id: div-dependency-complete-cache
+      continue-on-error: true
+      uses: actions/cache/restore@v4
+      with:
+        enableCrossOsArchive: false
+        path: |
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+        key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain',
+          'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch')
+          }}-complete-deployment-proofs-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-complete-deployment-proofs-
+    - name: Restore DIV dependency progress fallback
+      if: steps.div-dependency-complete-cache.outputs.cache-matched-key == ''
+      id: div-dependency-cache
+      continue-on-error: true
+      uses: actions/cache/restore@v4
+      with:
+        enableCrossOsArchive: false
+        path: |
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/lib/lean
+          examples/pancake-div256/.lake/packages/flapjack/.lake/build/ir
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/lib/lean
+          examples/pancake-div256/.lake/packages/Guest/.lake/build/ir
+        key: div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain',
+          'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch')
+          }}-progress-${{ github.run_id }}-${{ github.run_attempt }}-final
+        restore-keys: |
+          div256-external-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-progress-
+          div256-external-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py', 'examples/pancake-div256/patches/flapjack-lean435-compat.patch') }}-
+    - name: Pin reviewed selected batch and fresh project namespace
+      id: source-basis
+      run: |
+        python3 - <<'PYTHON'
+        import hashlib, json, os, re, subprocess
+        from pathlib import Path
+        root = Path.cwd().resolve(strict=True)
+        batch=os.environ['COVERAGE_BATCH']
+        if re.fullmatch(r'[0-9]{3}',batch)is None:raise SystemExit('invalid batch identifier')
+        evidence = root / ('native-coverage-'+batch+'-evidence')
+        if evidence.exists() or evidence.is_symlink():
+            raise SystemExit('coverage batch evidence directory already exists')
+        local = root / 'examples/pancake-div256/.lake/build/lib/lean/PancakeDiv256'
+        for parent in [local, *local.parents]:
+            if parent == root:
+                break
+            if parent.is_symlink():
+                raise SystemExit('local proof namespace has a directory alias')
+        if local.exists() and any(p.is_symlink() or p.suffix == '.olean' for p in local.rglob('*')):
+            raise SystemExit('local PancakeDiv256 proof objects already exist')
+        def digest(raw):
+            return hashlib.sha256(raw).hexdigest()
+        batch=os.environ['COVERAGE_BATCH']
+        if re.fullmatch(r'[0-9]{3}',batch)is None:raise SystemExit('invalid batch identifier')
+        registry_name='examples/pancake-div256/native-coverage-registry.json'
+        registry_raw=(root/registry_name).read_bytes()
+        if digest(registry_raw)!='9c888907688ea8122b2c87cfb8c2afcf970bf0a7847196a67c1d0775a2dc7c8d':raise SystemExit('reviewed batch registry changed')
+        registry=json.loads(registry_raw);entry=registry['batches'][batch]
+        if entry['source_review_complete']is not True:raise SystemExit('batch source review incomplete')
+        if entry['target']!='PancakeDiv256.Compiler.NativeCoverageBatch'+batch+'Checks':raise SystemExit('exact registered target changed')
+        manifest_name=entry['source_manifest_relative']
+        manifest_raw=(root/manifest_name).read_bytes()
+        if digest(manifest_raw)!=entry['source_manifest_sha256']:raise SystemExit('reviewed batch source manifest changed')
+        source_manifest = json.loads(manifest_raw)
+        expected = {}
+        prefix = 'examples/pancake-div256/PancakeDiv256/Compiler/'
+        for row in source_manifest['sources']:
+            name, want = row['path'], row['sha256']
+            if name in expected or not name.startswith(prefix) or not name.endswith('.lean') or '..' in Path(name).parts:
+                raise SystemExit('invalid/duplicate coverage batch source path')
+            if row['module'] != '.'.join(Path(name).relative_to('examples/pancake-div256').with_suffix('').parts):
+                raise SystemExit('coverage batch module/path mismatch')
+            expected[name] = want
+        if len(expected) != entry['local_cone'] or source_manifest['strict_math_owner_scope'] != entry['owners'] or source_manifest['labels'] != entry['labels']:
+            raise SystemExit('coverage batch source/scope cardinality changed')
+        positive_paths = sorted(expected)
+        if 'examples/pancake-div256/'+entry['target'].replace('.','/')+'.lean'not in expected:raise SystemExit('checker target outside selected source closure')
+        for row in source_manifest['negative_sources']:
+            name = row['path']
+            if name in expected or not name.startswith('examples/pancake-div256/tests/native-coverage'+batch+'/') or not name.endswith('.lean') or '..' in Path(name).parts:
+                raise SystemExit('invalid coverage batch negative source path')
+            expected[name] = row['sha256']
+        if len(expected) != entry['local_cone']+3 or source_manifest['negative_sources']!=entry['negative_cases']:
+            raise SystemExit('negative-source cardinality changed')
+        policy = [
+            '.github/workflows/native-coverage.yml',registry_name,'examples/pancake-div256/select-native-coverage.py', 'lean-toolchain', 'lakefile.toml', 'lake-manifest.json',
+            'examples/pancake-div256/lean-toolchain', 'examples/pancake-div256/lakefile.toml',
+            'examples/pancake-div256/lake-manifest.json', 'examples/pancake-div256/prepare-flapjack.py',
+            'examples/pancake-div256/patches/flapjack-lean435-compat.patch', manifest_name,
+        ]
+        paths = sorted(set(expected) | set(policy))
+        tree = subprocess.check_output(['git', 'ls-tree', '-r', 'HEAD', '--', *paths], text=True)
+        blobs = {}
+        for line in tree.splitlines():
+            metadata, name = line.split('\t', 1)
+            mode, kind, oid = metadata.split()
+            if kind != 'blob' or mode not in ['100644', '100755']:
+                raise SystemExit('source basis is not a regular committed blob')
+            blobs[name] = oid
+        if set(blobs) != set(paths):
+            raise SystemExit('uncommitted coverage batch source or policy file')
+        records = {}
+        for name in paths:
+            path = root / name
+            if path.is_symlink() or path.resolve(strict=True) != path:
+                raise SystemExit('coverage batch source alias')
+            raw = path.read_bytes()
+            oid = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+            if oid != blobs[name] or (name in expected and digest(raw) != expected[name]):
+                raise SystemExit('coverage batch source differs from committed/reviewed bytes')
+            records[name] = {'sha256': digest(raw), 'git_blob': oid, 'bytes':len(raw)}
+        example = root / 'examples/pancake-div256'
+        sdk = {}
+        for tool in ['lean', 'lake']:
+            executable = Path(subprocess.check_output(['elan', 'which', tool], cwd=example, text=True).strip()).resolve(strict=True)
+            sdk[tool] = {'path': str(executable), 'sha256': digest(executable.read_bytes()),
+                         'version': subprocess.check_output([str(executable), '--version'], text=True).strip()}
+        packages = {}
+        for name in ['Guest', 'flapjack']:
+            package = (example / '.lake/packages' / name).resolve(strict=True)
+            packages[name] = {'path': str(package),
+                'commit': subprocess.check_output(['git', '-C', str(package), 'rev-parse', 'HEAD'], text=True).strip(),
+                'tracked_diff_sha256': digest(subprocess.check_output(['git', '-C', str(package), 'diff', '--binary', 'HEAD', '--']))}
+        evidence.mkdir()
+        report = {
+            'kind': 'hosted Native coverage batch preflight; no acceptance claim', 'certificate': False,
+            'checkout_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+            'checkout_tree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+            'public_run_metadata': {name: os.environ.get(name) for name in [
+                'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'GITHUB_REF', 'GITHUB_EVENT_NAME']},
+            'sdk': sdk, 'prepared_packages': packages, 'fresh_local_proof_namespace': True,
+            'batch':batch,'batch_entry':entry,'selected_owner_count':entry['owners'],'positive_local_source_count':entry['local_cone'],'positive_selected_artifact_count':entry['positive_files'],
+            'source_paths': positive_paths, 'files': records,
+            'dependency_policy': 'pinned Guest/Flapjack sources and recorded patch; external build cache only',
+            'local_memory_profile_applied': False,
+            'fixed_endpoint_count':entry['functions'], 'whole_program_certificate': False,
+        }
+        (evidence / 'sources-before.json').write_text(json.dumps(report, indent=2) + '\n')
+        print('Verified scoped batch',batch,'fresh namespace; checkout',report['checkout_commit'])
+        artifact_paths=[]
+        if len(entry['artifact_sources'])!=entry['positive_files']or len(set(entry['artifact_sources']))!=entry['positive_files']:raise SystemExit('artifact scope count')
+        for name in entry['artifact_sources']:
+         if name not in positive_paths:raise SystemExit('artifact source outside batch')
+         artifact_paths.append('examples/pancake-div256/.lake/build/lib/lean/'+name.removeprefix('examples/pancake-div256/').removesuffix('.lean')+'.olean')
+        if sum(records[name]['bytes']for name in entry['artifact_sources'])>12525685:raise SystemExit('unchanged batch source envelope exceeded')
+        with Path(os.environ['GITHUB_OUTPUT']).open('a')as output:
+         output.write('target='+entry['target']+'\n')
+         output.write('manifest='+manifest_name+'\n')
+         output.write('objects<<END_BOUNDED_OBJECTS\n'+'\n'.join(artifact_paths)+'\nEND_BOUNDED_OBJECTS\n')
+        PYTHON
+    - name: Check selected full tuples and strict owner scope
+      working-directory: examples/pancake-div256
+      env:
+        BATCH_TARGET: ${{ steps.source-basis.outputs.target }}
+      run: |
+        set -o pipefail
+        lake --fail-fast build "$BATCH_TARGET" 2>&1 | tee "../../native-coverage-${COVERAGE_BATCH}-evidence/build.log"
+    - name: Reject selected typed mutations
+      working-directory: examples/pancake-div256
+      run: |
+        set -o pipefail
+        lake env python3 - <<'PYNEG' 2>&1 | tee "../../native-coverage-${COVERAGE_BATCH}-evidence/negatives.log"
+        from pathlib import Path
+        import json,os,re,subprocess,tempfile
+        batch=os.environ['COVERAGE_BATCH']
+        before=json.loads(Path('../../native-coverage-'+batch+'-evidence/sources-before.json').read_bytes())
+        with tempfile.TemporaryDirectory(prefix='native-coverage-negative-')as directory:
+            for row in before['batch_entry']['negative_cases']:
+                name,witness=row['name'],row['witness']
+                output=Path(directory)/(name+'.olean')
+                source=row['path'].removeprefix('examples/pancake-div256/')
+                result=subprocess.run(['lean','-o',str(output),source],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=300)
+                diagnostic=result.stdout
+                print(name+': actual exit='+str(result.returncode)+'; expected typed rejection\n'+diagnostic[-20000:])
+                lower=diagnostic.lower()
+                if result.returncode != 1 or output.exists() or output.is_symlink() or lower.count("error:") != 1 or "type mismatch" not in lower or re.search(r"(?<![\w'])" + re.escape(witness) + r"(?![\w'])", diagnostic) is None or any(text in lower for text in ["unknown identifier", "unknown constant", "unknown module", "object file", "unexpected token", "expected token", "unexpected end of input", "unterminated", "parser error", "invalid syntax", "failed to synthesize", "maximum recursion", "maximum heartbeats", "maximum number of heartbeats", "out of memory", "interrupted", "timed out", "timeout exceeded"]):
+                    raise SystemExit(name + ": expected typed proof mismatch without output")
+        PYNEG
+    - name: Recheck selected sources and exact fresh object inventory
+      run: |
+        python3 - <<'PYTHON'
+        import hashlib, json, os, re, subprocess
+        from pathlib import Path
+        root = Path.cwd().resolve(strict=True)
+        batch=os.environ['COVERAGE_BATCH']
+        evidence = root / ('native-coverage-'+batch+'-evidence')
+        before = json.loads((evidence / 'sources-before.json').read_bytes())
+        entry=before['batch_entry']
+        if before['batch']!=batch:raise SystemExit('batch selection changed')
+        if subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() != before['checkout_commit'] or subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip() != before['checkout_tree']:
+            raise SystemExit('checkout changed during coverage batch check')
+        for name, row in before['files'].items():
+            path = root / name
+            if path.is_symlink() or path.resolve(strict=True) != path or hashlib.sha256(path.read_bytes()).hexdigest() != row['sha256']:
+                raise SystemExit('source/policy bytes changed during coverage batch check')
+        for tool, row in before['sdk'].items():
+            actual = Path(subprocess.check_output(['elan', 'which', tool], cwd=root / 'examples/pancake-div256', text=True).strip()).resolve(strict=True)
+            if str(actual) != row['path'] or hashlib.sha256(actual.read_bytes()).hexdigest() != row['sha256'] or subprocess.check_output([str(actual), '--version'], text=True).strip() != row['version']:
+                raise SystemExit('SDK binary/selection changed during coverage batch check')
+        for row in before['prepared_packages'].values():
+            commit = subprocess.check_output(['git', '-C', row['path'], 'rev-parse', 'HEAD'], text=True).strip()
+            diff = subprocess.check_output(['git', '-C', row['path'], 'diff', '--binary', 'HEAD', '--'])
+            if commit != row['commit'] or hashlib.sha256(diff).hexdigest() != row['tracked_diff_sha256']:
+                raise SystemExit('prepared external package changed during coverage batch check')
+        text = (evidence / 'build.log').read_text()
+        matches = re.findall(r'Native coverage'+re.escape(batch)+r' strict audit: '+str(entry['owners'])+r' owners / (\d+) declarations / (\d+) theorems / 0 offenders', text)
+        if len(matches) != 1 or int(matches[0][0]) == 0 or int(matches[0][1]) < entry['functions']:
+            raise SystemExit('missing complete Native coverage batch strict audit')
+        negative_log = (evidence / 'negatives.log').read_text()
+        for name in [row['name']for row in entry['negative_cases']]:
+            if negative_log.count(name + ': actual exit=1; expected typed rejection') != 1:
+                raise SystemExit('missing strict typed negative result')
+        oleans = {}
+        prefix = 'examples/pancake-div256/'
+        for name in before['source_paths']:
+            relative = name.removeprefix(prefix).removesuffix('.lean') + '.olean'
+            path = root / prefix / '.lake/build/lib/lean' / relative
+            if path.is_symlink() or not path.is_file() or path.resolve(strict=True) != path:
+                raise SystemExit('missing/aliased freshly built coverage batch object')
+            oleans[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+        if len(oleans) != entry['local_cone']:
+            raise SystemExit('wrong fresh coverage batch object inventory')
+        report = {
+            'batch':batch,'kind':'hosted scoped Native batch Kernel checkpoint; Root evidence review pending',
+            'certificate': False, 'active': False, 'checkout_commit': before['checkout_commit'],
+            'sources_before_sha256': hashlib.sha256((evidence / 'sources-before.json').read_bytes()).hexdigest(),
+            'build_log_sha256': hashlib.sha256((evidence / 'build.log').read_bytes()).hexdigest(),
+            'negative_log_sha256': hashlib.sha256((evidence / 'negatives.log').read_bytes()).hexdigest(),
+            'selected_owners':entry['owners'], 'declarations': int(matches[0][0]), 'theorems': int(matches[0][1]),
+            'unexpected_axiom_offenders': 0, 'fixed_endpoints':entry['functions'], 'fresh_local_objects': oleans,
+            'strict_typed_negatives': 3, 'source_success_not_prior_Kernel_coverage': True,
+            'whole815_allocation_or_Native_binding': 'not established', 'whole_target_bytes_equality': 'not established',
+            'whole_program_certificate': False,
+        }
+        (evidence / 'checked-artifacts.json').write_text(json.dumps(report, indent=2) + '\n')
+        print('Native coverage batch checkpoint complete; Root acceptance and whole-program obligations remain separate')
+        PYTHON
+    - name: Preserve selected bounded batch evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: native-coverage-${{ matrix.batch }}-${{ github.run_id }}-${{ github.run_attempt }}
+        if-no-files-found: error
+        path: |
+          native-coverage-${{ matrix.batch }}-evidence/sources-before.json
+          native-coverage-${{ matrix.batch }}-evidence/build.log
+          native-coverage-${{ matrix.batch }}-evidence/negatives.log
+          native-coverage-${{ matrix.batch }}-evidence/checked-artifacts.json
+          ${{ steps.source-basis.outputs.manifest }}
+          ${{ steps.source-basis.outputs.objects }}
+'on':
+  workflow_dispatch:
+    inputs:
+      selection:
+        type: choice
+        default: active
+        options:
+        - active
+        - all-reviewed
+  push:
+    branches:
+    - feat/div256-native-coverage
