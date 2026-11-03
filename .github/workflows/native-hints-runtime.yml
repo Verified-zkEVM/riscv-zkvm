@@ -1,0 +1,164 @@
+name: Native hint interoperability
+
+on:
+  push:
+    paths:
+      - .github/workflows/native-hints-runtime.yml
+      - examples/native-fcall-modinv/**
+      - RiscvZkvm/Rv64/NativeFcall.lean
+      - RiscvZkvm/Rv64/ModInv256Hints/Accel.lean
+  pull_request:
+    paths:
+      - .github/workflows/native-hints-runtime.yml
+      - examples/native-fcall-modinv/**
+      - RiscvZkvm/Rv64/NativeFcall.lean
+      - RiscvZkvm/Rv64/ModInv256Hints/Accel.lean
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-hint-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpu-emulator:
+    # Branch pushes cover this repository; PR runs cover fork contributions.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      ZISK_REVISION: 64a1f1664184e76053686745d50c6b9aaa51b034
+      ZISK_LOCK_SHA256: e60a1098ca12dea60d0d501346aad7b8ec5215f2dad61aed69e240c3901fb3ce
+      NATIVE_RUST_TOOLCHAIN: 1.99.1
+      CARGO_TERM_COLOR: never
+      # A transitive build script invokes unbounded `make -j`; serialize recipes.
+      MAKEFLAGS: '--eval=.NOTPARALLEL:'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check fixture source and failure propagation controls
+        run: |
+          python3 examples/native-fcall-modinv/run.py --check-source
+          python3 examples/native-fcall-modinv/test-source.py
+
+      - name: Check available disk before the bounded build
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          free = shutil.disk_usage('.').free
+          Path('native-runtime').mkdir()
+          Path('native-runtime/disk-before.txt').write_text(str(free) + '\n')
+          if free < 20 * 1024**3:
+              raise SystemExit('Native emulator build requires 20 GiB free; refusing this runner')
+          PY
+
+      - name: Install CPU build and assembly dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libgmp-dev nasm pkg-config clang libclang-dev \
+            cmake libopenmpi-dev libomp-dev nlohmann-json3-dev libsodium-dev \
+            binutils-riscv64-unknown-elf
+          dpkg-query -W > native-runtime/system-packages.txt
+
+      - name: Fetch the reviewed ZisK source revision
+        uses: actions/checkout@v4
+        with:
+          repository: 0xPolygonHermez/zisk
+          ref: ${{ env.ZISK_REVISION }}
+          path: .native-zisk
+          persist-credentials: false
+
+      - name: Verify source and dependency lock
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, os, subprocess
+          root = Path('.native-zisk')
+          revision = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+          lock = hashlib.sha256((root / 'Cargo.lock').read_bytes()).hexdigest()
+          if revision != os.environ['ZISK_REVISION'] or lock != os.environ['ZISK_LOCK_SHA256']:
+              raise SystemExit('ZisK source or Cargo.lock differs from the reviewed pin')
+          Path('native-runtime/source.json').write_text(json.dumps({
+              'revision': revision, 'cargo_lock_sha256': lock,
+              'runner_image': os.environ.get('ImageVersion'),
+              'system_packages': 'recorded; not individually pinned',
+              'makeflags': os.environ['MAKEFLAGS'],
+          }, indent=2) + '\n')
+          PY
+
+      - name: Install the pinned host Rust toolchain
+        run: |
+          rustup toolchain install "$NATIVE_RUST_TOOLCHAIN" --profile minimal
+          rustc +"$NATIVE_RUST_TOOLCHAIN" --version --verbose > native-runtime/rustc.txt
+          cargo +"$NATIVE_RUST_TOOLCHAIN" --version > native-runtime/cargo.txt
+
+      - name: Build only the CPU emulator
+        working-directory: .native-zisk
+        run: |
+          set -o pipefail
+          native_build_status=0
+          /usr/bin/time -v -o ../native-runtime/build-resources.txt \
+            timeout --signal=TERM --kill-after=10s 30m \
+            cargo +"$NATIVE_RUST_TOOLCHAIN" build --locked --release \
+              --no-default-features -p ziskemu --bin ziskemu --jobs 2 \
+              2>&1 | head -c 4194304 > ../native-runtime/build.log || native_build_status=1
+          python3 - <<'PY'
+          from pathlib import Path
+          if Path('../native-runtime/build.log').stat().st_size >= 4 * 1024**2:
+              raise SystemExit('Build log reached its 4 MiB limit; refusing the run')
+          PY
+          tail -c 16384 ../native-runtime/build.log
+          exit "$native_build_status"
+
+      - name: Assemble and run the bounded interoperability fixtures
+        run: |
+          python3 examples/native-fcall-modinv/run.py \
+            --emulator "$GITHUB_WORKSPACE/.native-zisk/target/release/ziskemu" \
+            --out "$GITHUB_WORKSPACE/native-runtime/results"
+
+      - name: Record final disk usage
+        if: always()
+        run: |
+          mkdir -p native-runtime
+          df -h > native-runtime/disk-after.txt
+
+      - name: Check evidence bounds before upload
+        id: evidence
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, os
+          root = Path('native-runtime')
+          root.mkdir(exist_ok=True)
+          paths = sorted(root.rglob('*'))
+          regular = [p for p in paths if p.is_file() and not p.is_symlink()]
+          invalid = any(p.is_symlink() or not (p.is_file() or p.is_dir()) for p in paths)
+          sizes = [p.stat().st_size for p in regular]
+          summary = json.dumps({
+              'files_before_summary': len(regular), 'bytes_before_summary': sum(sizes),
+              'max_files_including_summary': 128, 'max_total_bytes': 16 * 1024**2,
+              'max_file_bytes': 4 * 1024**2, 'invalid_file_type': invalid,
+          }, indent=2) + '\n'
+          within = (not invalid and len(regular) + 1 <= 128
+                    and sum(sizes) + len(summary.encode()) <= 16 * 1024**2
+                    and all(size <= 4 * 1024**2 for size in sizes))
+          (root / 'artifact-summary.json').write_text(summary)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('within_bounds=' + str(within).lower() + '\n')
+          if not within:
+              raise SystemExit('Runtime evidence exceeds upload bounds; no artifact upload')
+          PY
+
+      - name: Preserve bounded runtime evidence
+        if: always() && steps.evidence.outputs.within_bounds == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-hint-runtime-${{ github.sha }}
+          path: native-runtime/
+          if-no-files-found: warn
+          retention-days: 7

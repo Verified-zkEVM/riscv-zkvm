@@ -4,4 +4,5 @@ import RiscvZkvm.Rv64.Hints
 import RiscvZkvm.Rv64.Logic.HintTape
 import RiscvZkvm.Rv64.Logic.HintInput
 import RiscvZkvm.Rv64.Logic.ResumableHints
+import RiscvZkvm.Rv64.Logic.NativeFcall
 import RiscvZkvm.Rv64.Logic.ModInvHints
