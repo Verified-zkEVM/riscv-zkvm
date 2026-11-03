@@ -65,16 +65,26 @@ theorem rawCode_some (image : Elf64Image) (pc : Word) (word : BitVec 32)
         word = BitVec.ofNat 32 value := by
   by_cases aligned : pc.toNat % 4 = 0
   · cases selected : image.segments.toList.find? (fun segment => containsWord segment pc) with
-    | none => simp only [rawCode, aligned, ite_true, selected] at fetched
+    | none =>
+      simp only [rawCode, aligned, ite_true, selected] at fetched
+      cases fetched
     | some segment =>
       cases read : Elf.readUIntLE segment.data (pc.toNat - segment.vaddr) 4 with
-      | error message => simp only [rawCode, aligned, ite_true, selected, read] at fetched
+      | error message =>
+        simp only [rawCode, aligned, ite_true, selected, read] at fetched
+        cases fetched
       | ok value =>
         have equal : BitVec.ofNat 32 value = word := by
           simpa only [rawCode, aligned, ite_true, selected, read, Option.some.injEq] using fetched
-        exact ⟨aligned, segment, List.mem_of_find?_eq_some selected,
-          List.find?_some selected, value, read, equal.symm⟩
+        have member : segment ∈ image.segments.toList :=
+          List.mem_of_find?_eq_some (p := fun segment => containsWord segment pc)
+            (l := image.segments.toList) (a := segment) selected
+        have covered : containsWord segment pc = true :=
+          List.find?_some (p := fun segment => containsWord segment pc)
+            (l := image.segments.toList) (a := segment) selected
+        exact ⟨aligned, segment, member, covered, value, read, equal.symm⟩
   · simp only [rawCode, aligned, ite_false] at fetched
+    cases fetched
 
 theorem containsWord_bounds (segment : Segment) (pc : Word)
     (covered : containsWord segment pc = true) :
@@ -121,18 +131,34 @@ theorem loadChecked_valid (image : Elf64Image) (input : List (BitVec 8))
     imageValid image = true := by
   by_cases valid : imageValid image = true
   · exact valid
-  · simp [loadChecked, validateImage, valid] at success
+  · have rejected : validateImage image =
+        .error "native ELF: invalid entry, segment bounds or overlapping load ranges" := by
+      simp only [validateImage, valid, ite_false]
+    unfold loadChecked at success
+    rw [rejected] at success
+    change (Except.error "native ELF: invalid entry, segment bounds or overlapping load ranges" :
+      Except String Loaded) = .ok loaded at success
+    cases success
 
 theorem loadChecked_origin (image : Elf64Image) (input : List (BitVec 8))
     (loaded : Loaded) (success : loadChecked image input = .ok loaded) :
     ∃ ordinary, Interpreter.loadChecked image input = .ok ordinary ∧
       loaded = { image, ordinary } := by
   have valid := loadChecked_valid image input loaded success
+  have validation : validateImage image = .ok () := by
+    simp only [validateImage, valid, ite_true]
   cases source : Interpreter.loadChecked image input with
-  | error message => simp [loadChecked, validateImage, valid, source] at success
+  | error message =>
+    unfold loadChecked at success
+    rw [validation, source] at success
+    change (Except.error message : Except String Loaded) = .ok loaded at success
+    cases success
   | ok ordinary =>
     have equal : ({ image, ordinary } : Loaded) = loaded := by
-      simpa [loadChecked, validateImage, valid, source] using success
+      unfold loadChecked at success
+      rw [validation, source] at success
+      change (Except.ok ({ image, ordinary } : Loaded) : Except String Loaded) = .ok loaded at success
+      exact Except.ok.inj success
     exact ⟨ordinary, rfl, equal.symm⟩
 
 /-- Complete preservation of the loaded non-code state, not selected operands. -/
