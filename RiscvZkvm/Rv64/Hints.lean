@@ -10,3 +10,4 @@ import RiscvZkvm.Rv64.ModInvHints
 import RiscvZkvm.Rv64.Div256Hints
 import RiscvZkvm.Rv64.ModInv256Hints
 import RiscvZkvm.Rv64.ModInv256Hints.Accel
+import RiscvZkvm.Rv64.ModInv256Hints.Caller
