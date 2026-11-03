@@ -4,7 +4,9 @@ import RiscvZkvm.Rv64.HintInterface
 import RiscvZkvm.Rv64.HintInput
 import RiscvZkvm.Rv64.ResumableHints
 import RiscvZkvm.Rv64.HintAdequacy
+import RiscvZkvm.Rv64.NativeFcall
 import RiscvZkvm.Rv64.HintHandlers
 import RiscvZkvm.Rv64.ModInvHints
 import RiscvZkvm.Rv64.Div256Hints
 import RiscvZkvm.Rv64.ModInv256Hints
+import RiscvZkvm.Rv64.ModInv256Hints.Accel
