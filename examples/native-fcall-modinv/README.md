@@ -35,11 +35,16 @@ separately from the exact source revision:
 ```sh
 git -C /path/to/zisk checkout --detach 64a1f1664184e76053686745d50c6b9aaa51b034
 cd /path/to/zisk
-cargo +1.99.1 build --locked --release --no-default-features -p ziskemu --bin ziskemu --jobs 2
+MAKEFLAGS='--eval=.NOTPARALLEL:' cargo +1.99.1 build --locked --release --no-default-features -p ziskemu --bin ziskemu --jobs 2
 ```
 
-The pinned native build uses make, C++, GMP, and NASM. Its complete minimal
-dependency set and standard-runner fit require hosted validation. Keep the
+The pinned native build uses make, C++, GMP, and NASM. A transitive build script
+also builds a C++ proof library and invokes unbounded `make -j`; Cargo's job
+limit does not bound that invocation. The GNU Make flag above injects
+`.NOTPARALLEL:` to serialize its recipes. The workflow installs JSON, sodium
+and OpenMP development headers/libraries required by those dependencies.
+The complete minimal dependency set and standard-runner fit still require
+hosted validation. Keep the
 actual build log and Rust/compiler provenance: a clean checkout, binary version,
 and binary hash alone do not attest how that binary was built.
 
