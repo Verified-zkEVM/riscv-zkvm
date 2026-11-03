@@ -50,8 +50,14 @@ private theorem leLimbsToNat_value (words : List Word) :
 private theorem readNat_value (state : MachineState) (address : Word) :
     _root_.RiscvZkvm.Rv64.Accel.leLimbsToNat (state.readWords address 4) = (readU256 state address).toNat := by
   rw [leLimbsToNat_value]
-  simpa only [MachineState.readWords, BitVec.add_assoc] using
-    Div256Hints.Encoding.readU256_value state address
+  change Div256Hints.Product.limbsValue
+    [state.getMem address, state.getMem (address + 8#64),
+      state.getMem ((address + 8#64) + 8#64),
+      state.getMem (((address + 8#64) + 8#64) + 8#64)] = _
+  simp only [BitVec.add_assoc,
+    show 8#64 + 8#64 = 16#64 from rfl,
+    show 8#64 + 16#64 = 24#64 from rfl]
+  exact Div256Hints.Encoding.readU256_value state address
 
 def remainder (state : MachineState) (base : Word) : Nat :=
   ((question state base).a.toNat * (witness state base).toNat) %
@@ -275,7 +281,10 @@ private theorem after_words_w_value (state : MachineState) (base : Word)
     (packet : Packet state base) :
     Div256Hints.Product.limbsValue (wordsAt (after state base) 0) =
       (witness state base).toNat := by
-  rw [wordsAt_value, after_getReg, packet.checking, BitVec.add_zero]
+  rw [wordsAt_value, after_getReg, packet.checking]
+  change (readU256 (after state base) ((base + 72#64) + 0#64)).toNat =
+    (witness state base).toNat
+  rw [BitVec.add_zero]
   exact congrArg BitVec.toNat (after_input state base 72 (Or.inl rfl))
 
 private theorem after_words_m_value (state : MachineState) (base : Word)
