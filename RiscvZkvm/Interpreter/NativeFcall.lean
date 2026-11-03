@@ -133,7 +133,7 @@ theorem loadChecked_valid (image : Elf64Image) (input : List (BitVec 8))
   · exact valid
   · have rejected : validateImage image =
         .error "native ELF: invalid entry, segment bounds or overlapping load ranges" := by
-      simp only [validateImage, valid, ite_false]
+      simp [validateImage, valid]
     unfold loadChecked at success
     rw [rejected] at success
     change (Except.error "native ELF: invalid entry, segment bounds or overlapping load ranges" :
