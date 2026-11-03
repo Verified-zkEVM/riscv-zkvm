@@ -1,0 +1,68 @@
+{
+  "modulus": "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
+  "honest": [
+    {
+      "name": "zero",
+      "a": "0000000000000000000000000000000000000000000000000000000000000000",
+      "candidate": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": 1
+    },
+    {
+      "name": "one",
+      "a": "0000000000000000000000000000000000000000000000000000000000000001",
+      "candidate": "0000000000000000000000000000000000000000000000000000000000000001",
+      "status": 0
+    },
+    {
+      "name": "two",
+      "a": "0000000000000000000000000000000000000000000000000000000000000002",
+      "candidate": "7fffffffffffffffffffffffffffffffffffffffffffffffffffffff7ffffe18",
+      "status": 0
+    },
+    {
+      "name": "p_minus_1",
+      "a": "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e",
+      "candidate": "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e",
+      "status": 0
+    },
+    {
+      "name": "p_minus_2",
+      "a": "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2d",
+      "candidate": "7fffffffffffffffffffffffffffffffffffffffffffffffffffffff7ffffe17",
+      "status": 0
+    },
+    {
+      "name": "limb_boundary_128",
+      "a": "0000000000000000000000000000000100000000000000000000000000000000",
+      "candidate": "bcb223fedc24a059d838091dd2253530ffffffffffffffffffffffff434dd931",
+      "status": 0
+    }
+  ],
+  "guest_supplied_candidates": [
+    {
+      "name": "wrong_zero",
+      "a": "0000000000000000000000000000000000000000000000000000000000000001",
+      "candidate": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": 1
+    },
+    {
+      "name": "noncanonical_p_plus_one",
+      "a": "0000000000000000000000000000000000000000000000000000000000000001",
+      "candidate": "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc30",
+      "status": 1
+    },
+    {
+      "name": "wrong_high_limb",
+      "a": "0000000000000000000000000000000000000000000000000000000000000001",
+      "candidate": "0000000000000001000000000000000000000000000000000000000000000001",
+      "status": 1
+    },
+    {
+      "name": "forged_low256_product",
+      "a": "0000000000000000000000000000000000000000000000000000000000000003",
+      "candidate": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
+      "status": 1
+    }
+  ],
+  "negative_scope": "Guest-supplied candidates bypass FCALL; they are not hostile-host injection tests."
+}
