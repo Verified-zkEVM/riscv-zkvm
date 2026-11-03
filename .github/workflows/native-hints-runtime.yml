@@ -42,6 +42,8 @@ jobs:
         run: |
           python3 examples/native-fcall-modinv/run.py --check-source
           python3 examples/native-fcall-modinv/test-source.py
+          python3 examples/native-fcall-modinv/compare.py --check-source
+          python3 examples/native-fcall-modinv/compare-source-tests.py
 
       - name: Check available disk before the bounded build
         run: |
@@ -120,6 +122,12 @@ jobs:
             --emulator "$GITHUB_WORKSPACE/.native-zisk/target/release/ziskemu" \
             --out "$GITHUB_WORKSPACE/native-runtime/results"
 
+      - name: Compare the same BE ABI against the pinned inverse closure
+        run: |
+          python3 examples/native-fcall-modinv/compare.py \
+            --emulator "$GITHUB_WORKSPACE/.native-zisk/target/release/ziskemu" \
+            --out "$GITHUB_WORKSPACE/native-comparison"
+
       - name: Record final disk usage
         if: always()
         run: |
@@ -133,32 +141,50 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json, os
-          root = Path('native-runtime')
-          root.mkdir(exist_ok=True)
-          paths = sorted(root.rglob('*'))
-          regular = [p for p in paths if p.is_file() and not p.is_symlink()]
-          invalid = any(p.is_symlink() or not (p.is_file() or p.is_dir()) for p in paths)
-          sizes = [p.stat().st_size for p in regular]
-          summary = json.dumps({
-              'files_before_summary': len(regular), 'bytes_before_summary': sum(sizes),
-              'max_files_including_summary': 128, 'max_total_bytes': 16 * 1024**2,
-              'max_file_bytes': 4 * 1024**2, 'invalid_file_type': invalid,
-          }, indent=2) + '\n'
-          within = (not invalid and len(regular) + 1 <= 128
-                    and sum(sizes) + len(summary.encode()) <= 16 * 1024**2
-                    and all(size <= 4 * 1024**2 for size in sizes))
-          (root / 'artifact-summary.json').write_text(summary)
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-              output.write('within_bounds=' + str(within).lower() + '\n')
-          if not within:
-              raise SystemExit('Runtime evidence exceeds upload bounds; no artifact upload')
+          all_within = True
+          for label, directory in [('runtime', 'native-runtime'), ('comparison', 'native-comparison')]:
+              root = Path(directory)
+              if root.is_symlink() or (root.exists() and not root.is_dir()):
+                  with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+                      output.write(label + '_within_bounds=false\n')
+                  all_within = False
+                  continue
+              root.mkdir(exist_ok=True)
+              paths = sorted(root.rglob('*'))
+              regular = [p for p in paths if p.is_file() and not p.is_symlink()]
+              invalid = any(p.is_symlink() or not (p.is_file() or p.is_dir()) for p in paths)
+              sizes = [p.stat().st_size for p in regular]
+              summary = json.dumps({
+                  'files_before_summary': len(regular), 'bytes_before_summary': sum(sizes),
+                  'max_files_including_summary': 128, 'max_total_bytes': 16 * 1024**2,
+                  'max_file_bytes': 4 * 1024**2, 'invalid_file_type': invalid,
+              }, indent=2) + '\n'
+              within = (not invalid and len(regular) + 1 <= 128
+                        and sum(sizes) + len(summary.encode()) <= 16 * 1024**2
+                        and all(size <= 4 * 1024**2 for size in sizes))
+              if not invalid:
+                  (root / 'artifact-summary.json').write_text(summary)
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+                  output.write(label + '_within_bounds=' + str(within).lower() + '\n')
+              all_within = all_within and within
+          if not all_within:
+              raise SystemExit('Runtime evidence exceeds upload bounds; affected artifact upload refused')
           PY
 
       - name: Preserve bounded runtime evidence
-        if: always() && steps.evidence.outputs.within_bounds == 'true'
+        if: always() && steps.evidence.outputs.runtime_within_bounds == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: native-hint-runtime-${{ github.sha }}
           path: native-runtime/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Preserve bounded comparison evidence
+        if: always() && steps.evidence.outputs.comparison_within_bounds == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-hint-comparison-${{ github.sha }}
+          path: native-comparison/
           if-no-files-found: warn
           retention-days: 7
