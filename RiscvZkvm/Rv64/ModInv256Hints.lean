@@ -124,10 +124,12 @@ theorem remainder_zero_iff_dvd (a divisor : U256) :
   · intro remainder
     apply Nat.dvd_of_mod_eq_zero
     have exact_remainder := congrArg BitVec.toNat remainder
-    simpa only [BitVec.toNat_umod, BitVec.toNat_zero] using exact_remainder
+    change a.toNat % divisor.toNat = 0 at exact_remainder
+    exact exact_remainder
   · intro divides
     apply BitVec.eq_of_toNat_eq
-    simpa only [BitVec.toNat_umod, BitVec.toNat_zero] using Nat.mod_eq_zero_of_dvd divides
+    change a.toNat % divisor.toNat = 0
+    exact Nat.mod_eq_zero_of_dvd divides
 
 theorem checkNoInverse_iff_contract (question : Question) (certificate : NoInverseCertificate) :
     checkNoInverse question certificate = true ↔ NoInverseContract question certificate := by
@@ -257,12 +259,12 @@ theorem verify_sound (question : Question) (proposal : Option Proposal) :
 theorem verify_complete_inverse (question : Question) (witness : U256)
     (valid : Contract question witness) :
     verify question (some (.inverse witness)) = .inverse witness := by
-  simp only [verify, if_pos (check_complete question witness valid)]
+  simp only [verify, ite_eq_left (check_complete question witness valid)]
 
 theorem verify_complete_noInverse (question : Question) (certificate : NoInverseCertificate)
     (valid : NoInverseContract question certificate) :
     verify question (some (.noInverse certificate)) = .noInverse := by
-  simp only [verify, if_pos (checkNoInverse_complete question certificate valid)]
+  simp only [verify, ite_eq_left (checkNoInverse_complete question certificate valid)]
 
 theorem no_conflicting_certificates (question : Question) (witness : U256)
     (certificate : NoInverseCertificate) (inverse : check question witness = true)

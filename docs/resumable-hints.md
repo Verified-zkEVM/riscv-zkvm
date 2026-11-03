@@ -97,7 +97,9 @@ Flapjack memory representations remains separate.
 Its Mathlib dependency is isolated from this package. The protocol uses a
 24-byte little-endian `(a,p,w)` array and an eight-byte raw witness reply.
 The guest checks the independent modular-inverse contract with 15 RV64IM
-instructions; range checks prevent multiplication overflow.
+instructions. This example requires both the operand and inverse witness to
+be below `2^32`; those range checks prevent RV64 multiplication overflow.
+It is not a full-width cryptographic inverse checker.
 `validBuffer` checks all 24 byte addresses as well as alignment and non-wrapping
 extent. The model's start-address-only doubleword predicate is not sufficient
 for a buffer ending at the upper edge of a data-memory zone.
@@ -106,6 +108,44 @@ This is an experimental ordinary-FFI PoC. Compiler/linker simulation, an
 emitted register-loading/interception stub, generic Flapjack-to-RV64 memory
 refinement, and Sail/platform/backend integration remain separate obligations.
 It neither changes nor proves evm.fast's fixed Challenge oracle contract.
+
+## Bounded trees and stateful execution
+
+`HintAdequacy.interpStateful` interprets the existing `HintITree` with an
+external handler state. Repeating the same question can therefore produce
+different answers. `interpStateful_bind` preserves that state through monadic
+composition.
+
+`unfoldWithin` observes a fixed number of scheduler transitions, using the
+selected guest fuel slice. Its leaves are `Control` values, so suspension,
+exhaustion and traps remain explicit. `interpStateful_unfoldWithin` equates
+interpretation with `execute`, including the final handler state;
+`unfoldWithin_add` composes observation horizons through tree bind.
+`unfoldWithin_safe` transfers `Safe` to all paths of this unfolding. It does
+not assert a converse, termination, trap freedom, or an instruction bound.
+
+This connects the finite tree and resumable execution models. Reading a
+particular serialized static tape still needs a codec and guest-read adequacy
+theorem; framing bytes alone does not establish that connection.
+
+## Full-width inverse certificates
+
+`ModInv256Hints` supplies a separate 256-bit mathematical contract and checker.
+The product is widened to 512 bits before reducing by the modulus. Acceptance
+requires a modulus greater than one and a canonical witness below it.
+`check_iff_contract` establishes soundness and completeness for that relation;
+`contract_unique` applies to composite moduli too, without assuming primality.
+
+An absence certificate supplies a divisor greater than one. The checker
+verifies that it divides both the operand and modulus; an accepted certificate
+excludes every inverse. Missing, malformed or false proposals are rejected,
+not interpreted as evidence of noninvertibility. The gcd construction has an
+acceptance theorem assuming the gcd is greater than one; this layer does not
+yet prove total inverse-or-absence availability from arbitrary inputs.
+
+These are arithmetic specification checkers. They do not by themselves prove
+a byte ABI, a guest instruction sequence, a native service implementation,
+or a prover/circuit cost improvement.
 
 ## Sail boundary on the refreshed toolchain
 
