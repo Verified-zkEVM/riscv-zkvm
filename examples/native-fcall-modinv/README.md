@@ -43,9 +43,9 @@ also builds a C++ proof library and invokes unbounded `make -j`; Cargo's job
 limit does not bound that invocation. The GNU Make flag above injects
 `.NOTPARALLEL:` to serialize its recipes. The workflow installs JSON, sodium
 and OpenMP development headers/libraries required by those dependencies.
-The complete minimal dependency set and standard-runner fit still require
-hosted validation. Keep the
-actual build log and Rust/compiler provenance: a clean checkout, binary version,
+The recorded dependency set built successfully on the hosted Ubuntu runner
+at commit `19e4110`; this is one observed build, not a general memory-fit
+guarantee. Keep the actual build log and Rust/compiler provenance: a clean checkout, binary version,
 and binary hash alone do not attest how that binary was built.
 
 Run from this repository:

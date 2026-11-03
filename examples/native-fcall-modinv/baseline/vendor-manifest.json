@@ -1,0 +1,729 @@
+{
+  "kind": "Exact source baseline; not a linked inverse correctness certificate",
+  "upstream_repository": "Verified-zkEVM/evm-asm",
+  "upstream_commit": "7e65e4d024718f704226cd795f3d03d4e9aafe13",
+  "files": {
+    "vendor/secp256k1FieldInvFunction.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldInvFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldInvFunction.s",
+      "git_blob": "bf61a5fcc1c9ecc1299f6c95cd71e2bb9df290c2",
+      "sha256": "7ae7e292378630c53a1533bb23abbc33241c1e432c90c3cfab77812546b13790",
+      "bytes": 486
+    },
+    "vendor/secp256k1FieldIsZeroFunction.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldIsZeroFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldIsZeroFunction.s",
+      "git_blob": "9b846870ada07df906d8010e11c572a03ada305d",
+      "sha256": "e766b55a5c035a40476f83074462e8cf0b72ece2874a0621038cdab8c569d4eb",
+      "bytes": 204
+    },
+    "vendor/secp256k1FieldZero32Function.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldZero32Function.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldZero32Function.s",
+      "git_blob": "c013d2b89a6af4abb87352ec64a8d88ab4ba1dcd",
+      "sha256": "a14d8d2227037dfbb9465a4fd84d7ab45cd6aedb0fa4aa728ddef8b161a65deb",
+      "bytes": 91
+    },
+    "vendor/secp256k1FieldCopy32Function.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldCopy32Function.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldCopy32Function.s",
+      "git_blob": "d58c028c749907ed0911bd7275eafca68b2da9d6",
+      "sha256": "5bd01e8de51081024cac38c9456794621de61df8aa47d767e251d2094bbbd417",
+      "bytes": 143
+    },
+    "vendor/secp256k1FieldPowFunction.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldPowFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldPowFunction.s",
+      "git_blob": "7282478dad4e15826b620a133007933eca458924",
+      "sha256": "3f06ba6cd254378a338ad568231fc78beee3645c67b1f39f0bb2c80d258560ea",
+      "bytes": 865
+    },
+    "vendor/secp256k1FieldReduceOnceFunction.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldReduceOnceFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldReduceOnceFunction.s",
+      "git_blob": "7daa1e3a0f0e17e3d4f7bb4db4e67d28d70862d5",
+      "sha256": "1dd019a1f88bfc6fa2dbbe2470cb0a4d62efd1a71f69756d9f620137d77e89e4",
+      "bytes": 520
+    },
+    "vendor/secp256k1FieldSquareFunction.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldSquareFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldSquareFunction.s",
+      "git_blob": "2aad9a1df8252587c46ddc690a0e32bb7c8b945b",
+      "sha256": "3d36c8af1e81a5146a042af41f727f1273c9b2e3e057819ce079a6d4008b766a",
+      "bytes": 58
+    },
+    "vendor/secp256k1FieldGetBitFunction.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldGetBitFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldGetBitFunction.s",
+      "git_blob": "7958690247a23470c887e60cb76ef369b4ab255d",
+      "sha256": "91a5aa522a3df2e186f1e15d9e57ad2eb2a1939a3e1eda384314728bc5638047",
+      "bytes": 221
+    },
+    "vendor/secp256k1FieldMulFunction.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldMulFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldMulFunction.s",
+      "git_blob": "451c92110fa3b2c6defa12669d0032acd1f312b4",
+      "sha256": "327e017c1231e49480f20a31ad6b9fa6c2c327de39ff266446f4c36f60df864f",
+      "bytes": 434
+    },
+    "vendor/secp256k1FieldBeToLeFunction.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldBeToLeFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldBeToLeFunction.s",
+      "git_blob": "c2cf4a9d895b51b9acc067c9ed49f063f8530a7d",
+      "sha256": "f7631b9c3abebe358052fa98a1683f30a67a7b05b4b305a55fadd296fad04a07",
+      "bytes": 442
+    },
+    "vendor/secp256k1FieldLeToBeFunction.s": {
+      "path": "scripts/asm-fixtures/secp256k1FieldLeToBeFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/secp256k1FieldLeToBeFunction.s",
+      "git_blob": "748a4a12eea194b24989a700905036efea9a0d95",
+      "sha256": "a2b5efcf23376a84ef5705a4b37bc25eda1445f72eff82e2f4a1bf291e8ecda0",
+      "bytes": 435
+    },
+    "vendor/u256LtBeFunction.s": {
+      "path": "scripts/asm-fixtures/u256LtBeFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/u256LtBeFunction.s",
+      "git_blob": "629a7115cf4cf7dc4aa0beb3a6422b38187b8eb6",
+      "sha256": "a03dc2d58c82d1a7f54073f802b843c924cedc8337ddb5b661591a681e040381",
+      "bytes": 454
+    },
+    "vendor/u256SubBeFunction.s": {
+      "path": "scripts/asm-fixtures/u256SubBeFunction.s",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/scripts/asm-fixtures/u256SubBeFunction.s",
+      "git_blob": "a69363e427610e1ff512b1636541908e2ae3e640",
+      "sha256": "3490f4b47752511178b521b41f686247c08c5ae1e824d6f0f6cbe8b8369428d2",
+      "bytes": 518
+    },
+    "LICENSE.evm-asm": {
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/Verified-zkEVM/evm-asm/7e65e4d024718f704226cd795f3d03d4e9aafe13/LICENSE",
+      "git_blob": "2aab0eec7c6fcf74ad11784468b881e1e545f1d8",
+      "sha256": "59e20153953235cf816d3e2b2c3acc1166ba2f3f8bacb99ac0bde53287fb9e7a",
+      "bytes": 1067
+    },
+    "field-data.s": {
+      "source_path": "EvmAsm/Codegen/Programs/Secp256k1Field.lean",
+      "source_git_blob": "ee890bf7d87861a3f96abbddbdeb0f55e3a34db1",
+      "source_sha256": "0e97a2b0d912babf784ed169e9feff4a1210e73f0cfb4341cc257d3d91614e90",
+      "declaration": "secp256k1FieldDataSection",
+      "sha256": "133ba8856580fa3b4e51fe13246fc8088c2c934cd94546c17395c513519d95bd",
+      "bytes": 2382,
+      "linked_data_size": 664,
+      "derivation": "Exact existing Lean String literal concatenation, no instruction/data changes."
+    }
+  },
+  "functions": {
+    "secf_inv_mod_p": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldInvFunction.s",
+      "calls_in_order": [
+        "secf_is_zero32",
+        "secf_zero32",
+        "secf_copy32",
+        "secf_pow_mod_p"
+      ],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [
+        "secp256k1_p_minus_2_be"
+      ],
+      "labels": [
+        "secf_inv_mod_p",
+        ".Lsecf_inv_nonzero",
+        ".Lsecf_inv_done"
+      ],
+      "stack_frame_bytes": 64,
+      "source_instruction_statements": 25,
+      "fixed_unrelaxed_word_count": 26,
+      "raw_csr_words": []
+    },
+    "secf_is_zero32": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldIsZeroFunction.s",
+      "calls_in_order": [],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [
+        {
+          "at": 8,
+          "delta": 24,
+          "target": 32
+        },
+        {
+          "at": 16,
+          "delta": 16,
+          "target": 32
+        },
+        {
+          "at": 28,
+          "delta": -20,
+          "target": 8
+        },
+        {
+          "at": 36,
+          "delta": 8,
+          "target": 44
+        }
+      ],
+      "global_data_refs_in_order": [],
+      "labels": [
+        "secf_is_zero32"
+      ],
+      "stack_frame_bytes": 0,
+      "source_instruction_statements": 12,
+      "fixed_unrelaxed_word_count": 12,
+      "raw_csr_words": []
+    },
+    "secf_zero32": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldZero32Function.s",
+      "calls_in_order": [],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [],
+      "labels": [
+        "secf_zero32"
+      ],
+      "stack_frame_bytes": 0,
+      "source_instruction_statements": 5,
+      "fixed_unrelaxed_word_count": 5,
+      "raw_csr_words": []
+    },
+    "secf_copy32": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldCopy32Function.s",
+      "calls_in_order": [],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [],
+      "labels": [
+        "secf_copy32"
+      ],
+      "stack_frame_bytes": 0,
+      "source_instruction_statements": 9,
+      "fixed_unrelaxed_word_count": 9,
+      "raw_csr_words": []
+    },
+    "secf_pow_mod_p": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldPowFunction.s",
+      "calls_in_order": [
+        "secf_copy32",
+        "secf_reduce_once",
+        "secf_square_mod_p",
+        "secf_get_bit_lsb",
+        "secf_mul_mod_p",
+        "secf_copy32"
+      ],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [
+        "secf_pow_result",
+        "secf_pow_base",
+        "secp256k1_one_be"
+      ],
+      "labels": [
+        "secf_pow_mod_p",
+        ".Lsecf_pow_loop",
+        ".Lsecf_pow_after_mul",
+        ".Lsecf_pow_done"
+      ],
+      "stack_frame_bytes": 80,
+      "source_instruction_statements": 47,
+      "fixed_unrelaxed_word_count": 50,
+      "raw_csr_words": []
+    },
+    "secf_reduce_once": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldReduceOnceFunction.s",
+      "calls_in_order": [
+        "u256_lt_be",
+        "u256_sub_be",
+        "secf_copy32"
+      ],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [
+        "secp256k1_p_be",
+        "secf_cmp",
+        "secf_cmp",
+        "secp256k1_p_be"
+      ],
+      "labels": [
+        "secf_reduce_once",
+        ".Lsecf_reduce_copy",
+        ".Lsecf_reduce_done"
+      ],
+      "stack_frame_bytes": 32,
+      "source_instruction_statements": 28,
+      "fixed_unrelaxed_word_count": 32,
+      "raw_csr_words": []
+    },
+    "secf_square_mod_p": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldSquareFunction.s",
+      "calls_in_order": [
+        "secf_mul_mod_p"
+      ],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [],
+      "labels": [
+        "secf_square_mod_p"
+      ],
+      "stack_frame_bytes": 0,
+      "source_instruction_statements": 2,
+      "fixed_unrelaxed_word_count": 2,
+      "raw_csr_words": []
+    },
+    "secf_get_bit_lsb": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldGetBitFunction.s",
+      "calls_in_order": [],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [],
+      "labels": [
+        "secf_get_bit_lsb"
+      ],
+      "stack_frame_bytes": 0,
+      "source_instruction_statements": 9,
+      "fixed_unrelaxed_word_count": 9,
+      "raw_csr_words": []
+    },
+    "secf_mul_mod_p": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldMulFunction.s",
+      "calls_in_order": [
+        "secf_be_to_le",
+        "secf_be_to_le",
+        "secf_le_to_be"
+      ],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [
+        "secf_le_a",
+        "secf_le_b",
+        "secf_arith_params_p",
+        "secf_le_d"
+      ],
+      "labels": [
+        "secf_mul_mod_p"
+      ],
+      "stack_frame_bytes": 32,
+      "source_instruction_statements": 22,
+      "fixed_unrelaxed_word_count": 26,
+      "raw_csr_words": [
+        "0x8022a073"
+      ]
+    },
+    "secf_be_to_le": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldBeToLeFunction.s",
+      "calls_in_order": [],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [],
+      "labels": [
+        "secf_be_to_le",
+        ".Lsecf_b2l_quad",
+        ".Lsecf_b2l_byte"
+      ],
+      "stack_frame_bytes": 0,
+      "source_instruction_statements": 20,
+      "fixed_unrelaxed_word_count": 20,
+      "raw_csr_words": []
+    },
+    "secf_le_to_be": {
+      "fixture": "scripts/asm-fixtures/secp256k1FieldLeToBeFunction.s",
+      "calls_in_order": [],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [],
+      "labels": [
+        "secf_le_to_be",
+        ".Lsecf_l2b_quad",
+        ".Lsecf_l2b_byte"
+      ],
+      "stack_frame_bytes": 0,
+      "source_instruction_statements": 19,
+      "fixed_unrelaxed_word_count": 19,
+      "raw_csr_words": []
+    },
+    "u256_lt_be": {
+      "fixture": "scripts/asm-fixtures/u256LtBeFunction.s",
+      "calls_in_order": [],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [],
+      "labels": [
+        "u256_lt_be",
+        ".Lulb_loop",
+        ".Lulb_less",
+        ".Lulb_greater",
+        ".Lulb_equal"
+      ],
+      "stack_frame_bytes": 0,
+      "source_instruction_statements": 19,
+      "fixed_unrelaxed_word_count": 19,
+      "raw_csr_words": []
+    },
+    "u256_sub_be": {
+      "fixture": "scripts/asm-fixtures/u256SubBeFunction.s",
+      "calls_in_order": [],
+      "local_branches_closed": true,
+      "relative_PC_branches_closed": [],
+      "global_data_refs_in_order": [],
+      "labels": [
+        "u256_sub_be",
+        ".Lu256s_loop",
+        ".Lu256s_done"
+      ],
+      "stack_frame_bytes": 0,
+      "source_instruction_statements": 17,
+      "fixed_unrelaxed_word_count": 17,
+      "raw_csr_words": []
+    }
+  },
+  "data_layout": {
+    "secp256k1_p_be": {
+      "offset_from_data_fragment": 0,
+      "directives": [
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xfe,0xff,0xff,0xfc,0x2f",
+          "bytes": 8
+        }
+      ]
+    },
+    "secp256k1_c_be": {
+      "offset_from_data_fragment": 32,
+      "directives": [
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x01,0x00,0x00,0x03,0xd1",
+          "bytes": 8
+        }
+      ]
+    },
+    "secp256k1_one_be": {
+      "offset_from_data_fragment": 64,
+      "directives": [
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01",
+          "bytes": 8
+        }
+      ]
+    },
+    "secp256k1_p_minus_2_be": {
+      "offset_from_data_fragment": 96,
+      "directives": [
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xfe,0xff,0xff,0xfc,0x2d",
+          "bytes": 8
+        }
+      ]
+    },
+    "secp256k1_sqrt_exp_be": {
+      "offset_from_data_fragment": 128,
+      "directives": [
+        {
+          "op": ".byte",
+          "values": "0x3f,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xbf,0xff,0xff,0x0c",
+          "bytes": 8
+        }
+      ]
+    },
+    "secf_n_be": {
+      "offset_from_data_fragment": 160,
+      "directives": [
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfe",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xba,0xae,0xdc,0xe6,0xaf,0x48,0xa0,0x3b",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xbf,0xd2,0x5e,0x8c,0xd0,0x36,0x41,0x41",
+          "bytes": 8
+        }
+      ]
+    },
+    "secf_n_c_be": {
+      "offset_from_data_fragment": 192,
+      "directives": [
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0x45,0x51,0x23,0x19,0x50,0xb7,0x5f,0xc4",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0x40,0x2d,0xa1,0x73,0x2f,0xc9,0xbe,0xbf",
+          "bytes": 8
+        }
+      ]
+    },
+    "secf_n_minus_2_be": {
+      "offset_from_data_fragment": 224,
+      "directives": [
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfe",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xba,0xae,0xdc,0xe6,0xaf,0x48,0xa0,0x3b",
+          "bytes": 8
+        },
+        {
+          "op": ".byte",
+          "values": "0xbf,0xd2,0x5e,0x8c,0xd0,0x36,0x41,0x3f",
+          "bytes": 8
+        }
+      ]
+    },
+    "secf_tmp0": {
+      "offset_from_data_fragment": 256,
+      "directives": [
+        {
+          "op": ".zero",
+          "values": "32",
+          "bytes": 32
+        }
+      ]
+    },
+    "secf_cmp": {
+      "offset_from_data_fragment": 288,
+      "directives": [
+        {
+          "op": ".zero",
+          "values": "8",
+          "bytes": 8
+        }
+      ]
+    },
+    "secf_le_a": {
+      "offset_from_data_fragment": 296,
+      "directives": [
+        {
+          "op": ".fill",
+          "values": "32, 1, 0",
+          "bytes": 32
+        }
+      ]
+    },
+    "secf_le_b": {
+      "offset_from_data_fragment": 328,
+      "directives": [
+        {
+          "op": ".fill",
+          "values": "32, 1, 0",
+          "bytes": 32
+        }
+      ]
+    },
+    "secf_le_d": {
+      "offset_from_data_fragment": 360,
+      "directives": [
+        {
+          "op": ".fill",
+          "values": "32, 1, 0",
+          "bytes": 32
+        }
+      ]
+    },
+    "secf_le_zero": {
+      "offset_from_data_fragment": 392,
+      "directives": [
+        {
+          "op": ".fill",
+          "values": "32, 1, 0",
+          "bytes": 32
+        }
+      ]
+    },
+    "secf_le_p": {
+      "offset_from_data_fragment": 424,
+      "directives": [
+        {
+          "op": ".quad",
+          "values": "0xFFFFFFFEFFFFFC2F, 0xFFFFFFFFFFFFFFFF",
+          "bytes": 16
+        },
+        {
+          "op": ".quad",
+          "values": "0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF",
+          "bytes": 16
+        }
+      ]
+    },
+    "secf_le_n": {
+      "offset_from_data_fragment": 456,
+      "directives": [
+        {
+          "op": ".quad",
+          "values": "0xBFD25E8CD0364141, 0xBAAEDCE6AF48A03B",
+          "bytes": 16
+        },
+        {
+          "op": ".quad",
+          "values": "0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF",
+          "bytes": 16
+        }
+      ]
+    },
+    "secf_arith_params_p": {
+      "offset_from_data_fragment": 488,
+      "directives": [
+        {
+          "op": ".quad",
+          "values": "secf_le_a, secf_le_b, secf_le_zero, secf_le_p, secf_le_d",
+          "bytes": 40
+        }
+      ]
+    },
+    "secf_arith_params_n": {
+      "offset_from_data_fragment": 528,
+      "directives": [
+        {
+          "op": ".quad",
+          "values": "secf_le_a, secf_le_b, secf_le_zero, secf_le_n, secf_le_d",
+          "bytes": 40
+        }
+      ]
+    },
+    "secf_pow_result": {
+      "offset_from_data_fragment": 568,
+      "directives": [
+        {
+          "op": ".zero",
+          "values": "32",
+          "bytes": 32
+        }
+      ]
+    },
+    "secf_pow_base": {
+      "offset_from_data_fragment": 600,
+      "directives": [
+        {
+          "op": ".zero",
+          "values": "32",
+          "bytes": 32
+        }
+      ]
+    },
+    "secf_pow_verify": {
+      "offset_from_data_fragment": 632,
+      "directives": [
+        {
+          "op": ".zero",
+          "values": "32",
+          "bytes": 32
+        }
+      ]
+    }
+  },
+  "inferred_words": 246,
+  "inferred_nested_stack_bytes": 176,
+  "license": "LICENSE.evm-asm; retain exact upstream MIT copyright/permission notice",
+  "proof_gaps": [
+    "Unlinked inverse emission guard is not an execution theorem",
+    "No concrete callee-heavy pow execution theorem inherited",
+    "Power uses in-place aliases outside disjoint multiply spec",
+    "Literal Fp is LE-a+0x80; generic multiply proof hpm assumes+0xA0",
+    "New linker addresses differ from GuestAddrs; ELF/model binding remains separate"
+  ]
+}
