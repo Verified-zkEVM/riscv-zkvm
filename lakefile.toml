@@ -57,6 +57,7 @@ platformIndependent = true
 # state, and a fuel-limited driver.
 [[lean_lib]]
 name = "RiscvZkvm.Interpreter"
+roots = ["RiscvZkvm.Interpreter", "RiscvZkvm.Interpreter.Hints"]
 platformIndependent = true
 
 # ELF runner CLI. Platform-specific output — never build this in the release job.

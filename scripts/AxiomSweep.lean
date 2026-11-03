@@ -43,7 +43,8 @@ def scanModules : Array Import :=
   #[{ module := `RiscvZkvm.Rv64 }, { module := `RiscvZkvm.Rv64.Hints },
     { module := `RiscvZkvm.Rv64.SailEquiv }, { module := `RiscvZkvm.Rv64.Logic },
     { module := `RiscvZkvm.Rv64.Logic.Hints },
-    { module := `RiscvZkvm.Interpreter }]
+    { module := `RiscvZkvm.Interpreter },
+    { module := `RiscvZkvm.Interpreter.Hints }]
 
 /-- The axioms this project accepts, and why.
 
