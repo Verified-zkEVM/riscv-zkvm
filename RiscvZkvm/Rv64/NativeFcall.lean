@@ -40,11 +40,28 @@ def Replies.pop : Replies → Option (Word × Replies)
   | .four w => some (w.w0,.three w.w1 w.w2 w.w3)
 
 theorem Replies.bounded (r : Replies) : r.remaining ≤ 4 := by
-  cases r <;> decide
+  cases r <;> simp only [remaining] <;> decide
 
 theorem Replies.pop_decreases (r : Replies) (w : Word) (rest : Replies)
     (h : r.pop = some (w,rest)) : rest.remaining + 1 = r.remaining := by
-  cases r <;> simp_all [pop, remaining]
+  cases r with
+  | empty => cases h
+  | one a =>
+    have rest_eq := congrArg Prod.snd (Option.some.inj h)
+    cases rest_eq
+    rfl
+  | two a b =>
+    have rest_eq := congrArg Prod.snd (Option.some.inj h)
+    cases rest_eq
+    rfl
+  | three a b c =>
+    have rest_eq := congrArg Prod.snd (Option.some.inj h)
+    cases rest_eq
+    rfl
+  | four words =>
+    have rest_eq := congrArg Prod.snd (Option.some.inj h)
+    cases rest_eq
+    rfl
 
 /-- Service is fixed to Fp inverse ID1; its only question data are input limbs.
     Neither nonzeroness nor reduction modulo p is enforced at this ABI layer. -/
@@ -140,8 +157,7 @@ def executeOp (s : State) : Op → Event State Request Unit
       | some _ => .trap
       | none =>
         if parameterValid s.guest rs1 then
-          .progress { s with guest := retire s.guest,
-            parameters := some (snapshot s.guest rs1) }
+          .progress { s with guest := retire s.guest, parameters := some (snapshot s.guest rs1) }
         else .trap
   | .invokeFp1 =>
     match s.parameters with
@@ -277,15 +293,15 @@ theorem invoke_without_parameters_traps (s : State) (empty : s.parameters = none
 section EncodingChecks
 variable (ordinary : BitVec 32 → Option Instr)
 
-theorem decode_parameter4 : decode ordinary 0x8f22a073#32 = some (.parameter4 .x5) := by decide
-theorem decode_invoke : decode ordinary 0x8c00d073#32 = some .invokeFp1 := by decide
-theorem decode_get : decode ordinary 0xffe02373#32 = some (.getWord .x6) := by decide
-theorem decode_get_zero : decode ordinary 0xffe02073#32 = some .noop := by decide
-theorem decode_parameter_zero : decode ordinary 0x8f202073#32 = some .noop := by decide
-theorem reject_service2 : decode ordinary 0x8c015073#32 = none := by decide
-theorem reject_other_parameter_port : decode ordinary 0x8f12a073#32 = none := by decide
-theorem reject_invoke_rd : decode ordinary 0x8c00d0f3#32 = none := by decide
-theorem reject_get_rs1 : decode ordinary 0xffe2a373#32 = none := by decide
+theorem decode_parameter4 : decode ordinary 0x8f22a073#32 = some (.parameter4 .x5) := rfl
+theorem decode_invoke : decode ordinary 0x8c00d073#32 = some .invokeFp1 := rfl
+theorem decode_get : decode ordinary 0xffe02373#32 = some (.getWord .x6) := rfl
+theorem decode_get_zero : decode ordinary 0xffe02073#32 = some .noop := rfl
+theorem decode_parameter_zero : decode ordinary 0x8f202073#32 = some .noop := rfl
+theorem reject_service2 : decode ordinary 0x8c015073#32 = none := rfl
+theorem reject_other_parameter_port : decode ordinary 0x8f12a073#32 = none := rfl
+theorem reject_invoke_rd : decode ordinary 0x8c00d0f3#32 = none := rfl
+theorem reject_get_rs1 : decode ordinary 0xffe2a373#32 = none := rfl
 
 end EncodingChecks
 end RiscvZkvm.Rv64.NativeFcall

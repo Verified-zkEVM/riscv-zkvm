@@ -36,11 +36,22 @@ structure Packet (state : MachineState) (base : Word) : Prop where
   d_pointer : state.getMem (base + 32) = base + 168
   zero : readU256 state (base + 104) = 0
 
+private theorem leLimbsToNat_value (words : List Word) :
+    _root_.RiscvZkvm.Rv64.Accel.leLimbsToNat words =
+      Div256Hints.Product.limbsValue words := by
+  induction words with
+  | nil => rfl
+  | cons word words ih =>
+    change _root_.RiscvZkvm.Rv64.Accel.leLimbsToNat words * 2^64 + word.toNat =
+      word.toNat + 2^64 * Div256Hints.Product.limbsValue words
+    rw [ih]
+    ac_rfl
+
 private theorem readNat_value (state : MachineState) (address : Word) :
     _root_.RiscvZkvm.Rv64.Accel.leLimbsToNat (state.readWords address 4) = (readU256 state address).toNat := by
-  rw [← Div256Hints.Encoding.readU256_value]
-  simp [_root_.RiscvZkvm.Rv64.Accel.leLimbsToNat, MachineState.readWords,
-    Div256Hints.Product.limbsValue, BitVec.add_assoc, Nat.mul_comm, Nat.add_comm]
+  rw [leLimbsToNat_value]
+  simpa only [MachineState.readWords, BitVec.add_assoc] using
+    Div256Hints.Encoding.readU256_value state address
 
 def remainder (state : MachineState) (base : Word) : Nat :=
   ((question state base).a.toNat * (witness state base).toNat) %
@@ -61,7 +72,7 @@ theorem accelerator_effect (state : MachineState) (base : Word) (packet : Packet
         (_root_.RiscvZkvm.Rv64.Accel.leLimbsToNat (state.readWords (state.getMem (state.getReg .x11)) 4))
         (_root_.RiscvZkvm.Rv64.Accel.leLimbsToNat (state.readWords (state.getMem (state.getReg .x11 + 8)) 4))
         (_root_.RiscvZkvm.Rv64.Accel.leLimbsToNat (state.readWords (state.getMem (state.getReg .x11 + 16)) 4))
-        (_root_.RiscvZkvm.Rv64.Accel.leLimbsToNat (state.readWords (state.getMem (state.getReg .x11 + 24)) 4))))) = _
+        (_root_.RiscvZkvm.Rv64.Accel.leLimbsToNat (state.readWords (state.getMem (state.getReg .x11 + 24)) 4)))) = _
     have zero := congrArg BitVec.toNat packet.zero
     change (readU256 state (base + 104)).toNat = 0 at zero
     simp only [packet.parameter, packet.a_pointer, packet.w_pointer, packet.c_pointer,
@@ -87,7 +98,15 @@ theorem after_fields (state : MachineState) (base : Word) :
     (after state base).privateInput = state.privateInput ∧
     (after state base).publicValues = state.publicValues ∧
     (after state base).committed = state.committed ∧
-    (after state base).inputBufBase = state.inputBufBase := by simp [after]
+    (after state base).inputBufBase = state.inputBufBase := by
+  constructor
+  · rfl
+  · simp only [after, MachineState.code_setPC, MachineState.code_writeWords,
+      MachineState.privateInput_setPC, MachineState.privateInput_writeWords,
+      MachineState.publicValues_setPC, MachineState.publicValues_writeWords,
+      MachineState.committed_setPC, MachineState.committed_writeWords,
+      MachineState.inputBufBase_setPC, MachineState.inputBufBase_writeWords,
+      and_self]
 
 def OutsideOutput (base address : Word) : Prop :=
   address ≠ base + 168 ∧ address ≠ base + 176 ∧
@@ -97,8 +116,14 @@ theorem after_memory_frame (state : MachineState) (base address : Word)
     (outside : OutsideOutput base address) :
     (after state base).getMem address = state.getMem address := by
   rcases outside with ⟨h0, h1, h2, h3⟩
-  simp [after, _root_.RiscvZkvm.Rv64.Accel.natToLeLimbs, List.range_succ, MachineState.writeWords,
-    BitVec.add_assoc, h0, h1, h2, h3]
+  have n0 : address ≠ base + 168#64 := h0
+  have n1 : address ≠ base + 176#64 := h1
+  have n2 : address ≠ base + 184#64 := h2
+  have n3 : address ≠ base + 192#64 := h3
+  simp [after, _root_.RiscvZkvm.Rv64.Accel.natToLeLimbs, List.range_succ,
+    MachineState.writeWords, BitVec.add_assoc]
+  rw [MachineState.getMem_setMem_ne n3, MachineState.getMem_setMem_ne n2,
+    MachineState.getMem_setMem_ne n1, MachineState.getMem_setMem_ne n0]
 
 theorem after_byte_frame (state : MachineState) (base address : Word)
     (outside : OutsideOutput base (alignToDword address)) :
@@ -233,8 +258,10 @@ theorem decision_accept_iff (state : MachineState) :
         Div256Hints.Product.limbsValue (wordsAt state 64) := by
   have append : execute state decisionCode = execute (execute state rangeCode) equalityCode :=
     List.foldl_append
-  rw [append, equality_result, wordsAt_frame, range_flag, Div256Hints.Program.flag_and,
-    Div256Hints.Program.flag_eq_one, Bool.and_eq_true, decide_eq_true_eq,
+  rw [append, equality_result, wordsAt_frame, range_flag, Div256Hints.Program.flag_and]
+  change flag (decide (wordsAt state 96 = [1, 0, 0, 0]) &&
+      Div256Hints.Compare.compareLimbs false (wordsAt state 0) (wordsAt state 64)) = 1#64 ↔ _
+  rw [Div256Hints.Program.flag_eq_one, Bool.and_eq_true, decide_eq_true_eq,
     Div256Hints.Compare.compareLimbs_false_eq _ _ (by simp [wordsAt, MachineState.readWords]),
     decide_eq_true_eq]
 
@@ -243,6 +270,22 @@ private theorem wordsAt_value (state : MachineState) (offset : Word) :
       (readU256 state (state.getReg .x10 + offset)).toNat := by
   simpa [wordsAt, MachineState.readWords, BitVec.add_assoc] using
     Div256Hints.Encoding.readU256_value state (state.getReg .x10 + offset)
+
+private theorem after_words_w_value (state : MachineState) (base : Word)
+    (packet : Packet state base) :
+    Div256Hints.Product.limbsValue (wordsAt (after state base) 0) =
+      (witness state base).toNat := by
+  rw [wordsAt_value, after_getReg, packet.checking, BitVec.add_zero]
+  exact congrArg BitVec.toNat (after_input state base 72 (Or.inl rfl))
+
+private theorem after_words_m_value (state : MachineState) (base : Word)
+    (packet : Packet state base) :
+    Div256Hints.Product.limbsValue (wordsAt (after state base) 64) =
+      (question state base).modulus.toNat := by
+  rw [wordsAt_value, after_getReg, packet.checking, BitVec.add_assoc]
+  change (readU256 (after state base) (base + 136)).toNat =
+    (readU256 state (base + 136)).toNat
+  exact congrArg BitVec.toNat (after_input state base 136 (Or.inr rfl))
 
 /-- Actual41-step execution: one existing accelerator instruction plus the
     forty ordinary decision instructions. No initialization/reset is inserted. -/
@@ -264,7 +307,7 @@ theorem checker_stepN (state : MachineState) (base : Word) (packet : Packet stat
     decision_supported nextLoads
   change (step state).bind (stepN 40) = _
   rw [accelerator_step state base packet first valid, Option.bind_some]
-  simpa only [decision_length] using rest
+  exact (congrArg (fun n => stepN n (after state base)) decision_length).symm.trans rest
 
 /-- m>1 is a proved CALLER invariant for the initial fixed-field consumer;
     the emitted decision checks arbitrary provider w<m. No inverse-property
@@ -274,8 +317,6 @@ theorem checker_sound (state : MachineState) (base : Word) (packet : Packet stat
     (accepted : (execute (after state base) decisionCode).getReg .x5 = 1) :
     Contract (question state base) (witness state base) := by
   obtain ⟨output, range⟩ := (decision_accept_iff (after state base)).mp accepted
-  have wframe := after_input state base 72 (Or.inl rfl)
-  have mframe := after_input state base 136 (Or.inr rfl)
   have encoded : _root_.RiscvZkvm.Rv64.Accel.natToLeLimbs 4 (remainder state base) = [1, 0, 0, 0] := by
     unfold wordsAt at output
     rw [after_getReg, packet.checking, BitVec.add_assoc] at output
@@ -286,16 +327,14 @@ theorem checker_sound (state : MachineState) (base : Word) (packet : Packet stat
     Nat.lt_trans (Nat.mod_lt _ (by omega)) (question state base).modulus.isLt
   have identity := (encoded_one_iff _ bound).mp encoded
   refine ⟨modulus, ?_, identity⟩
-  simp only [wordsAt_value, after_getReg, packet.checking] at range
-  simpa only [BitVec.add_zero, BitVec.add_assoc, wframe, mframe, question, witness] using range
+  rw [after_words_w_value state base packet, after_words_m_value state base packet] at range
+  exact range
 
 theorem checker_complete (state : MachineState) (base : Word) (packet : Packet state base)
     (valid : Contract (question state base) (witness state base)) :
     (execute (after state base) decisionCode).getReg .x5 = 1 := by
   rcases valid with ⟨_, range, identity⟩
   have exact_remainder : remainder state base = 1 := identity
-  have wframe := after_input state base 72 (Or.inl rfl)
-  have mframe := after_input state base 136 (Or.inr rfl)
   apply (decision_accept_iff (after state base)).mpr
   constructor
   · unfold wordsAt
@@ -303,8 +342,8 @@ theorem checker_complete (state : MachineState) (base : Word) (packet : Packet s
     change (after state base).readWords (base + 168) 4 = [1, 0, 0, 0]
     rw [after_output, exact_remainder]
     rfl
-  · simp only [wordsAt_value, after_getReg, packet.checking]
-    simpa only [BitVec.add_zero, BitVec.add_assoc, wframe, mframe, question, witness] using range
+  · rw [after_words_w_value state base packet, after_words_m_value state base packet]
+    exact range
 
 /-- Connects the acceptance theorem to a run of the ACTUAL machine, using the
     pre-call operands and candidate read out of its own memory. -/
