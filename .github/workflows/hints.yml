@@ -25,6 +25,23 @@ jobs:
         run: |
           lake build RiscvZkvm.Interpreter.HintTests \
             RiscvZkvm.Interpreter.Hints RiscvZkvm.Interpreter.NativeFcallTests riscv-zkvm-run
+      - name: Build and audit the minimal framework consumer
+        working-directory: examples/hint-framework
+        run: |
+          cmp ../../lean-toolchain lean-toolchain
+          lake build Example 2>&1 | tee build.log
+          test "${PIPESTATUS[0]}" -eq 0
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re
+          names = sorted(p['name'] for p in json.loads(Path('lake-manifest.json').read_text())['packages'])
+          if names != ['Sail', 'riscv-zkvm']:
+              raise SystemExit('Minimal consumer has an unexpected dependency: ' + repr(names))
+          log = re.sub(r'\x1b\[[0-9;]*m', '', Path('build.log').read_text())
+          if re.search(r'^warning: (?:.*[/\\])?Example\.lean:\d+:\d+:', log, re.MULTILINE):
+              raise SystemExit('Minimal consumer has a Lean source warning')
+          PY
+          lake env lean --run AxiomSweep.lean
       - name: Run interpreter fixtures
         run: scripts/run-interpreter-tests.sh
       - name: DIV256 actual-machine differential regressions

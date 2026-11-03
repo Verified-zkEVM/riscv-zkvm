@@ -70,6 +70,60 @@ for any handler and arbitrary handler state. On successful return, `Valid`
 means `P`. On trap it means `True`: this is partial correctness, not guaranteed
 success, termination, or availability of an honest witness.
 
+## Start with a small checked protocol
+
+[Example.lean](../examples/hint-framework/Example.lean) is an abstract `Nat`
+square-root protocol using only `ResumableHints`. It is a small starting point
+for a new client:
+
+1. Define the question, response type and saved guest state. The example asks
+   for a root of `number`; its response type is `Nat`, with no attached proof.
+2. Make `tick` suspend with `.pending question savedState`. Keep the original
+   problem in that state. `requests` shows the actual one-tick waiting boundary.
+3. Let `accept` install arbitrary response data. `accepts_data` shows resumption;
+   it establishes no square-root property.
+4. Check the candidate on the next guest tick. The example multiplies full
+   natural numbers and returns only when `r * r = number`. A wrong candidate
+   explicitly traps. `rejects` states that behavior.
+5. Prove `Safe`: returned values satisfy the result contract, progress preserves
+   the invariant, and every possible response restores the invariant. The
+   example's invariant keeps the original `number` unchanged, so a returned root
+   solves the original question.
+
+`stateful_safe` applies the existing `adversarial_stateful_sound` theorem to
+**any** handler and handler history. No response-honesty or repeated-query
+consistency hypothesis appears. The finite guards use one handler whose
+external counter changes its answer to the same question: `3` returns a checked
+root of `9`; `4` traps. The final counter also demonstrates that handler state
+passes through the existing scheduler, outside the saved guest state.
+`honest_nine` and `malicious_nine` also give closed execution equalities.
+Scheduler rounds include handler delivery; guest ticks here are abstract
+protocol transitions, with no RV64 instruction or proving-cost interpretation.
+
+Use a checkout containing the example and its pinned `lean-toolchain`; this
+walkthrough does not imply availability in older release archives. Check the
+standalone consumer from that repository root:
+
+```bash
+cd examples/hint-framework
+cmp ../../lean-toolchain lean-toolchain
+lake build Example
+lake env lean --run AxiomSweep.lean
+```
+
+The example proves an abstract protocol. RV64 instruction realization, memory
+and ABI framing, loaded-code agreement, and platform/prover admission need
+their own adapters and proofs. Its typed `Nat` reply has no byte codec;
+serialization requires a separate correctness and bounds argument.
+`Safe` permits a trap as a partial-correctness
+outcome; it does **not** prove that a real backend refuses a bad witness.
+A client that requires a fallback, a particular failure status or termination
+must specify and prove that behavior as well. In particular, translating
+candidate rejection into a normal application result needs an application-level
+refinement argument.
+
+## Connect an existing machine or client
+
 For ordinary machine execution, `rvTick intercept done` checks interception
 first, then completion, then `step`. It saves the current state without retiring
 an instruction on interception. `stepN_lift` identifies non-intercepting

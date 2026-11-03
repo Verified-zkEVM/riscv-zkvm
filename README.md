@@ -79,23 +79,47 @@ recorded in [validation](docs/validation.md) along with three other known gaps.
 
 ## Experimental prover hints
 
-The [resumable hint API](docs/resumable-hints.md) supports suspension,
-stateful handlers, all-response guest safety, and non-intercepting CPS/WP
-lifting. An isolated [Pancake modinv example](examples/pancake-modinv/README.md)
-checks real buffer write-back and a concrete RV64 checker execution.
+The released `v0.3.1` installation example above predates these extensions.
+For this interface, use Lean 4.35.0 and the reviewed hint-enabled candidate
+revision identified in the handoff PR. The example below is part of that
+candidate checkout. The [API guide](docs/resumable-hints.md) distinguishes candidate source validation
+from the release archive and downstream checks required before tagging.
+
+The [resumable hint API](docs/resumable-hints.md) models a guest suspending on a
+typed request and resuming with an untrusted response. A checker establishes the
+response's mathematical contract. The safety theorem covers every response,
+including responses from stateful handlers; it does not assume oracle honesty.
+See the [minimal consumer](examples/hint-framework/Example.lean) for an adoption
+example and the [API guide](docs/resumable-hints.md) for the proof obligations.
 
 Hints are opt-in. Ordinary `RiscvZkvm.Sail`, `RiscvZkvm.Rv64`,
 `RiscvZkvm.Rv64.SailEquiv`, and `RiscvZkvm.Rv64.Logic` imports exclude the
-optional hint layer. Import `RiscvZkvm.Rv64.Hints` for its executable interface,
-or `RiscvZkvm.Rv64.Logic.Hints` for the corresponding proof rules. There is one
-unchanged generated Sail extraction; a Sail hint adapter remains separate work.
+optional hint layer. Use `RiscvZkvm.Rv64.ResumableHints` for the minimal scheduler,
+`RiscvZkvm.Rv64.Hints` for the examples and adapters, or
+`RiscvZkvm.Rv64.Logic.Hints` for their proof rules. The separate
+`RiscvZkvm.Interpreter.Hints` import constructs the native overlay from executable
+ELF words. There is one unchanged generated Sail extraction; a Sail hint
+interpretation and its refinement theorem remain separate work.
 
-The experimental [DIV256 pilot](docs/div256-hints.md) verifies untrusted
-quotient/remainder hints with a proved 233-instruction checker and resumable
-stateful protocol, plus a callee-save validation function. Original operands
-are preserved across response installation.
-Actual-machine and protocol regressions accompany the proofs. Its deployment,
-compiler, and emitted EVM-opcode boundaries remain explicit.
+Examples cover distinct boundaries:
+
+- The [Pancake modinv companion](examples/pancake-modinv/README.md) checks real
+  ordinary-FFI buffer replacement and a 15-instruction RV64 checker. Its operand
+  and witness are restricted to 32 bits.
+- The [native inverse fixture](examples/native-fcall-modinv/README.md) exercises
+  ZisK service 1 and a full-width checker using the existing Arith256Mod operation
+  plus 40 ordinary instructions. The separate [comparison in PR #94](https://github.com/Verified-zkEVM/riscv-zkvm/pull/94)
+  concerns modular inversion, not DIV. Its emulator metrics do not measure proof
+  generation or whole-EVM performance.
+- The [DIV256 pilot](docs/div256-hints.md) proves a 233-instruction checker for
+  untrusted quotient/remainder responses, with a resumable protocol and a
+  callee-save validation function. Its compiler-certification expansion is frozen.
+
+Consumers must instantiate the guest's ABI, code placement and initial-state
+conditions, compose the checker with the application's failure policy, and meet
+their backend's acceptance contract. These library proofs and finite runtime
+examples do not constitute an accepted evm.fast submission. The native scalar
+inverse used by `ecrecover` remains a separate integration task.
 
 ## Downstream compatibility — read before changing anything
 
