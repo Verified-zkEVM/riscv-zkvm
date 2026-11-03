@@ -147,6 +147,74 @@ These are arithmetic specification checkers. They do not by themselves prove
 a byte ABI, a guest instruction sequence, a native service implementation,
 or a prover/circuit cost improvement.
 
+## Native fixed-field request and guest verification
+
+The opt-in `NativeFcall` overlay gives selected raw instruction encodings an
+explicit request semantics. It targets ZisK revision
+`64a1f1664184e76053686745d50c6b9aaa51b034`, service 1 (secp256k1 base-field
+inverse). This is a fixed-field service, even though the mathematical inverse
+checker above supports other moduli.
+
+The parameter instruction reads a snapshot of four little-endian 64-bit words
+from the guest. Its admission check covers all 32 byte addresses, alignment and
+non-wrapping extent. Invocation suspends at the current PC and clears the
+protocol buffers. Supplying **any** four-word response installs a bounded reply
+queue and retires that instruction once. Four get instructions can then move
+the words into registers. Acceptance itself writes neither guest memory nor
+public output. Missing parameters, exhausted replies and unsupported reserved
+encodings trap. This extension does not reinterpret the ordinary `step`
+function's ECALL behavior.
+
+`ModInv256Hints.Accel` checks the response using the existing exact
+`Arith256Mod` accelerator at CSR `0x802`, followed by 40 ordinary instructions.
+The accelerator computes the exact modular product; the ordinary code checks
+that the remainder is one and the candidate is strictly below the modulus.
+`guest_checker_sound` and `guest_checker_complete` relate this 41-step execution
+to the mathematical contract using the operands in actual entry memory.
+The caller must establish modulus greater than one, the descriptor and zero
+buffer, code placement and valid memory accesses. These are explicit premises;
+the checker does not execute an independent modulus-validity test.
+
+`ModInv256Hints.Caller` connects the raw request words, response stores and
+checker. `request_boundary` reaches a pending request after two ticks.
+`continuation` covers eight get/store ticks and the 41-step checker after
+resumption. `fixedFp_acceptance_iff` identifies acceptance with a canonical
+inverse of the original operand modulo the fixed field. Memory-frame results
+preserve the original operand, modulus, descriptor and memory outside the
+candidate and result buffers. These are model-step counts, not cycle or proving
+costs. Code/decoder agreement, placement and access conditions still need to be
+established for a concrete loaded program.
+
+`Logic.NativeFcall` provides compositional rules for the existing concrete
+assertions. `invoke_run1` covers an actual fetched invocation; PC-free owned
+resources and their disjoint frame survive suspension and **every** response.
+`get_framed` replaces the selected owned register and preserves its frame.
+Protocol buffers remain explicit pure premises. There is no ghost token,
+linear ownership of the host service, or assertion that a response is honest.
+The arithmetic contract is established only after the guest checker accepts.
+
+The [native fixture](../examples/native-fcall-modinv/README.md) has also run on
+the pinned ZisK CPU emulator. At commit `19e4110`, six honest inputs passed,
+including local handling of zero; four guest-supplied bad candidates were
+rejected, and a separate forced exit-7 control propagated correctly. The linked
+request/checker words and artifact/source binding were independently checked;
+the guest checked its output and preserved buffers. The bad candidates bypass the host service; they
+are not malicious-host injection tests. See the
+[hosted runtime run](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/41579740181).
+
+The formal caller and request rules pass the repository's full build, warning
+and seven-axiom gates at `92d590b`, alongside interpreter regressions and the
+isolated Pancake consumer. See the
+[full build](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/41582287751)
+and [focused checks](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/41582287583).
+These establish separate model and finite runtime results. An ELF-to-model
+binding, entry-state/setup proof, callee-save wrapper, input-domain and
+zero/rejection/fallback contracts, native implementation/circuit correspondence,
+fair software-baseline
+measurement and evm.fast service admission remain separate obligations.
+The checked absence certificate is currently an arithmetic API, not an emitted
+native guest protocol.
+
 ## Sail boundary on the refreshed toolchain
 
 The Lean 4.35 / official lean-sail v8 stack still extracts RISC-V 0.13.1.
