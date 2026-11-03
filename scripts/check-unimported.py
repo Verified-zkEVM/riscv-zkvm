@@ -38,6 +38,7 @@ ROOTS = [
     "RiscvZkvm.Rv64.Logic",
     "RiscvZkvm.Rv64.Logic.Hints",
     "RiscvZkvm.Interpreter",
+    "RiscvZkvm.Interpreter.Hints",
     "MainRun",
 ]
 
@@ -53,6 +54,8 @@ ALLOWED_ORPHANS = {
     "RiscvZkvm.Interpreter.HintTests",
     # Ordinary import isolation, checked explicitly after the Sail build in CI.
     "RiscvZkvm.Interpreter.HintImportTests",
+    # Optional native adapter import isolation; built by the hint workflow.
+    "RiscvZkvm.Interpreter.NativeFcallTests",
 }
 
 SCAN_DIRS = ["RiscvZkvm/Rv64", "RiscvZkvm/Interpreter"]

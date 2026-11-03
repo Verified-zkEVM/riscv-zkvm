@@ -215,6 +215,41 @@ measurement and evm.fast service admission remain separate obligations.
 The checked absence certificate is currently an arithmetic API, not an emitted
 native guest protocol.
 
+## Optional ELF adapter
+
+```lean
+import RiscvZkvm.Interpreter.Hints
+```
+
+`Interpreter.NativeFcall` constructs the native overlay from an ELF image
+without importing the inverse arithmetic, caller or program-logic layers.
+Its checked loader reuses the ordinary data/input initializer, then replaces
+the code map with `NativeFcall.Code.projectedCode`. Native instruction slots
+are holes in that ordinary map; they remain available through the separate raw
+word fetch. The original caller names for the generic code factory remain
+compatibility aliases.
+
+Raw fetch requires an absolutely four-byte-aligned PC and four complete
+file-backed bytes in an executable segment. It uses the existing checked
+little-endian reader; a short read yields no instruction. The opt-in validator
+rejects address wrap, file data beyond memory extent, overlapping nonempty load
+ranges and an entry without a complete aligned executable word. It also checks
+publicly constructed images, rather than relying solely on parser success.
+Input allocation keeps the ordinary loader's doubleword-rounded overlap check.
+The ordinary parser and loader retain their existing behavior.
+
+Construction theorems expose the source bytes of a fetched word, code/decoder
+agreement, native holes and preservation of every loaded non-code state field.
+The adapter's `runPrefix` uses the existing resumable runner and explicit response
+API. It adds no CLI flag or guest-return convention. Image validation does not
+prove the whole ELF specification, text immutability, instruction decoding
+against Sail, or entry-to-call setup. Instantiating the real fixture's code
+placement and caller premises, including valid memory accesses and prepared
+registers, remains necessary before applying the caller theorem to that ELF.
+The existing initializer materializes segment memory; the new validator does
+not bound allocation sizes or segment counts. Explicit execution fuel does not
+bound ELF-loading time or memory use.
+
 ## Sail boundary on the refreshed toolchain
 
 The Lean 4.35 / official lean-sail v8 stack still extracts RISC-V 0.13.1.

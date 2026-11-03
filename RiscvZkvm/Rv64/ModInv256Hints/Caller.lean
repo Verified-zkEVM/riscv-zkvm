@@ -3,7 +3,7 @@
    This is not an ELF, host/circuit, callee-save, fallback, or HALT theorem. -/
 module
 
-public import RiscvZkvm.Rv64.NativeFcall
+public import RiscvZkvm.Rv64.NativeFcall.Code
 public import RiscvZkvm.Rv64.ModInv256Hints.Accel
 
 set_option maxRecDepth 4096
@@ -86,53 +86,25 @@ theorem resume_boundary (s : NativeState) (reply : Words4) :
     resume (A := Unit) NativeFcall.accept (input s) (waiting s) reply =
       .running (resumed s reply) := rfl
 
-/-- Ordinary code lives in the existing instruction map. Native slots may be
-    absent there. This is a concrete raw-word/decoder/code-map condition, not
-    an execution or semantic-callback premise. At native request/get slots the
-    ordinary code map must have no entry: a mixed map retaining ordinary CSRS
-    entries there does not satisfy this sufficient condition. -/
-def OrdinaryCode (ordinary : BitVec 32 → Option Instr)
+/-- Compatibility alias for the generic native-overlay code condition. -/
+abbrev OrdinaryCode (ordinary : BitVec 32 → Option Instr)
     (raw : Word → Option (BitVec 32)) (code : CodeMem) : Prop :=
-  ∀ pc instr, code pc = some instr →
-    ∃ word, raw pc = some word ∧ NativeFcall.decode ordinary word = some (.ordinary instr)
+  NativeFcall.Code.OrdinaryCode ordinary raw code
 
-/-- Intended construction of the ordinary instruction map: native request,
-    invocation and get slots are holes; their raw words remain in rawCode. -/
-def projectedCode (ordinary : BitVec 32 → Option Instr)
+/-- Compatibility alias: the generic factory retains native slots as holes. -/
+abbrev projectedCode (ordinary : BitVec 32 → Option Instr)
     (raw : Word → Option (BitVec 32)) (pc : Word) : Option Instr :=
-  match raw pc with
-  | none => none
-  | some word =>
-    match NativeFcall.decode ordinary word with
-    | some (.ordinary instr) => some instr
-    | _ => none
+  NativeFcall.Code.projectedCode ordinary raw pc
 
 theorem projected_ordinary (ordinary : BitVec 32 → Option Instr)
     (raw : Word → Option (BitVec 32)) :
-    OrdinaryCode ordinary raw (projectedCode ordinary raw) := by
-  intro pc instr placed
-  cases rawFetch : raw pc with
-  | none => simp [projectedCode, rawFetch] at placed
-  | some word =>
-    cases decoded : NativeFcall.decode ordinary word with
-    | none => simp [projectedCode, rawFetch, decoded] at placed
-    | some op =>
-      cases op with
-      | ordinary i =>
-        have equal : i = instr := by simpa [projectedCode, rawFetch, decoded] using placed
-        subst instr
-        exact ⟨word, rfl, decoded⟩
-      | parameter4 register => simp [projectedCode, rawFetch, decoded] at placed
-      | invokeFp1 => simp [projectedCode, rawFetch, decoded] at placed
-      | getWord register => simp [projectedCode, rawFetch, decoded] at placed
-      | noop => simp [projectedCode, rawFetch, decoded] at placed
+    OrdinaryCode ordinary raw (projectedCode ordinary raw) :=
+  NativeFcall.Code.projected_ordinary ordinary raw
 
 theorem projected_code_agrees (ordinary : BitVec 32 → Option Instr)
     (raw : Word → Option (BitVec 32)) (guest : MachineState) :
-    NativeFcall.CodeAgrees ordinary raw { guest with code := projectedCode ordinary raw } := by
-  intro pc word instr fetch decoded
-  change projectedCode ordinary raw pc = some instr
-  simp only [projectedCode, fetch, decoded]
+    NativeFcall.CodeAgrees ordinary raw { guest with code := projectedCode ordinary raw } :=
+  NativeFcall.Code.projected_code_agrees ordinary raw guest
 
 /-- An actual base-model segment also runs in the native overlay. The caller
     below DERIVES the stepN premise from the emitted checker, not a provider. -/
