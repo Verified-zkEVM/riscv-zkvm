@@ -158,6 +158,30 @@ When changing Lean:
 5. run the emulator validation;
 6. cut a new `riscv-zkvm` release and update downstream pins.
 
+## Checking a candidate archive without publishing
+
+The [candidate archive workflow](../.github/workflows/candidate-archive.yml)
+checks manual archive transfer before release. It has read-only repository
+permissions and creates no tag, release or downstream pin. Use a fresh source
+checkout at the exact candidate commit; the checker refuses an existing build
+or an overlapping output directory.
+
+Its producer builds exactly the five library targets without restored build
+artifacts, checks that no `bin` directory exists, and calls `lake pack` before
+any executable audit. A separate consumer resolves and builds only the pinned
+external Sail runtime, then unpacks the approved archive into an unbuilt
+candidate checkout. It imports all five ordinary roots and all three optional
+hint roots, checks real API endpoints, and builds the small consumer. A model
+rebuild or a changed object set fails the check. Source, runtime, SDK binary,
+archive and object hashes are recorded; logs and archives have explicit bounds.
+
+This Linux check establishes manual candidate unpack/import/trace reuse. It
+leaves automatic GitHub release-asset download, tag association and cross-platform
+archive use to their own checks. The full evm-asm build remains a separate
+compatibility gate; a historical port build or a small consumer cannot replace
+it. Run the source/kernel/import/axiom gates as well before treating a candidate
+as ready for review.
+
 ## Releasing cached oleans
 
 Before starting: if the release touches anything README.md lists under

@@ -1,0 +1,122 @@
+name: Candidate archive without publication
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/hints-framework-handoff]
+    paths:
+      - scripts/check-candidate-archive.sh
+      - scripts/CandidateCacheSmoke.lean
+      - scripts/test-candidate-archive.py
+      - .github/workflows/candidate-archive.yml
+
+permissions:
+  contents: read
+
+jobs:
+  producer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      archive_sha: ${{ steps.package.outputs.archive_sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Source and fake-process guard regressions
+        run: python3 scripts/test-candidate-archive.py
+      - name: Build five libraries and pack before any executable audit
+        id: package
+        env:
+          EXPECTED_CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          scripts/check-candidate-archive.sh produce --source "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/candidate-evidence"
+          echo "archive_sha=$(cat "$RUNNER_TEMP/candidate-evidence/archive.sha256")" >> "$GITHUB_OUTPUT"
+      - name: Transfer exact candidate archive and producer receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-archive-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/candidate-evidence/riscv-zkvm-oleans.tar.gz
+            ${{ runner.temp }}/candidate-evidence/report.json
+            ${{ runner.temp }}/candidate-evidence/archive.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Bound diagnostic upload independently
+        if: always()
+        id: diagnostics
+        run: |
+          python3 - "$RUNNER_TEMP/candidate-evidence" <<'PY'
+          import os,pathlib,sys
+          root=pathlib.Path(os.path.abspath(sys.argv[1]))
+          assert root.is_dir() and not root.is_symlink() and root.resolve(strict=True)==root
+          rows=list(root.glob('*.log'))+list(root.glob('report.json'))+list(root.glob('INCOMPLETE'))
+          assert rows and all(p.is_file() and not p.is_symlink() for p in rows)
+          assert sum(p.stat().st_size for p in rows)<=16*1024**2
+          PY
+      - name: Producer diagnostics only
+        if: always() && steps.diagnostics.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-producer-diagnostics-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/candidate-evidence/*.log
+            ${{ runner.temp }}/candidate-evidence/report.json
+            ${{ runner.temp }}/candidate-evidence/INCOMPLETE
+          if-no-files-found: error
+          retention-days: 7
+
+  consumer:
+    needs: producer
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: candidate-archive-${{ github.sha }}
+          path: ${{ runner.temp }}/candidate-transfer
+      - name: Prepare only Sail then consume exact archive without fallback
+        env:
+          EXPECTED_CANDIDATE_SHA: ${{ github.sha }}
+          APPROVED_ARCHIVE_SHA: ${{ needs.producer.outputs.archive_sha }}
+        run: |
+          scripts/check-candidate-archive.sh consume --source "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/consumer-evidence" --artifact "$RUNNER_TEMP/candidate-transfer" --archive-sha "$APPROVED_ARCHIVE_SHA"
+      - name: Bound diagnostic upload independently
+        if: always()
+        id: diagnostics
+        run: |
+          python3 - "$RUNNER_TEMP/consumer-evidence" <<'PY'
+          import os,pathlib,sys
+          root=pathlib.Path(os.path.abspath(sys.argv[1]))
+          assert root.is_dir() and not root.is_symlink() and root.resolve(strict=True)==root
+          rows=list(root.glob('*.log'))+list(root.glob('report.json'))+list(root.glob('INCOMPLETE'))
+          assert rows and all(p.is_file() and not p.is_symlink() for p in rows)
+          assert sum(p.stat().st_size for p in rows)<=16*1024**2
+          PY
+      - name: Consumer diagnostics only
+        if: always() && steps.diagnostics.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-consumer-diagnostics-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/consumer-evidence/*.log
+            ${{ runner.temp }}/consumer-evidence/report.json
+            ${{ runner.temp }}/consumer-evidence/INCOMPLETE
+          if-no-files-found: error
+          retention-days: 7

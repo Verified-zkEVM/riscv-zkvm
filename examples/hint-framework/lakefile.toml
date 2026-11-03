@@ -1,0 +1,11 @@
+name = "hint-framework-example"
+version = "0.1.0"
+defaultTargets = ["Example"]
+
+# A minimal consumer of the checked-out candidate; no Mathlib dependency.
+[[require]]
+name = "riscv-zkvm"
+path = "../.."
+
+[[lean_lib]]
+name = "Example"
