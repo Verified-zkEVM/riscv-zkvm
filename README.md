@@ -81,7 +81,7 @@ recorded in [validation](docs/validation.md) along with three other known gaps.
 
 The released `v0.3.1` installation example above predates these extensions.
 For this interface, use Lean 4.35.0 and the reviewed hint-enabled candidate
-revision identified in the handoff PR. The example below is part of that
+revision identified in [handoff PR #95](https://github.com/Verified-zkEVM/riscv-zkvm/pull/95). The example below is part of that
 candidate checkout. The [API guide](docs/resumable-hints.md) distinguishes candidate source validation
 from the release archive and downstream checks required before tagging.
 
