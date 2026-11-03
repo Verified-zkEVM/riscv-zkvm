@@ -257,8 +257,13 @@ private theorem pair_boundary (ordinary : BitVec 32 → Option Instr)
     simpa only [got, retire_pc, MachineState.pc_setReg] using placed.store
   have second : NativeFcall.tick ordinary raw got = .progress
       { s with guest := stored s.guest offset word, replies := rest } := by
-    simpa only [NativeFcall.tick, rawFetch, placed.decoded, NativeFcall.executeOp,
+    simp only [NativeFcall.tick, rawFetch, placed.decoded, NativeFcall.executeOp,
       fetch, ite_true, step_sd fetch access]
+    change (Event.progress
+      ({ s with guest := stored s.guest offset word, replies := rest } : NativeState) :
+      Event NativeState NativeFcall.Request Unit) =
+      .progress { s with guest := stored s.guest offset word, replies := rest }
+    rfl
   simp only [run, first, second]
 
 def received (s : NativeState) (reply : Words4) : NativeState :=
@@ -379,11 +384,16 @@ private theorem received_mem (s : NativeState) (reply : Words4) (address : Word)
       if address = s.guest.getReg .x10 + 8#64 then reply.w1 else
       if address = s.guest.getReg .x10 then reply.w0 else s.guest.getMem address := by
   simp only [received, stored_mem, stored_reg, resumed_reg, resumed_mem,
-    show (.x10 : Reg) ≠ .x5 from by decide, ite_false,
-    show signExtend12 0#12 = 0#64 from rfl,
-    show signExtend12 8#12 = 8#64 from rfl,
+    show (.x10 : Reg) ≠ .x5 from by decide, ite_false]
+  change (if address = s.guest.getReg .x10 + signExtend12 24#12 then reply.w3 else
+    if address = s.guest.getReg .x10 + signExtend12 16#12 then reply.w2 else
+    if address = s.guest.getReg .x10 + signExtend12 8#12 then reply.w1 else
+    if address = s.guest.getReg .x10 + signExtend12 0#12 then reply.w0 else
+      s.guest.getMem address) = _
+  rw [show signExtend12 24#12 = 24#64 from rfl,
     show signExtend12 16#12 = 16#64 from rfl,
-    show signExtend12 24#12 = 24#64 from rfl, BitVec.add_zero]
+    show signExtend12 8#12 = 8#64 from rfl,
+    show signExtend12 0#12 = 0#64 from rfl, BitVec.add_zero]
 
 private theorem received_mem_base (s : NativeState) (reply : Words4) (base : Word)
     (pointer : s.guest.getReg .x10 = base + 72) (address : Word) :
@@ -393,6 +403,10 @@ private theorem received_mem_base (s : NativeState) (reply : Words4) (base : Wor
       if address = base + 80#64 then reply.w1 else
       if address = base + 72#64 then reply.w0 else s.guest.getMem address := by
   rw [received_mem, pointer]
+  change (if address = (base + 72#64) + 24#64 then reply.w3 else
+    if address = (base + 72#64) + 16#64 then reply.w2 else
+    if address = (base + 72#64) + 8#64 then reply.w1 else
+    if address = base + 72#64 then reply.w0 else s.guest.getMem address) = _
   have a24 : (base + 72#64) + 24#64 = base + 96#64 := by rw [BitVec.add_assoc]; rfl
   have a16 : (base + 72#64) + 16#64 = base + 88#64 := by rw [BitVec.add_assoc]; rfl
   have a8 : (base + 72#64) + 8#64 = base + 80#64 := by rw [BitVec.add_assoc]; rfl

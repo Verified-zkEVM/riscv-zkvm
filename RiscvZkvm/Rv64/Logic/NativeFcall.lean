@@ -85,7 +85,9 @@ theorem get_framed (F : Assertion) (fFree : F.pcFree) (s : State)
   dsimp only
   have updated : ((rd ↦ᵣ word) ** F).holdsFor (s.guest.setReg rd word) :=
     holdsFor_sepConj_regIs_setReg nonzero owned
-  have preserved := holdsFor_pcFree_setPC (pcFree_sepConj pcFree_regIs fFree) updated
+  have preserved : ((rd ↦ᵣ word) ** F).holdsFor
+      ((s.guest.setReg rd word).setPC ((s.guest.setReg rd word).pc + 4)) :=
+    holdsFor_pcFree_setPC (pcFree_sepConj pcFree_regIs fFree) updated
   exact ⟨get_word s rd word rest nonzero ready, preserved, rfl, rfl⟩
 
 end RiscvZkvm.Rv64.NativeFcall.Logic
