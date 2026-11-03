@@ -50,6 +50,18 @@ def waiting (s : NativeState) : NativeState :=
 def resumed (s : NativeState) (reply : Words4) : NativeState :=
   NativeFcall.accept (input s) (waiting s) reply
 
+@[simp] private theorem retire_pc (s : MachineState) :
+    (NativeFcall.retire s).pc = s.pc + 4 := rfl
+
+@[simp] private theorem retire_code (s : MachineState) :
+    (NativeFcall.retire s).code = s.code := rfl
+
+@[simp] private theorem retire_reg (s : MachineState) (r : Reg) :
+    (NativeFcall.retire s).getReg r = s.getReg r := MachineState.getReg_setPC
+
+@[simp] private theorem retire_mem (s : MachineState) (address : Word) :
+    (NativeFcall.retire s).getMem address = s.getMem address := rfl
+
 /-- Two real ticks stop at a request, without asking a handler for any proof. -/
 theorem request_boundary (ordinary : BitVec 32 → Option Instr)
     (raw : Word → Option (BitVec 32)) (s : NativeState)
@@ -58,11 +70,17 @@ theorem request_boundary (ordinary : BitVec 32 → Option Instr)
     (parameter : raw s.guest.pc = some parameterWord)
     (invoke : raw (s.guest.pc + 4) = some invokeWord) :
     run (NativeFcall.tick ordinary raw) 2 s = .waiting (input s) (waiting s) := by
-  have first := NativeFcall.parameter_snapshot s .x12 empty (by decide) valid
-  simp only [run, NativeFcall.tick, parameter, decode_parameter]
-  rw [first]
-  simp [run, NativeFcall.tick, NativeFcall.retire, invoke, decode_invoke,
-    NativeFcall.executeOp, input, waiting, MachineState.setPC]
+  let prepared : NativeState := { s with guest := NativeFcall.retire s.guest, parameters := some (NativeFcall.snapshot s.guest .x12) }
+  have first : NativeFcall.tick ordinary raw s = .progress prepared := by
+    simp only [NativeFcall.tick, parameter, decode_parameter]
+    exact NativeFcall.parameter_snapshot s .x12 empty (by decide) valid
+  have fetched : raw prepared.guest.pc = some invokeWord := by
+    change raw (s.guest.pc + 4#64) = some invokeWord
+    exact invoke
+  have second : NativeFcall.tick ordinary raw prepared = .pending (input s) (waiting s) := by
+    simp only [NativeFcall.tick, fetched, decode_invoke]
+    exact NativeFcall.invocation_snapshot prepared (NativeFcall.snapshot s.guest .x12) rfl
+  simp only [run, first, second]
 
 theorem resume_boundary (s : NativeState) (reply : Words4) :
     resume (A := Unit) NativeFcall.accept (input s) (waiting s) reply =
@@ -103,7 +121,7 @@ theorem projected_ordinary (ordinary : BitVec 32 → Option Instr)
       | ordinary i =>
         have equal : i = instr := by simpa [projectedCode, rawFetch, decoded] using placed
         subst instr
-        exact ⟨word, rawFetch, decoded⟩
+        exact ⟨word, rfl, decoded⟩
       | parameter4 register => simp [projectedCode, rawFetch, decoded] at placed
       | invokeFp1 => simp [projectedCode, rawFetch, decoded] at placed
       | getWord register => simp [projectedCode, rawFetch, decoded] at placed
@@ -136,7 +154,7 @@ theorem ordinary_lift (ordinary : BitVec 32 → Option Instr)
       obtain ⟨instr, fetch⟩ : ∃ instr, s.guest.code s.guest.pc = some instr := by
         cases fetch : s.guest.code s.guest.pc with
         | none => simp [step, fetch] at first
-        | some instr => exact ⟨instr, fetch⟩
+        | some instr => exact ⟨instr, rfl⟩
       obtain ⟨word, rawFetch, decoded⟩ := code _ _ fetch
       have tick : NativeFcall.tick ordinary raw s =
           .progress { s with guest := middle } := by
@@ -161,8 +179,6 @@ structure PairAt (ordinary : BitVec 32 → Option Instr)
 def stored (s : MachineState) (offset : BitVec 12) (word : Word) : MachineState :=
   execInstrBr (NativeFcall.retire (s.setReg .x5 word)) (.SD .x10 .x5 offset)
 
-@[simp] private theorem retire_pc (s : MachineState) :
-    (NativeFcall.retire s).pc = s.pc + 4 := rfl
 
 @[simp] private theorem stored_pc (s : MachineState) (offset : BitVec 12) (word : Word) :
     (stored s offset word).pc = s.pc + 8 := by
@@ -174,6 +190,49 @@ def stored (s : MachineState) (offset : BitVec 12) (word : Word) : MachineState 
     (stored s offset word).code = s.code := by
   simp only [stored, code_execInstrBr, NativeFcall.retire, MachineState.code_setPC,
     MachineState.code_setReg]
+
+@[simp] private theorem setMem_reg (s : MachineState) (address value : Word) (r : Reg) :
+    (s.setMem address value).getReg r = s.getReg r := by
+  cases r <;> rfl
+
+@[simp] private theorem temp_reg (s : MachineState) (word : Word) (r : Reg) :
+    (s.setReg .x5 word).getReg r = if r = .x5 then word else s.getReg r := by
+  cases r <;> rfl
+
+private theorem setMem_lookup (s : MachineState) (where_ value address : Word) :
+    (s.setMem where_ value).getMem address =
+      if address = where_ then value else s.getMem address := by
+  by_cases equal : address = where_
+  · subst address
+    simp [MachineState.getMem, MachineState.setMem]
+  · simp [MachineState.getMem, MachineState.setMem, equal]
+
+@[simp] private theorem stored_reg (s : MachineState) (offset : BitVec 12) (word : Word) (r : Reg) :
+    (stored s offset word).getReg r = if r = .x5 then word else s.getReg r := by
+  simp only [stored, execInstrBr, MachineState.getReg_setPC, setMem_reg, retire_reg, temp_reg]
+
+private theorem stored_mem (s : MachineState) (offset : BitVec 12) (word address : Word) :
+    (stored s offset word).getMem address =
+      if address = s.getReg .x10 + signExtend12 offset then word else s.getMem address := by
+  simp [stored, execInstrBr, MachineState.getMem_setPC, setMem_lookup,
+    retire_reg, temp_reg, retire_mem, MachineState.getMem_setReg]
+
+@[simp] private theorem resumed_pc (s : NativeState) (reply : Words4) :
+    (resumed s reply).guest.pc = s.guest.pc + 8#64 := by
+  change (s.guest.pc + 4#64) + 4#64 = s.guest.pc + 8#64
+  rw [BitVec.add_assoc]
+  rfl
+
+@[simp] private theorem resumed_code (s : NativeState) (reply : Words4) :
+    (resumed s reply).guest.code = s.guest.code := rfl
+
+@[simp] private theorem resumed_reg (s : NativeState) (reply : Words4) (r : Reg) :
+    (resumed s reply).guest.getReg r = s.guest.getReg r := by
+  change (NativeFcall.retire (NativeFcall.retire s.guest)).getReg r = _
+  rw [retire_reg, retire_reg]
+
+@[simp] private theorem resumed_mem (s : NativeState) (reply : Words4) (address : Word) :
+    (resumed s reply).guest.getMem address = s.guest.getMem address := rfl
 
 private theorem pair_boundary (ordinary : BitVec 32 → Option Instr)
     (raw : Word → Option (BitVec 32)) (s : NativeState) (offset : BitVec 12)
@@ -189,15 +248,17 @@ private theorem pair_boundary (ordinary : BitVec 32 → Option Instr)
     simp only [NativeFcall.tick, placed.get, decode_get]
     exact NativeFcall.get_word s .x5 word rest (by decide) ready
   have fetch : got.guest.code got.guest.pc = some (.SD .x10 .x5 offset) := by
-    simpa only [got, retire_pc, MachineState.code_setPC, MachineState.code_setReg] using placed.instruction
+    simpa only [got, retire_pc, retire_code, MachineState.code_setReg,
+      MachineState.pc_setReg] using placed.instruction
   have access : isValidDwordAccess (got.guest.getReg .x10 + signExtend12 offset) = true := by
-    simpa [got, NativeFcall.retire, MachineState.getReg_setReg_ne] using valid
+    simpa only [got, retire_reg, temp_reg, show (.x10 : Reg) ≠ .x5 from by decide,
+      ite_false] using valid
   have rawFetch : raw got.guest.pc = some (storeWord offset) := by
-    simpa only [got, retire_pc] using placed.store
+    simpa only [got, retire_pc, MachineState.pc_setReg] using placed.store
   have second : NativeFcall.tick ordinary raw got = .progress
       { s with guest := stored s.guest offset word, replies := rest } := by
     simpa only [NativeFcall.tick, rawFetch, placed.decoded, NativeFcall.executeOp,
-      fetch, ite_true, step_sd fetch access, got, stored]
+      fetch, ite_true, step_sd fetch access]
   simp only [run, first, second]
 
 def received (s : NativeState) (reply : Words4) : NativeState :=
@@ -230,33 +291,64 @@ theorem response_boundary (ordinary : BitVec 32 → Option Instr)
   let t1 : NativeState := { t0 with guest := stored t0.guest 0 reply.w0, replies := .three reply.w1 reply.w2 reply.w3 }
   let t2 : NativeState := { t1 with guest := stored t1.guest 8 reply.w1, replies := .two reply.w2 reply.w3 }
   let t3 : NativeState := { t2 with guest := stored t2.guest 16 reply.w2, replies := .one reply.w3 }
+  have c0 : t0.guest.code = s.guest.code := resumed_code s reply
+  have c1 : t1.guest.code = s.guest.code := by
+    change (stored t0.guest 0 reply.w0).code = _
+    rw [stored_code, c0]
+  have c2 : t2.guest.code = s.guest.code := by
+    change (stored t1.guest 8 reply.w1).code = _
+    rw [stored_code, c1]
+  have c3 : t3.guest.code = s.guest.code := by
+    change (stored t2.guest 16 reply.w2).code = _
+    rw [stored_code, c2]
+  have pc0 : t0.guest.pc = s.guest.pc + 8#64 := resumed_pc s reply
+  have pc1 : t1.guest.pc = s.guest.pc + 16#64 := by
+    change (stored t0.guest 0 reply.w0).pc = _
+    rw [stored_pc, pc0, BitVec.add_assoc]
+    rfl
+  have pc2 : t2.guest.pc = s.guest.pc + 24#64 := by
+    change (stored t1.guest 8 reply.w1).pc = _
+    rw [stored_pc, pc1, BitVec.add_assoc]
+    rfl
+  have pc3 : t3.guest.pc = s.guest.pc + 32#64 := by
+    change (stored t2.guest 16 reply.w2).pc = _
+    rw [stored_pc, pc2, BitVec.add_assoc]
+    rfl
   have p0 : PairAt ordinary raw t0.guest.code t0.guest.pc 0 := by
-    simpa only [t0, resumed, waiting, NativeFcall.accept,
-      retire_pc, stored_pc, stored_code, MachineState.code_setPC,
-      BitVec.add_assoc] using placed.limb0
+    rw [c0, pc0]
+    exact placed.limb0
   have p1 : PairAt ordinary raw t1.guest.code t1.guest.pc 8 := by
-    simpa only [t1, t0, resumed, waiting, NativeFcall.accept,
-      retire_pc, stored_pc, stored_code, MachineState.code_setPC,
-      BitVec.add_assoc] using placed.limb1
+    rw [c1, pc1]
+    exact placed.limb1
   have p2 : PairAt ordinary raw t2.guest.code t2.guest.pc 16 := by
-    simpa only [t2, t1, t0, resumed, waiting, NativeFcall.accept,
-      retire_pc, stored_pc, stored_code, MachineState.code_setPC,
-      BitVec.add_assoc] using placed.limb2
+    rw [c2, pc2]
+    exact placed.limb2
   have p3 : PairAt ordinary raw t3.guest.code t3.guest.pc 24 := by
-    simpa only [t3, t2, t1, t0, resumed, waiting, NativeFcall.accept,
-      retire_pc, stored_pc, stored_code, MachineState.code_setPC,
-      BitVec.add_assoc] using placed.limb3
+    rw [c3, pc3]
+    exact placed.limb3
+  have r0 : t0.guest.getReg .x10 = s.guest.getReg .x10 := resumed_reg s reply .x10
+  have r1 : t1.guest.getReg .x10 = s.guest.getReg .x10 := by
+    simpa only [t1, stored_reg, show (.x10 : Reg) ≠ .x5 from by decide, ite_false] using r0
+  have r2 : t2.guest.getReg .x10 = s.guest.getReg .x10 := by
+    simpa only [t2, stored_reg, show (.x10 : Reg) ≠ .x5 from by decide, ite_false] using r1
+  have r3 : t3.guest.getReg .x10 = s.guest.getReg .x10 := by
+    simpa only [t3, stored_reg, show (.x10 : Reg) ≠ .x5 from by decide, ite_false] using r2
   have v0 : isValidDwordAccess (t0.guest.getReg .x10 + signExtend12 0) = true := by
-    simpa [t0, resumed, waiting, NativeFcall.accept, NativeFcall.retire] using valid.1
+    change isValidDwordAccess (t0.guest.getReg .x10 + 0#64) = true
+    rw [r0, BitVec.add_zero]
+    exact valid.1
   have v1 : isValidDwordAccess (t1.guest.getReg .x10 + signExtend12 8) = true := by
-    simpa [t1, t0, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, MachineState.getReg_setReg_ne] using valid.2.1
+    change isValidDwordAccess (t1.guest.getReg .x10 + 8#64) = true
+    rw [r1]
+    exact valid.2.1
   have v2 : isValidDwordAccess (t2.guest.getReg .x10 + signExtend12 16) = true := by
-    simpa [t2, t1, t0, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, MachineState.getReg_setReg_ne] using valid.2.2.1
+    change isValidDwordAccess (t2.guest.getReg .x10 + 16#64) = true
+    rw [r2]
+    exact valid.2.2.1
   have v3 : isValidDwordAccess (t3.guest.getReg .x10 + signExtend12 24) = true := by
-    simpa [t3, t2, t1, t0, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, MachineState.getReg_setReg_ne] using valid.2.2.2
+    change isValidDwordAccess (t3.guest.getReg .x10 + 24#64) = true
+    rw [r3]
+    exact valid.2.2.2
   have h0 := pair_boundary ordinary raw t0 0 reply.w0 _ rfl p0 v0
   have h1 := pair_boundary ordinary raw t1 8 reply.w1 _ rfl p1 v1
   have h2 := pair_boundary ordinary raw t2 16 reply.w2 _ rfl p2 v2
@@ -274,14 +366,44 @@ def OutsideCandidate (base address : Word) : Prop :=
   address ≠ base + 72#64 ∧ address ≠ base + 80#64 ∧
   address ≠ base + 88#64 ∧ address ≠ base + 96#64
 
+private theorem received_reg (s : NativeState) (reply : Words4) (r : Reg) :
+    (received s reply).guest.getReg r = if r = .x5 then reply.w3 else s.guest.getReg r := by
+  by_cases equal : r = .x5
+  · simp only [received, stored_reg, equal, ite_true]
+  · simp only [received, stored_reg, equal, ite_false, resumed_reg]
+
+private theorem received_mem (s : NativeState) (reply : Words4) (address : Word) :
+    (received s reply).guest.getMem address =
+      if address = s.guest.getReg .x10 + 24#64 then reply.w3 else
+      if address = s.guest.getReg .x10 + 16#64 then reply.w2 else
+      if address = s.guest.getReg .x10 + 8#64 then reply.w1 else
+      if address = s.guest.getReg .x10 then reply.w0 else s.guest.getMem address := by
+  simp only [received, stored_mem, stored_reg, resumed_reg, resumed_mem,
+    show (.x10 : Reg) ≠ .x5 from by decide, ite_false,
+    show signExtend12 0#12 = 0#64 from rfl,
+    show signExtend12 8#12 = 8#64 from rfl,
+    show signExtend12 16#12 = 16#64 from rfl,
+    show signExtend12 24#12 = 24#64 from rfl, BitVec.add_zero]
+
+private theorem received_mem_base (s : NativeState) (reply : Words4) (base : Word)
+    (pointer : s.guest.getReg .x10 = base + 72) (address : Word) :
+    (received s reply).guest.getMem address =
+      if address = base + 96#64 then reply.w3 else
+      if address = base + 88#64 then reply.w2 else
+      if address = base + 80#64 then reply.w1 else
+      if address = base + 72#64 then reply.w0 else s.guest.getMem address := by
+  rw [received_mem, pointer]
+  have a24 : (base + 72#64) + 24#64 = base + 96#64 := by rw [BitVec.add_assoc]; rfl
+  have a16 : (base + 72#64) + 16#64 = base + 88#64 := by rw [BitVec.add_assoc]; rfl
+  have a8 : (base + 72#64) + 8#64 = base + 80#64 := by rw [BitVec.add_assoc]; rfl
+  rw [a24, a16, a8]
+
 theorem response_memory_frame (s : NativeState) (reply : Words4) (base address : Word)
     (pointer : s.guest.getReg .x10 = base + 72) (outside : OutsideCandidate base address) :
     (received s reply).guest.getMem address = s.guest.getMem address := by
   rcases outside with ⟨h0, h1, h2, h3⟩
-  simp [received, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-    NativeFcall.retire, pointer, MachineState.getReg_setReg_ne,
-    MachineState.getMem, MachineState.setMem, MachineState.setPC, MachineState.setReg,
-    BitVec.add_assoc, h0, h1, h2, h3]
+  rw [received_mem_base s reply base pointer]
+  simp only [h3, h2, h1, h0, ite_false]
 
 /-- Entry input and modulus survive transport; candidate is the actual reply,
     including noncanonical and mathematically wrong values. -/
@@ -289,43 +411,20 @@ theorem response_operands (s : NativeState) (reply : Words4) (base : Word)
     (pointer : s.guest.getReg .x10 = base + 72) :
     Accel.question (received s reply).guest base = Accel.question s.guest base ∧
     Accel.witness (received s reply).guest base = replyValue reply := by
-  simp [Accel.question, Accel.witness, replyValue, readU256, received, resumed,
-    waiting, stored, execInstrBr, NativeFcall.accept, NativeFcall.retire,
-    pointer, MachineState.getReg_setReg_ne, MachineState.getMem, MachineState.setMem,
-    MachineState.setPC, MachineState.setReg, BitVec.add_assoc]
+  simp [Accel.question, Accel.witness, replyValue, readU256,
+    received_mem_base s reply base pointer, BitVec.add_assoc]
 
 theorem response_packet (s : NativeState) (reply : Words4) (base : Word)
     (packet : Accel.Packet s.guest base) : Accel.Packet (received s reply).guest base := by
-  rcases packet with ⟨parameter, checking, a, w, c, m, d, zero⟩
   constructor
-  · simpa [received, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, MachineState.getReg_setReg_ne] using parameter
-  · simpa [received, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, MachineState.getReg_setReg_ne] using checking
-  · simpa [received, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, checking, MachineState.getReg_setReg_ne,
-      MachineState.getMem, MachineState.setMem, MachineState.setPC, MachineState.setReg,
-      BitVec.add_assoc] using a
-  · simpa [received, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, checking, MachineState.getReg_setReg_ne,
-      MachineState.getMem, MachineState.setMem, MachineState.setPC, MachineState.setReg,
-      BitVec.add_assoc] using w
-  · simpa [received, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, checking, MachineState.getReg_setReg_ne,
-      MachineState.getMem, MachineState.setMem, MachineState.setPC, MachineState.setReg,
-      BitVec.add_assoc] using c
-  · simpa [received, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, checking, MachineState.getReg_setReg_ne,
-      MachineState.getMem, MachineState.setMem, MachineState.setPC, MachineState.setReg,
-      BitVec.add_assoc] using m
-  · simpa [received, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, checking, MachineState.getReg_setReg_ne,
-      MachineState.getMem, MachineState.setMem, MachineState.setPC, MachineState.setReg,
-      BitVec.add_assoc] using d
-  · simpa [received, resumed, waiting, stored, execInstrBr, NativeFcall.accept,
-      NativeFcall.retire, checking, MachineState.getReg_setReg_ne, readU256,
-      MachineState.getMem, MachineState.setMem, MachineState.setPC, MachineState.setReg,
-      BitVec.add_assoc] using zero
+  · simpa only [received_reg, show (.x11 : Reg) ≠ .x5 from by decide, ite_false] using packet.parameter
+  · simpa only [received_reg, show (.x10 : Reg) ≠ .x5 from by decide, ite_false] using packet.checking
+  · simpa [received_mem_base s reply base packet.checking] using packet.a_pointer
+  · simpa [received_mem_base s reply base packet.checking] using packet.w_pointer
+  · simpa [received_mem_base s reply base packet.checking] using packet.c_pointer
+  · simpa [received_mem_base s reply base packet.checking] using packet.m_pointer
+  · simpa [received_mem_base s reply base packet.checking] using packet.d_pointer
+  · simpa [readU256, received_mem_base s reply base packet.checking, BitVec.add_assoc] using packet.zero
 
 def finalGuest (s : NativeState) (reply : Words4) (base : Word) : MachineState :=
   Div256Hints.Program.execute (Accel.after (received s reply).guest base) Accel.decisionCode

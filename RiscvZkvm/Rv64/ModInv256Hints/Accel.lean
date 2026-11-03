@@ -55,8 +55,7 @@ private theorem readNat_value (state : MachineState) (address : Word) :
       state.getMem ((address + 8#64) + 8#64),
       state.getMem (((address + 8#64) + 8#64) + 8#64)] = _
   simp only [BitVec.add_assoc,
-    show 8#64 + 8#64 = 16#64 from rfl,
-    show 8#64 + 16#64 = 24#64 from rfl]
+    show 8#64 + 8#64 = 16#64 from rfl]
   exact Div256Hints.Encoding.readU256_value state address
 
 def remainder (state : MachineState) (base : Word) : Nat :=
