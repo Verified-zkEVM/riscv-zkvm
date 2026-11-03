@@ -1,5 +1,4 @@
 /- Opt-in ELF adapter for native request/resume execution.
    Ordinary Interpreter.Run and the generated Sail model remain separate. -/
-module
 
-public import RiscvZkvm.Interpreter.NativeFcall
+import RiscvZkvm.Interpreter.NativeFcall

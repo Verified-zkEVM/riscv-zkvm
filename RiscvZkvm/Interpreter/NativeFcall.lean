@@ -1,12 +1,10 @@
 /- Optional ELF adapter for the native prefix model. Ordinary Interpreter,
    Instr, step and Sail are unchanged. No arithmetic-specific caller import,
    host-service implementation, exit convention or whole-program claim. -/
-module
 
-public import RiscvZkvm.Interpreter.Run
-public import RiscvZkvm.Rv64.NativeFcall.Code
+import RiscvZkvm.Interpreter.Run
+import RiscvZkvm.Rv64.NativeFcall.Code
 
-@[expose] public section
 namespace RiscvZkvm.Interpreter.NativeFcall
 
 open RiscvZkvm.Rv64
