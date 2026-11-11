@@ -24,6 +24,7 @@ import RiscvZkvm.Rv64.Logic.Support
 
 -- Separation logic and the specification layer.
 import RiscvZkvm.Rv64.Logic.SepLogic
+import RiscvZkvm.Rv64.Logic.Sp1Mem
 import RiscvZkvm.Rv64.Logic.CPSSpec
 import RiscvZkvm.Rv64.Logic.CPSCall
 import RiscvZkvm.Rv64.Logic.GenericSpecs

@@ -84,6 +84,53 @@ BGE = lambda a, b, off: btype(0x63, 5, a, b, off)
 JAL = lambda rd, off: jtype(0x6F, rd, off)
 ECALL = 0x73
 ADDW_UNMODELED = rtype(0x3B, 0, 0x00, "a2", "a0", "a1")  # the RV64 word-op gap
+# `csrs 0x800, a0` == `csrrs x0, 0x800, a0`: the ZisK Keccakf accelerator call.
+# Rejected by the sp1 backend, which has no CSR instruction at all.
+CSRS_KECCAK_A0 = itype(0x73, 2, "zero", "a0", 0x800)
+
+
+def li32(rd, value):
+    """Materialise a positive 32-bit constant with lui+addi.
+
+    Only used for SP1 syscall ids, all of which have a zero low bit 11, so the
+    addi immediate never sign-extends into the upper bits."""
+    assert 0 <= value < 0x8000_0000 and (value & 0x800) == 0, hex(value)
+    return [LUI(rd, value >> 12), ADDI(rd, rd, value & 0xFFF)]
+
+
+def li64(rd, value):
+    """Materialise an arbitrary 64-bit constant, one byte at a time.
+
+    `li32`'s lui+addi trick does not reach 64 bits, and the Pallas fixture needs
+    real field limbs. Eight shift-and-add steps of 8 bits cover the word exactly,
+    and every `addi` immediate stays under 0x100 so none sign-extends."""
+    assert 0 <= value < 1 << 64, hex(value)
+    ops = [ADDI(rd, "zero", 0)]
+    for shift in range(56, -8, -8):
+        ops += [SLLI(rd, rd, 8), ADDI(rd, rd, (value >> shift) & 0xFF)]
+    return ops
+
+
+# SP1 syscall ids, pinned in sp1-import/syscall-ids.json.
+SP1_KECCAK_PERMUTE = 0x0001_0109
+SP1_SHA_EXTEND = 0x0030_0105      # a real SP1 id this model deliberately omits
+SP1_COMMIT      = 0x00000010   # a0 = digest index, a1 = digest word
+SP1_UINT256_MUL = 0x0001_011D
+SP1_PALLAS_DOUBLE = 0x0000_0137   # vendor id: dmpierre/sp1, not upstream SP1
+SP1_HINT_LEN = 0x0000_00F0
+SP1_HINT_READ = 0x0000_00F1
+
+# The four RV64 word-ops a real SP1 guest emits.
+SUBW  = lambda rd, a, b: rtype(0x3B, 0, 0x20, rd, a, b)
+SRLW  = lambda rd, a, b: rtype(0x3B, 5, 0x00, rd, a, b)
+SLLIW = lambda rd, rs1, sh: itype(0x1B, 1, rd, rs1, sh & 0x1F)
+SRLIW = lambda rd, rs1, sh: itype(0x1B, 5, rd, rs1, sh & 0x1F)
+SRAIW_UNMODELED = itype(0x1B, 5, "a0", "a0", 0x400 | 1)   # funct7 = 0x20
+
+# A high address inside SP1's image window: the exact address the downstream
+# guest dies on (`ld sp, 0(sp)` with sp = 0x780014b0). Above MEM_END = 0x78000000,
+# so the zisk profile rejects it and the sp1 profile accepts it.
+SP1_HI_ADDR = 0x780014B0
 
 # 0xa0000000 has bit 31 set, so `lui` alone would sign-extend it to
 # 0xffffffff_a0000000 on RV64. Materialise it as 0x50000000 << 1.
@@ -168,6 +215,320 @@ def _wordop():
         ADDW_UNMODELED,
         *HALT,
     ]
+
+
+@fixture("sp1keccak")
+def _sp1keccak():
+    """SP1 KECCAK_PERMUTE: ecall with the syscall id in t0, state pointer in a0.
+
+    Permutes the all-zero state in place and loads the first lane into a2. The
+    companion `ziskkeccak` fixture runs the same permutation over the same
+    memory through the ZisK csrs path; the two must agree in a2, which is what
+    makes `Accel.keccakF` reuse an equivalence rather than a claim."""
+    return [
+        *LOAD_DATA_BASE,               # t1 = 0xa0000000
+        ADDI("a0", "t1", 0),           # a0 = state pointer (25 zero lanes)
+        ADDI("a1", "zero", 0),         # a1 must be 0 for KECCAK_PERMUTE
+        *li32("t0", SP1_KECCAK_PERMUTE),
+        ECALL,
+        LD("a2", 0, "a0"),             # first lane of the permuted state
+        *HALT,
+    ]
+
+
+@fixture("ziskkeccak")
+def _ziskkeccak():
+    """The ZisK spelling of the same permutation: `csrs 0x800, a0`.
+
+    Succeeds under --backend zisk and is rejected under --backend sp1, which is
+    the observable half of "SP1 has no csrs accelerator call"."""
+    return [
+        *LOAD_DATA_BASE,
+        ADDI("a0", "t1", 0),
+        CSRS_KECCAK_A0,
+        LD("a2", 0, "a0"),
+        *HALT,
+    ]
+
+
+@fixture("sp1u256")
+def _sp1u256():
+    """SP1 UINT256_MUL: x := (x * y) mod modulus, 256-bit.
+
+    x at a0 (overwritten by the result); y then modulus contiguous at a1, which
+    is SP1's layout. Uses small values so the answer is checkable by hand:
+    (7 * 6) mod 10 = 2. The high limbs are already zero (the data segment is
+    .bss-style), so only the low limb of each operand needs storing."""
+    return [
+        *LOAD_DATA_BASE,                 # t1 = 0xa0000000
+        ADDI("a0", "t1", 0),             # a0 = x (and result)
+        ADDI("a1", "t1", 0x40),          # a1 = y; modulus at a1 + 32
+        ADDI("t2", "zero", 7), SD("t2", 0x00, "t1"),    # x = 7
+        ADDI("t2", "zero", 6), SD("t2", 0x40, "t1"),    # y = 6
+        ADDI("t2", "zero", 10), SD("t2", 0x60, "t1"),   # modulus = 10
+        *li32("t0", SP1_UINT256_MUL),
+        ECALL,
+        LD("a2", 0, "a0"),               # (7*6) mod 10 = 2
+        *HALT,
+    ]
+
+
+@fixture("sp1u256zero")
+def _sp1u256zero():
+    """The same call with modulus = 0, which this model traps on.
+
+    `Accel.arith256Mod` is `(a*b + c) % m` and `% 0` is identity on `Nat`, so
+    without the guard this would silently return the unreduced product. ZisK's
+    Arith256Mod takes the same stance; see Sp1Accel.lean."""
+    return [
+        *LOAD_DATA_BASE,
+        ADDI("a0", "t1", 0),
+        ADDI("a1", "t1", 0x40),
+        ADDI("t2", "zero", 7), SD("t2", 0x00, "t1"),
+        ADDI("t2", "zero", 6), SD("t2", 0x40, "t1"),
+        # modulus left at 0
+        *li32("t0", SP1_UINT256_MUL),
+        ECALL,
+        ADDI("a3", "zero", 7),           # never reached
+        *HALT,
+    ]
+
+
+@fixture("sp1himem")
+def _sp1himem():
+    """A load from 0x780014b0 -- the address the real SP1 guest dies on.
+
+    SP1's zkvm.ld puts .rodata/.text/.data/.bss/heap ABOVE
+    __sp1_stack_top = 0x78000000, whereas isValidMemAddr's largest zone ENDS
+    there. So this traps under --backend zisk and succeeds under --backend sp1.
+    Nothing is stored first: unwritten memory reads as zero, and what is being
+    tested is the address predicate, not the value."""
+    return [
+        LUI("t1", SP1_HI_ADDR >> 12),
+        ADDI("t1", "t1", SP1_HI_ADDR & 0xFFF),
+        LD("a2", 0, "t1"),
+        *HALT,
+    ]
+
+
+@fixture("sp1textstore")
+def _sp1textstore():
+    """A store onto an address that holds code. Must trap even under sp1.
+
+    This is the store half of Word.lean's invariant -- "code is immutable AND
+    unreachable by stores". Under zisk the text window is excluded by
+    construction; under sp1 there is no such window, so `storeOkSp1` asks the
+    `code` map directly. TEXT is where this fixture's own instructions live."""
+    return [
+        ADDI("a0", "zero", 1),
+        LUI("t1", TEXT >> 12),          # t1 = 0x80000000, this image's own .text
+        SD("a0", 0, "t1"),
+        *HALT,
+    ]
+
+
+@fixture("sp1hint")
+def _sp1hint():
+    """SP1's input path: HINT_LEN then HINT_READ then HINT_LEN again.
+
+    --input must be length-prefix framed under --backend sp1: each hint is an
+    8-byte LE length followed by that many payload bytes. Reads one 8-byte hint
+    into the RAM zone, then checks the exhausted-stream sentinel.
+
+      a2 = first HINT_LEN            (expected 8)
+      a3 = the payload dword         (whatever --input carries)
+      a4 = HINT_LEN after consuming  (expected u64::MAX = -1)
+    """
+    return [
+        *LOAD_DATA_BASE,                    # t1 = 0xa0000000 (8-byte aligned)
+        *li32("t0", SP1_HINT_LEN),
+        ECALL,
+        ADDI("a2", "t0", 0),                # a2 = length reported in t0
+        ADDI("a0", "t1", 0),                # a0 = destination
+        ADDI("a1", "a2", 0),                # a1 = length (must match)
+        *li32("t0", SP1_HINT_READ),
+        ECALL,
+        LD("a3", 0, "t1"),                  # a3 = the payload
+        *li32("t0", SP1_HINT_LEN),
+        ECALL,
+        ADDI("a4", "t0", 0),                # a4 = sentinel
+        *HALT,
+    ]
+
+
+@fixture("wordops")
+def _wordops():
+    """The four word-ops the SP1 guest needs, with hand-checkable answers.
+
+      a2 = subw(5, 9)            = -4 sign-extended  = 0xfffffffffffffffc
+      a3 = srliw(0x8000_0000, 4) = 0x0800_0000
+      a4 = slliw(1, 31)          = 0x8000_0000 sext   = 0xffffffff80000000
+      a5 = srlw(0x8000_0000, 4)  = 0x0800_0000
+
+    srliw/srlw are the logical shifts: the point of the 0x8000_0000 input is
+    that an arithmetic shift would give a different answer, so these pin that
+    the funct7 discrimination in the decoder is real."""
+    return [
+        ADDI("a0", "zero", 5),
+        ADDI("a1", "zero", 9),
+        SUBW("a2", "a0", "a1"),             # 5 - 9 = -4, sext32
+        ADDI("t2", "zero", 1),
+        SLLIW("t2", "t2", 31),              # t2 = 0xffffffff80000000
+        SRLIW("a3", "t2", 4),               # logical: 0x0800_0000
+        ADDI("a4", "zero", 1),
+        SLLIW("a4", "a4", 31),              # 0xffffffff80000000
+        ADDI("a6", "zero", 4),
+        SRLW("a5", "t2", "a6"),             # logical: 0x0800_0000
+        *HALT,
+    ]
+
+
+@fixture("sraiw")
+def _sraiw():
+    """`sraiw` differs from `srliw` only in funct7, and is still unmodeled.
+
+    If the decoder ignored funct7 this would silently execute as srliw -- a
+    wrong answer rather than a stop. It must report undecodable."""
+    return [
+        ADDI("a0", "zero", 1),
+        SRAIW_UNMODELED,
+        *HALT,
+    ]
+
+
+@fixture("wroutput")
+def _wroutput():
+    """write_output(ptr, 8) over a valid RAM range: must SUCCEED.
+
+    The positive half of the range check. Without this, a guard that rejected
+    everything would pass every other test in this file -- there is no other
+    fixture that exercises write_output successfully."""
+    return [
+        *LOAD_DATA_BASE,                    # t1 = 0xa0000000, inside the RAM zone
+        ADDI("t2", "zero", 0x41),
+        SD("t2", 0, "t1"),                  # something to copy out
+        ADDI("a0", "t1", 0),                # a0 = ptr
+        ADDI("a1", "zero", 8),              # a1 = 8 bytes
+        ADDI("t0", "zero", 0x10),           # t0 = write_output
+        ECALL,
+        *HALT,
+    ]
+
+
+@fixture("wroutbad")
+def _wroutbad():
+    """write_output(0, 0x42c4b0e3): the exact call a real SP1 guest made.
+
+    Address 0 is below MEM_START, and the size is a digest word misread as a
+    byte count -- a 1.1 GB read. Before the range check this killed the host
+    process with `Stack overflow detected. Aborting.`: no output, no trap, no
+    diagnostic. It must trap."""
+    return [
+        ADDI("a0", "zero", 0),              # ptr = 0, not a valid address
+        *li32("a1", 0x42C4B0E3),            # size = 1.1 GB
+        ADDI("t0", "zero", 0x10),
+        ECALL,
+        *HALT,
+    ]
+
+
+@fixture("wroutbig")
+def _wroutbig():
+    """write_output(0xa0000000, 0x20000000): in zone, but 512 MiB.
+
+    Distinct from wroutbad: this range IS inside the RAM zone, so the extent
+    check alone would admit it and the host would still die evaluating
+    readBytes. It is MAX_OUTPUT_BYTES that rejects it, which is why that bound
+    exists as well as the range check."""
+    return [
+        *LOAD_DATA_BASE,
+        ADDI("a0", "t1", 0),
+        *li32("a1", 0x20000000),
+        ADDI("t0", "zero", 0x10),
+        ECALL,
+        *HALT,
+    ]
+
+
+@fixture("wrfd13bad")
+def _wrfd13bad():
+    """WRITE (t0=0x02) to fd 13 with a 1.1 GB byte count.
+
+    The same unbounded read one branch away from write_output: `nbytes` comes
+    from a2. Fixing only write_output would have left this."""
+    return [
+        ADDI("a0", "zero", 13),             # fd = 13 (public values)
+        ADDI("a1", "zero", 0),              # buf = 0, not a valid address
+        *li32("a2", 0x42C4B0E3),            # nbytes = 1.1 GB
+        ADDI("t0", "zero", 0x02),
+        ECALL,
+        *HALT,
+    ]
+
+
+@fixture("sp1badcall")
+def _sp1badcall():
+    """An `ecall` carrying a real SP1 syscall id this model does not implement.
+
+    Under --backend sp1 this must TRAP: SP1's precompiles share the t0 space
+    with the host syscalls, so continuing would claim the guest ran a precompile
+    that never executed. Under --backend zisk the same id is an inert ecall and
+    execution continues, setting a3 = 7 -- so the fixture pins both halves of
+    the difference."""
+    return [
+        *li32("t0", SP1_SHA_EXTEND),
+        ADDI("a0", "zero", 0),
+        ADDI("a1", "zero", 0),
+        ECALL,
+        ADDI("a3", "zero", 7),         # only reached if the ecall was a no-op
+        *HALT,
+    ]
+
+
+@fixture("sp1commit")
+def _sp1commit():
+    """SP1's COMMIT (0x10), which collides with zkvm-standards `write_output`.
+
+    A real SP1 guest ends with eight of these, one per public-values digest
+    word. Read as `write_output(ptr, size)` the arguments are nonsense: a1 is a
+    digest word, so it becomes a byte count. The value below is one actually
+    observed from a compiled guest -- 0x42c4b0e3, or 1.1 GB -- which the
+    write_output path tries to read from address 0, exhausting the host stack
+    before any trap can be reported.
+
+    So this fixture pins that COMMIT is handled as COMMIT: execution continues,
+    a3 = 7 is reached, and the run halts. Under --backend zisk the same id is
+    still `write_output`, so the run must NOT be expected to match."""
+    return [
+        *li32("t0", SP1_COMMIT),
+        ADDI("a0", "zero", 3),          # digest index
+        *li32("a1", 0x42C4B0E3),        # digest word, observed from a real guest
+        ECALL,
+        ADDI("a3", "zero", 7),          # reached only if COMMIT advanced the pc
+        *HALT,
+    ]
+
+
+@fixture("sp1pallasdbl")
+def _sp1pallasdbl():
+    """SP1 PALLAS_DOUBLE: P := 2P on Pallas, a vendor id from dmpierre/sp1.
+
+    The point is the Pallas generator (-1, 2) on y^2 = x^3 + 5, stored as
+    8 LE u64 limbs at a0 -- x first, then y -- which is SP1's layout, identical
+    to SECP256K1_DOUBLE. The doubled x is checked against a value computed
+    independently from the group law, so the modulus, the limb order and the
+    a0-in-place convention are all pinned by one comparison. Getting any of the
+    three wrong would still produce *a* point."""
+    P = 0x40000000000000000000000000000000224698FC094CF91B992D30ED00000001
+    x1 = [0x992D30ED00000000, 0x224698FC094CF91B, 0x0, 0x4000000000000000]  # -1 mod p
+    ops = [*LOAD_DATA_BASE, ADDI("a0", "t1", 0)]
+    for i, limb in enumerate(x1):                       # x = -1
+        ops += [*li64("t2", limb), SD("t2", 8 * i, "t1")]
+    ops += [ADDI("t2", "zero", 2), SD("t2", 0x20, "t1")]  # y = 2
+    ops += [*li32("t0", SP1_PALLAS_DOUBLE), ECALL]
+    ops += [LD("a2", 0, "a0")]                          # low limb of (2G).x
+    ops += [*HALT]
+    return ops
 
 
 # --- ELF emission ---------------------------------------------------------

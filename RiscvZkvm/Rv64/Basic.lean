@@ -206,6 +206,14 @@ inductive Instr where
   -- RV64I *W instructions (word-size operations on lower 32 bits)
   /-- ADDIW rd, rs1, imm : rd := sext((rs1 + sext(imm))[31:0]) -/
   | ADDIW (rd rs1 : Reg) (imm : BitVec 12)
+  /-- SUBW rd, rs1, rs2 : rd := sext((rs1 - rs2)[31:0]) -/
+  | SUBW  (rd rs1 rs2 : Reg)
+  /-- SRLW rd, rs1, rs2 : rd := sext((rs1[31:0] >>> rs2[4:0])) (logical) -/
+  | SRLW  (rd rs1 rs2 : Reg)
+  /-- SLLIW rd, rs1, shamt : rd := sext((rs1[31:0] << shamt)) (5-bit shamt) -/
+  | SLLIW (rd rs1 : Reg) (shamt : BitVec 5)
+  /-- SRLIW rd, rs1, shamt : rd := sext((rs1[31:0] >>> shamt)) (logical, 5-bit) -/
+  | SRLIW (rd rs1 : Reg) (shamt : BitVec 5)
   -- RV64I system
   /-- ECALL: environment call -/
   | ECALL

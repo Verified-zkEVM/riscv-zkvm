@@ -1,7 +1,8 @@
 # riscv-zkvm
 
-`riscv-zkvm` is the RISC-V semantics and verification stack used by the
-Verified-zkEVM projects. It publishes four things:
+`riscv-zkvm` is a generic RV64 semantics and verification stack for zkVM guests,
+tied to the official Sail RISC-V model, with the zkVM's ABI as a backend (ZisK by
+default, and SP1). It publishes four things:
 
 | Library | What it is |
 |---|---|
@@ -32,10 +33,11 @@ need only Lean and Lake; Sail, OCaml, CMake, and Z3 are regeneration tools.
 
 ## Use as a dependency
 
-The Lean 4.33.1 candidate `v0.4.0` is held as a draft while an upstream runtime
-warning blocks release-cache reuse. See the [release review](docs/release-refresh.md).
-Do not bump downstream pins to it yet. The published `v0.3.1` release uses
-Lean 4.33.0; match that toolchain when using its prebuilt oleans.
+`v0.4.0` (Lean 4.33.1) is the last release compatible with
+[evm-asm](https://github.com/Verified-zkEVM/evm-asm); see [evm-asm](#evm-asm) below.
+Its prebuilt olean archive is not reused by consumers (an upstream runtime warning
+records an absolute path; see the [release review](docs/release-refresh.md)), so a
+consumer builds it from source.
 
 Pin a published release tag so Lake can download the prebuilt oleans:
 
@@ -72,43 +74,70 @@ Execution goes through `RiscvZkvm.Rv64.step` itself — the interpreter supplies
 an ELF loader and an efficient memory representation, not a second set of
 instruction semantics. Guest images must use the zkVM memory map the model
 hard-codes; **the standard `riscv-tests` images do not run here**, for reasons
-recorded in [validation](docs/validation.md) along with three other known gaps.
+recorded in [validation](docs/validation.md) along with four other known gaps.
 
-## Downstream compatibility — read before changing anything
+### Backends
 
-**This repository exists to serve
-[`Verified-zkEVM/evm-asm`](https://github.com/Verified-zkEVM/evm-asm), and every
-change here MUST preserve compatibility with it.**
+The model's precompile ABI is a commitment to a particular zkVM, and it is
+selectable. ZisK is the default and is unchanged in every respect:
 
-That is a stronger obligation than "don't break your consumers". `RiscvZkvm.Rv64`
-and `RiscvZkvm.Rv64.SailEquiv` were extracted *from* evm-asm, and evm-asm's
-entire RISC-V proof core is built on them — roughly 2,500 of its ~3,000 modules
-depend on this package transitively. A change that is locally reasonable here can
-invalidate thousands of proofs there, and evm-asm consumes prebuilt oleans at a
-release tag, so it will not notice until someone bumps the pin.
+```bash
+.lake/build/bin/riscv-zkvm-run guest.elf --backend sp1
+```
 
-Treat the following as public API. Changing any of it is a breaking change:
+`--backend sp1` reads precompiles as SP1 does — `ecall` with a syscall id in
+`t0` and operand pointers in `a0`/`a1` — instead of as ZisK's `csrs <id>, <reg>`
+accelerator calls, dispatching to the same concrete `Accel.*` functions so the
+two paths compute the same mathematics. The four host syscalls are shared. In
+Lean the selector is `RiscvZkvm.Rv64.Backend`, and
 
-| Surface | Why evm-asm depends on it |
-|---|---|
-| Module paths `RiscvZkvm.{Sail, Rv64, Rv64.SailEquiv, Rv64.Logic, Interpreter}.*` | imported by name across the tree |
-| `Instr` constructors (`RiscvZkvm/Rv64/Basic.lean`) | the proof core is indexed on them; **adding** one also trips evm-asm's `check-roundtrip-coverage.sh` ratchet, which wants a round-trip guard per constructor |
-| `MachineState` fields, and `step` / `stepN` / `execInstrBr` semantics | every evm-asm theorem about a guest program |
-| `SailEquiv` theorem names — `*_sail_equiv`, `sailStep_run_sim`, `sailStepN_run_sim`, `step_eq_execInstrBr` | cited by name in evm-asm's `docs/riscv-zkvm-compliance.md` |
-| The axiom set: 3 classical + 4 Sail platform | it *is* evm-asm's trusted base; see [validation](docs/validation.md) |
-| `SailEquiv/StateRel.lean` importing `RiscvZkvm.Sail.InstsEnd`, not `RiscvZkvm.Sail` | keeps the ~14 GiB `RvfiDii` module out of evm-asm's build |
-| `platformIndependent` on every library, and one release archive covering all five | evm-asm's CI downloads them instead of recompiling; Linux-built oleans must validate on macOS |
-| The `RiscvZkvm.Rv64.Logic` tactic surface — `xperm`, `xsimp`, `xcancel`, `seqFrame`, `runBlock`, `sym_step`, `wp_rv64*`, `signext`, `extract_pure`, and the `rv64_addr` / `reg_ops` / `byte_alg` / `rv64_wp` simp attributes | evm-asm's proofs invoke these by name; a renamed tactic or simp attribute breaks call sites that no type signature protects |
-| `lean-toolchain` | must match evm-asm's, which is pinned to the same Mathlib tag |
+```lean
+theorem stepOn_zisk (s : MachineState) : stepOn .zisk s = step s := rfl
+```
 
-Before tagging a release that touches any of the above, **build evm-asm against
-the candidate revision** — the local gates here cannot see downstream breakage.
-Then follow the release ordering in [maintenance](docs/maintenance.md): tag and
-publish the archive here first, and only then bump evm-asm's pin.
+is what makes this additive rather than a change: `step` keeps its exact
+definition, so every existing proof stands untouched. SP1's ids and operand
+layouts are pinned in [`sp1-import/`](sp1-import/PROVENANCE.toml) and gated by
+`scripts/check-sp1-pin.sh`. **`--backend sp1` cannot run an ELF from the real
+SP1 toolchain** — SP1 links its code and data above `0x78000000`, where this
+model's memory map ends. See [validation](docs/validation.md) gap 5 for what it
+is and is not evidence of.
 
-Additions are usually safe and removals or renames are not, with the one
-exception noted in the table: adding an `Instr` constructor is a downstream
-change too.
+## Public API
+
+Treat the following as public API. Changing any of it is a breaking change, and
+needs a `CHANGELOG.md` entry that says so and a new minor version:
+
+- module paths `RiscvZkvm.{Sail, Rv64, Rv64.SailEquiv, Rv64.Logic, Interpreter}.*`;
+- `Instr` constructors (`RiscvZkvm/Rv64/Basic.lean`): adding one is a change too,
+  since it breaks exhaustive matches downstream;
+- `MachineState` fields, and the semantics of `step`, `stepN`, `execInstrBr` and
+  of each backend's stepper (`stepOn`, `stepSp1`);
+- the `SailEquiv` theorem names: `*_sail_equiv`, `sailStep_run_sim`,
+  `sailStepN_run_sim`, `step_eq_execInstrBr`;
+- the axiom set: 3 classical and 4 Sail platform axioms (see [validation](docs/validation.md));
+- `SailEquiv/StateRel.lean` importing `RiscvZkvm.Sail.InstsEnd`, not
+  `RiscvZkvm.Sail`, which keeps the ~14 GiB `RvfiDii` module out of consumers' builds;
+- `platformIndependent` on every library, and one release archive covering all five;
+- the `RiscvZkvm.Rv64.Logic` tactic surface: `xperm`, `xsimp`, `xcancel`,
+  `seqFrame`, `runBlock`, `sym_step`, `wp_rv64*`, `signext`, `extract_pure`, and the
+  `rv64_addr` / `reg_ops` / `byte_alg` / `rv64_wp` simp attributes;
+- `lean-toolchain`.
+
+**Backends.** A zkVM's ABI (its precompiles and system calls) is a backend
+(`Backend`, `stepOn`, `stepNOn`; `stepSp1` for SP1, `Sp1Accel.*`), and
+`stepOn .zisk = step` holds by `rfl`. A new backend belongs beside
+`Sp1Accel.lean`, not inside `Execution.step`. Instructions a backend's guests
+need go into the shared model, with their Sail equivalence.
+
+## evm-asm
+
+`RiscvZkvm.Rv64` and `RiscvZkvm.Rv64.SailEquiv` were extracted from
+[evm-asm](https://github.com/Verified-zkEVM/evm-asm), and this repository first
+existed to serve it. It no longer does: compatibility with evm-asm is not a
+requirement, and changes are not checked against an evm-asm build. `v0.4.0` is the
+last release that evm-asm builds against (its full build passes, 6,259 jobs; see
+the [release review](docs/release-refresh.md)), and evm-asm can pin it.
 
 ## Develop and validate
 

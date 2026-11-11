@@ -1,5 +1,280 @@
 # Changelog
 
+## Unreleased — the SP1 backend on `main`; evm-asm compatibility retired
+
+This merges branch `sp1-backend` into `main`. The sections below, down to
+v0.4.0, are that branch's history. **Breaking** against v0.4.0:
+
+- **Four new `Instr` constructors**, `SUBW`, `SRLW`, `SLLIW` and `SRLIW`, which a
+  real SP1 guest needs. Exhaustive matches over `Instr` downstream must handle
+  them. They have no Sail equivalence yet: `SailEquiv/StepSim.lean` marks them
+  `no_sim`.
+- **`step` range-checks the two output syscalls** for every backend: `WRITE` to
+  fd 13 and `write_output` return `none` when their buffer leaves the memory map
+  or exceeds `MAX_OUTPUT_BYTES` (16 MiB), instead of reading it.
+
+**evm-asm compatibility is no longer required.** The repository is now a generic
+RV64 stack with zkVM backends; README.md's "Public API" replaces "Downstream
+compatibility", and `v0.4.0` is the last release evm-asm builds against.
+
+## Unreleased (branch `sp1-backend`) — a memory cell per backend
+
+- **`memIs` is now `memIsOn isValidDwordAccess`.** The separation-logic memory
+  cell carried ZisK's address map *inside the resource*: `a ↦ₘ v` required
+  `isValidDwordAccess a`, so at any address outside ZisK's three zones the cell
+  was not merely unguarded but unsatisfiable. An SP1 guest's writable segment
+  sits in the gap between those zones (the downstream ZIP-2005 guest's
+  `.data`/`.bss` starts at `0x78040618`, and `HINT_READ` bump-allocates its
+  input buffer there), so no assertion could name the memory an SP1 proof is
+  about.
+
+  `memIsOn valid a v` takes the validity predicate as a parameter. `↦ₘ` is the
+  ZisK instance and an `abbrev`, so every existing spec and proof is unchanged;
+  `Logic/Sp1Mem.lean` adds `memIsSp1 := memIsOn isValidDwordAccessSp1`, the
+  bridge `memIsSp1_of_memIs` (ZisK ⊂ SP1 for loads, strictly), and SP1 analogues
+  of `MemSat`'s zone-literal dischargers. Stores are deliberately *not* bridged:
+  `memOkSp1` asks `noCodeAt`, which ZisK never checks, and ZisK rejects the
+  `[0x78000000, 0xa0000000)` window, which SP1 does not. `bytesRegion` is
+  generalised the same way (`bytesRegionOn`), with the ZisK names as abbrevs.
+  The generic forms `holdsFor_memIsOn`, `pcFree_memIsOn` and
+  `holdsFor_sepConj_memIsOn_setMem` carry the proofs; the ZisK names remain as
+  one-line instances.
+
+- **`HINT_READ` range-checks its write window.** It checked only
+  `isAligned8 a0`: no `isValidMemAddrSp1`, no `noCodeAt`. It was therefore the
+  one write in the model that could land outside SP1's addressable space, or
+  over text -- updating `mem` while `code_hintRead` still certified `code`
+  unchanged, the same model-more-optimistic-than-machine pattern
+  `StepOn.lean`'s header rules out for stores. `hintWindowOk` now asks
+  `memOkSp1`'s two questions of the whole `n / 8 + 1`-doubleword window, on
+  `Nat` so a wrapping `ptr + width` cannot alias back in. The `sp1hint` fixture
+  writes at `0xa0000000` and is unaffected.
+
+- Two doc fixes in `StepOn.lean`: the header credited a `storeOkSp1` that does
+  not exist (the mechanism is `memOkSp1`'s `noCodeAt` conjunct), and attributed
+  `@[implicit_reducible]` to `isValidMemAddr` rather than to the zone constants.
+
+## Unreleased (branch `feat/sp1-backend`) — range-check the output syscalls
+
+- **WRITE (`t0 = 0x02`, fd 13) and `write_output` (`t0 = 0x10`) are now range
+  checked.** They read a guest-controlled number of bytes and were the only
+  unchecked memory accesses left in `step`. Reported downstream on PR #10 from a
+  real SP1 guest: `write_output(0, 0x42c4b0e3)` — address 0, and a
+  public-values digest word misread as a byte count — attempted a 1.1 GB read
+  and killed the host process with `Stack overflow detected. Aborting.`, giving
+  no output, no trap and no diagnostic. It now traps.
+
+  The report named `write_output`; the identical unbounded read was one branch
+  away in WRITE, whose count comes from `a2`. Both are fixed, and both have
+  fixtures.
+
+  `isValidOutputRange` checks the **whole extent**, not just the start address
+  — for these two syscalls the extent is the guest-controlled part, so a
+  start-only check would have left the bug in place. Arithmetic is on `Nat` via
+  `toNat`, so a `ptr + n` that would wrap as a `BitVec` cannot alias back into a
+  zone.
+
+  It also imposes `MAX_OUTPUT_BYTES = 16 MiB`, which is a deliberate pessimism
+  rather than a fact about any zkVM. The extent check cannot bound the size on
+  its own: the legacy zone spans ~2 GB, so an in-zone request can still exhaust
+  the host evaluating the non-tail-recursive `readBytes`. Recorded as
+  `docs/validation.md` gap 6, together with the honest fix (a tail-recursive
+  `readBytes`, which would let the cap rise to the zone size).
+
+  Both predicates live in `Execution.lean` rather than beside the other access
+  predicates in `Word.lean`, so that the memory map stays byte-identical to its
+  evm-asm original — `check-relocation.sh` still reports **0** for `Word.lean`
+  and `ZiskAccel.lean`.
+
+- **This changes `step`, in the conservative direction** — it now traps where it
+  previously succeeded — so it is downstream-visible.
+  `step_ecall_write_output`, `step_ecall_write_public` and the deprecated
+  `step_ecall_commit` each gain an `isValidOutputRange` hypothesis, and
+  `step_ecall_write_output_trap` / `step_ecall_write_public_trap` state the new
+  trap. `SailEquiv` is unaffected: `Instr.simulable` already excludes `.ECALL`,
+  so no `*_sail_equiv` theorem covers either syscall.
+
+  The known downstream cost, checked rather than assumed:
+  `evm-asm/EvmAsm/Rv64/RLP/Phase6WriteOutput.lean:191` calls
+  `step_ecall_write_output`. Its surrounding theorem has `halign` and `hover`
+  (8-byte alignment, no 64-bit overflow), which are **not** sufficient — and
+  `bytesRegion` does not imply zone membership. So that theorem needs an
+  `isValidOutputRange` hypothesis threaded to its callers, or `bytesRegion`
+  strengthened to imply validity. Nothing downstream moves until someone bumps
+  the `v0.3.0` pin.
+
+- Tests: 21 → 25. `wroutput` is the important one and comes first: no other
+  fixture exercises `write_output` successfully, so a guard that rejected
+  everything would have passed every negative case and looked correct.
+
+## Unreleased (branch `feat/sp1-guest-runs`) — make a real SP1 guest runnable
+
+Follows the downstream report on PR #10, where a real `cargo prove build` guest
+(Zcash Orchard / ZIP-2005, 41,783 instructions) still failed at instruction 4
+against `feat/sp1-backend`. That branch modelled SP1's *precompiles*; a real SP1
+guest turned out to be blocked by three other things.
+
+**This branch is not aimed at `main`.** It deliberately breaks the machine-model
+relocation gate — see the last item.
+
+- **An SP1 memory profile.** `isValidMemAddr` is untouched and remains the ZisK
+  profile; `Rv64/StepOn.lean` adds `isValidMemAddrSp1` (anything below
+  `SP1_MAX_MEMORY = 1 <<< 37`, mirroring `zkvm.ld`). `stepSp1` therefore stops
+  delegating the eleven load/store forms to `step` and gates them itself.
+
+  The interesting part is stores. Under ZisK, `Word.lean`'s excluded text window
+  makes "code is unreachable by stores" structural; under SP1 no contiguous
+  window carves code out, since the stack is below the image and the heap above
+  it. So `storeOkSp1` asks whether any 4-aligned word the access covers holds
+  code — a sharper question than any address window, and one that needs **no
+  declared text extent**, no new `Backend` payload, and no well-formedness
+  obligation. Loads are deliberately not gated this way: reading `.rodata` is
+  legitimate and is exactly what the guest does four instructions in.
+
+  `code_execInstrBr` / `code_step` / `code_stepN` needed no changes — they never
+  mention `isValidMemAddr` and hold structurally, because `setMem` does not touch
+  the `code` field.
+
+- **`HINT_LEN` / `HINT_READ`: SP1's input path.** Previously filed under
+  "prover infrastructure", which was wrong — they are the *only* way an SP1
+  guest reads input (`sp1_zkvm::io::read` bottoms out in `read_vec_raw`, which is
+  this pair), and `read_input` (`0xF2`) is a zkvm-standards id no SP1 guest
+  emits. Rather than extend `MachineState`, `privateInput` carries SP1's queue as
+  a length-prefixed stream. `HINT_READ` reuses the existing
+  `MachineState.writeBytesAsWords`.
+
+  One detail worth recording: `hint_read` writes `len / 8 + 1` doublewords, not
+  `⌈len/8⌉` — SP1 writes a final zero-padded word unconditionally, even when
+  `len` is a multiple of 8. `hintWrittenAddrs` is the single source of truth for
+  that extent, so the interpreter's write-back set cannot drift from it.
+
+- **Four RV64 word-ops: `SUBW`, `SRLW`, `SLLIW`, `SRLIW`.** 739 words of the
+  downstream guest (1.8%) are these four encodings and nothing else — no `ADDW`,
+  `MULW`, `DIVW` or `REMW`. The decoder checks `funct7` explicitly so `SRAIW`
+  and `SRAW`, which differ from their logical siblings only in that field, keep
+  returning `none` rather than being silently decoded as `SRLIW`/`SRLW`. Pinned
+  by both positive and negative `#guard`s.
+
+  **`Instr.simulable` and `Instr.simulableUncond` are blacklists ending
+  `| _ => true`**, so adding constructors without editing them would have made
+  the four `simulable = true` while `toSailInstr?` sends them to `none` — which
+  makes `toSailInstr?_isSome_of_simulable` a false statement that still compiles.
+  Both blacklists are updated and the four ops sit outside the Sail bridge, like
+  `MV`/`LI`/`NOP`. Mapping them in `toSailInstr?` and proving `*_sail_equiv` (the
+  Sail `RTYPEW`/`SHIFTIWOP` targets exist) is deliberately deferred.
+
+- `UINT256_MUL` is unchanged from PR #10. `unimp` gets no `Instr` constructor —
+  it correctly surfaces as `Stop.undecodable`, and only if reached.
+
+- `Stop.hintFailed` distinguishes a modelled hint syscall that failed its
+  preconditions (exhausted stream, length mismatch, misaligned `a0` — all three
+  `assert!`/`panic!` in SP1's executor) from an unknown syscall id.
+
+- **Tests: 13 → 20.** New: the SP1 profile on `0x780014b0`, the guest's actual
+  failing address, trapping under `zisk` and succeeding under `sp1`; a store onto
+  this image's own `.text` trapping under `sp1`; the full hint round trip
+  including the `u64::MAX` sentinel; the four word-ops with inputs chosen so an
+  arithmetic shift would give a different answer than a logical one; and `sraiw`
+  still undecodable. The five original fixtures are unchanged.
+
+- **The relocation gate now fails, by exactly 36 lines.** `Word.lean` and
+  `ZiskAccel.lean` are still at 0 — the memory profile and the precompiles are
+  both additive. The deltas are `Basic.lean` 8, `Instructions.lean` 12,
+  `Execution.lean` 12, `Program.lean` 4, and **every one of those lines is a
+  word-op**. Do not loosen `check-relocation.sh` to hide this; the number is the
+  audit.
+
+- Pin: `sp1-import/` gains `minimal/hint.rs` with its digest. The consumer runs
+  the `dmpierre/sp1` fork, but its copy of that file is byte-identical to
+  upstream v6.6.0's (same git blob `924e6417`), so the pin stays
+  single-revision upstream rather than mixing a fork in.
+
+## Unreleased — an optional SP1 backend
+
+- **The precompile ABI is now selectable, and ZisK remains the default.**
+  `RiscvZkvm.Rv64.Backend` picks the zkVM ABI a stepper is read against;
+  `RiscvZkvm.Rv64.stepOn` is the backend-parametric stepper, with
+
+  ```lean
+  theorem stepOn_zisk (s : MachineState) : stepOn .zisk s = step s := rfl
+  ```
+
+  This is deliberately additive. `step`, `stepN` and `execInstrBr` keep their
+  exact definitions and signatures, so no existing proof — here or in evm-asm —
+  is affected, and all six relocation-pinned machine-model files still differ
+  from their evm-asm originals by exactly zero lines. No new `Instr`
+  constructor was added, so evm-asm's `check-roundtrip-coverage.sh` ratchet is
+  untouched too.
+
+- **`RiscvZkvm.Rv64.Sp1Accel`: SP1's `ecall`-based accelerators.** SP1 passes
+  operand pointers in `a0`/`a1` and writes results in place at the `a0` block,
+  where ZisK passes one pointer to an in-memory block of pointers — that is the
+  whole ABI difference. 13 precompiles are modelled: `KECCAK_PERMUTE`, add and
+  double on secp256k1 / BN254 / BLS12-381, and add/sub/mul in the BN254 and
+  BLS12-381 Fp2 towers. Each dispatches to the concrete `Accel.*` function
+  `ZiskAccel.lean` already defines and known-answer-tests, so the SP1 and ZisK
+  paths compute the same mathematics and no new cryptography, axiom or
+  `decide`-heavy proof enters the build. `execSp1Accel` is a single
+  `writeWords`, exactly as `execCsrs` is, so its seven state-projection lemmas
+  are one-liners independent of the dispatch's branch count.
+
+- **An unmodelled SP1 syscall traps rather than continuing.** `step`'s ECALL
+  chain ends by advancing the PC and changing nothing, which is right for ZisK
+  — a stray `ecall` really is inert there — but wrong for SP1, whose
+  precompiles share the `t0` space with the host syscalls. `stepSp1` delegates
+  to `step` only for the four *enumerated* host ids and traps on everything
+  else, so a precompile that never ran cannot look like a successful no-op.
+  `Sp1.isAccelId_host_false` is the kernel-checked guarantee that testing
+  accelerator ids first cannot shadow HALT, WRITE, `write_output` or
+  `read_input`.
+
+- **`riscv-zkvm-run --backend zisk|sp1`**, defaulting to `zisk`. `Stop` gains
+  `unsupportedOnBackend` and `unknownSyscall` so the two new rejection modes
+  are reported precisely rather than as an opaque trap. `Interpreter.decode` is
+  unchanged — its signature is in the release smoke test, and the behaviour is
+  identical either way since `stepSp1` rejects `.CSRS` regardless.
+
+- **SP1's ABI is pinned, not transcribed.** `sp1-import/PROVENANCE.toml` and
+  `sp1-import/syscall-ids.json` pin the ids and operand layouts to SP1 v6.6.0
+  (`f5a5bbf`), and `scripts/check-sp1-pin.sh` (new, in CI) diffs the Lean
+  constants against that table. This pin is stronger than `ZiskAccel.lean`'s
+  prose provenance on purpose: evm-asm's codegen emits the ZisK ids, so a wrong
+  one breaks a guest loudly, whereas nothing here emits SP1 syscalls and a wrong
+  id would break no test at all. SP1 v6's zkEVM target is
+  `riscv64im-succinct-zkvm-elf` against the same `eth-act/zkvm-standards` C ABI
+  this model's `read_input` follows, so 64-bit words are SP1's own — not a
+  reinterpretation of a 32-bit ABI.
+
+- **Tests.** `scripts/run-interpreter-tests.sh` grows from 5 cases to 13,
+  including the one that matters: `sp1keccak` (via `ecall`) and `ziskkeccak`
+  (via `csrs`) must leave the same first lane, `0xf1258f7940e1dde7`, so the id
+  table and operand layout are checked against real execution rather than
+  asserted. `sp1badcall` pins both halves of the trap-versus-continue
+  difference.
+
+- `scripts/AxiomSweep.lean` now also scans the `RiscvZkvm.Rv64` root. Nothing
+  imported it before, so declarations reachable only from there — including all
+  of the above — would have escaped the axiom gate. Census: 3,549 declarations,
+  0 offenders.
+
+- `UINT256_MUL` (`0x0001011d`) is modelled, on a downstream request. A zero
+  modulus **traps**, which is the stance `ZiskAccel.lean` already takes for
+  `Arith256Mod`: `Accel.arith256Mod` is `(a*b + c) % m`, `% 0` is identity on
+  `Nat`, and its docstring already requires callers to guard `m ≠ 0`. So this
+  needed no new mathematics and no guess about SP1's undocumented behaviour —
+  only the conservative direction. Fixtures pin both the answer
+  ((7 × 6) mod 10 = 2, which also checks a1's two contiguous blocks are not
+  swapped) and the trap.
+
+- `docs/maintenance.md` records how to try a branch downstream without paying
+  for Sail: nothing under `RiscvZkvm/Sail*` imports `RiscvZkvm.Rv64`, so
+  `riscv-zkvm-run`'s import closure is 14 modules with no Sail in it.
+
+- **Known limitation**, recorded as `docs/validation.md` gap 5: the memory map
+  is unchanged, so `--backend sp1` runs SP1-ABI guests laid out for *this*
+  model's map. It cannot run an ELF from the SP1 toolchain, which links code and
+  data above `0x78000000` where `isValidMemAddr` ends.
+
 ## v0.4.0 — Lean 4.33.1
 
 - Update the toolchain to Lean 4.33.1 and use official lean-sail v5, replacing

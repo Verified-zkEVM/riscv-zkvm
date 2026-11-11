@@ -55,10 +55,19 @@ private def d (w : Nat) : Option Instr := decode (BitVec.ofNat 32 w)
 -- ZisK accelerator call: `csrrs x0, csr, rs1` only.
 #guard d 0x8002A073 == some (.CSRS 0x800 .x5)
 
--- KNOWN GAP: the RV64 word-op family is absent from `Instr`.
+-- The four RV64 word-ops a real SP1 guest actually emits are now modeled.
+#guard d 0x40B5063B == some (.SUBW .x12 .x10 .x11)   -- subw a2, a0, a1
+#guard d 0x00B5563B == some (.SRLW .x12 .x10 .x11)   -- srlw a2, a0, a1
+#guard d 0x0015151B == some (.SLLIW .x10 .x10 1)     -- slliw a0, a0, 1
+#guard d 0x0015551B == some (.SRLIW .x10 .x10 1)     -- srliw a0, a0, 1
+
+-- KNOWN GAP: the rest of the word-op family is still absent. The negative
+-- guards below are as load-bearing as the positive ones -- in particular the
+-- arithmetic-shift forms differ from their logical siblings only in funct7,
+-- so decoding them as SRLIW/SRLW would be a silent soundness bug.
+#guard d 0x4015551B == none   -- sraiw a0, a0, 1   (funct7 = 0x20)
+#guard d 0x40B5563B == none   -- sraw  a2, a0, a1  (funct7 = 0x20)
 #guard d 0x00B5063B == none   -- addw a2, a0, a1
-#guard d 0x40B5063B == none   -- subw a2, a0, a1
-#guard d 0x0015151B == none   -- slliw a0, a0, 1
 #guard d 0x02B5063B == none   -- mulw a2, a0, a1
 
 -- KNOWN GAP: CSR access other than the accelerator form is not modeled.
