@@ -21,38 +21,70 @@ public import RiscvZkvm.Rv64.Logic.Tactics.XSimp
 namespace RiscvZkvm.Rv64
 
 /-- Assert `n` consecutive 8-byte dwords starting at `base`, holding `bs`
-    little-endian (`packBytes` per chunk). -/
-def bytesRegionAux (base : Word) : Nat → List (BitVec 8) → Assertion
+    little-endian (`packBytes` per chunk), each cell carrying the validity
+    predicate `valid`. Generic over the backend's address map the same way
+    `memIsOn` is; `bytesRegionAux` below is the ZisK instance. -/
+def bytesRegionAuxOn (valid : Word → Bool) (base : Word) :
+    Nat → List (BitVec 8) → Assertion
   | 0, _ => empAssertion
-  | n + 1, bs => (base ↦ₘ packBytes (bs.take 8)) ** bytesRegionAux (base + 8) n (bs.drop 8)
+  | n + 1, bs =>
+    memIsOn valid base (packBytes (bs.take 8)) ** bytesRegionAuxOn valid (base + 8) n (bs.drop 8)
+
+/-- A contiguous byte region over the validity predicate `valid`: `bs` stored in
+    `⌈|bs|/8⌉` consecutive dwords from the (dword-aligned) `base`. -/
+def bytesRegionOn (valid : Word → Bool) (base : Word) (bs : List (BitVec 8)) : Assertion :=
+  bytesRegionAuxOn valid base ((bs.length + 7) / 8) bs
+
+/-- The ZisK instance of `bytesRegionAuxOn`: cells are `↦ₘ`. -/
+abbrev bytesRegionAux (base : Word) : Nat → List (BitVec 8) → Assertion :=
+  bytesRegionAuxOn isValidDwordAccess base
 
 /-- A contiguous byte region: `bs` stored in `⌈|bs|/8⌉` consecutive dwords from
-    the (dword-aligned) `base`. -/
-def bytesRegion (base : Word) (bs : List (BitVec 8)) : Assertion :=
-  bytesRegionAux base ((bs.length + 7) / 8) bs
+    the (dword-aligned) `base`. The ZisK instance of `bytesRegionOn`. -/
+abbrev bytesRegion (base : Word) (bs : List (BitVec 8)) : Assertion :=
+  bytesRegionOn isValidDwordAccess base bs
+
+theorem bytesRegionOn_nil (valid : Word → Bool) (base : Word) :
+    bytesRegionOn valid base [] = empAssertion := rfl
 
 @[simp] theorem bytesRegion_nil (base : Word) : bytesRegion base [] = empAssertion := rfl
 
 /-- Peel the first dword (8 bytes) off a nonempty region. -/
-theorem bytesRegion_eq_cons (base : Word) (bs : List (BitVec 8)) (h : bs ≠ []) :
-    bytesRegion base bs
-      = ((base ↦ₘ packBytes (bs.take 8)) ** bytesRegion (base + 8) (bs.drop 8)) := by
+theorem bytesRegionOn_eq_cons (valid : Word → Bool) (base : Word) (bs : List (BitVec 8))
+    (h : bs ≠ []) :
+    bytesRegionOn valid base bs
+      = (memIsOn valid base (packBytes (bs.take 8)) **
+          bytesRegionOn valid (base + 8) (bs.drop 8)) := by
   have hlen : 0 < bs.length := List.length_pos_iff.mpr h
   have hchunks : (bs.length + 7) / 8 = ((bs.drop 8).length + 7) / 8 + 1 := by
     rw [List.length_drop]; omega
-  unfold bytesRegion
+  unfold bytesRegionOn
   rw [hchunks]
   rfl
 
-theorem bytesRegionAux_pcFree (n : Nat) (base : Word) (bs : List (BitVec 8)) :
-    (bytesRegionAux base n bs).pcFree := by
+/-- Peel the first dword (8 bytes) off a nonempty region. -/
+theorem bytesRegion_eq_cons (base : Word) (bs : List (BitVec 8)) (h : bs ≠ []) :
+    bytesRegion base bs
+      = ((base ↦ₘ packBytes (bs.take 8)) ** bytesRegion (base + 8) (bs.drop 8)) :=
+  bytesRegionOn_eq_cons isValidDwordAccess base bs h
+
+theorem bytesRegionAuxOn_pcFree (valid : Word → Bool) (n : Nat) (base : Word)
+    (bs : List (BitVec 8)) : (bytesRegionAuxOn valid base n bs).pcFree := by
   induction n generalizing base bs with
   | zero => exact pcFree_emp
-  | succ k ih => exact pcFree_sepConj pcFree_memIs (ih _ _)
+  | succ k ih => exact pcFree_sepConj pcFree_memIsOn (ih _ _)
+
+theorem bytesRegionOn_pcFree (valid : Word → Bool) (base : Word) (bs : List (BitVec 8)) :
+    (bytesRegionOn valid base bs).pcFree :=
+  bytesRegionAuxOn_pcFree valid _ base bs
+
+theorem bytesRegionAux_pcFree (n : Nat) (base : Word) (bs : List (BitVec 8)) :
+    (bytesRegionAux base n bs).pcFree :=
+  bytesRegionAuxOn_pcFree isValidDwordAccess n base bs
 
 theorem bytesRegion_pcFree (base : Word) (bs : List (BitVec 8)) :
     (bytesRegion base bs).pcFree :=
-  bytesRegionAux_pcFree _ base bs
+  bytesRegionOn_pcFree isValidDwordAccess base bs
 
 /-! ## Address arithmetic for an aligned base + byte offset -/
 

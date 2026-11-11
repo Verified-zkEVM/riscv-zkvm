@@ -371,14 +371,30 @@ def regIs (r : Reg) (v : Word) : Assertion :=
 /-- Notation: r ↦ᵣ v means register r holds value v. -/
 notation:50 r " ↦ᵣ " v => regIs r v
 
-/-- Memory at address a holds value v.
-    The assertion additionally requires `a` to be a valid dword-aligned
-    memory address (`isValidDwordAccess a = true`). This means `↦ₘ` cannot
-    hold at out-of-range or mis-aligned addresses, letting specs recover
-    the validity hypothesis from the precondition instead of taking it as
-    a separate side-condition (issue #338). -/
-def memIs (a : Word) (v : Word) : Assertion :=
-  fun h => h = PartialState.singletonMem a v ∧ isValidDwordAccess a = true
+/-- Memory at address `a` holds value `v`, at an address the validity predicate
+    `valid` admits.
+
+    The predicate is a parameter because the two backends genuinely disagree
+    about which addresses exist: ZisK's `isValidDwordAccess` is three fixed
+    zones topping out at `0xc0000000`, SP1's is everything below `2^37`. Baking
+    one of them into the resource -- as this definition originally did with
+    `isValidDwordAccess` -- makes the cell *unsatisfiable*, not merely
+    unguarded, at every other address. An SP1 guest's writable segment at
+    `0x78040618` sits in the gap between ZisK's zones, so no `↦ₘ` cell could
+    name the memory its input is written to.
+
+    Carrying validity in the resource at all is deliberate (issue #338): it lets
+    a spec recover the validity hypothesis from its precondition rather than
+    taking it as a separate side condition. -/
+def memIsOn (valid : Word → Bool) (a : Word) (v : Word) : Assertion :=
+  fun h => h = PartialState.singletonMem a v ∧ valid a = true
+
+/-- Memory at address a holds value v, at a ZisK-valid dword-aligned address.
+
+    The ZisK instance of `memIsOn`. This is the cell every existing spec is
+    stated with, and it is an `abbrev` so that nothing about them changes;
+    `memIsOn` is what a second backend instantiates. -/
+abbrev memIs (a : Word) (v : Word) : Assertion := memIsOn isValidDwordAccess a v
 
 /-- Notation: a ↦ₘ v means memory at address a holds value v. -/
 notation:50 a " ↦ₘ " v => memIs a v
@@ -453,14 +469,18 @@ theorem holdsFor_regIs {r : Reg} {v : Word} {s : MachineState} :
     exact ⟨_, PartialState.CompatibleWith_singletonReg.mpr heq, rfl⟩
 
 @[simp]
-theorem holdsFor_memIs {a : Word} {v : Word} {s : MachineState} :
-    (memIs a v).holdsFor s ↔ s.getMem a = v ∧ isValidDwordAccess a = true := by
-  simp only [Assertion.holdsFor, memIs]
+theorem holdsFor_memIsOn {valid : Word → Bool} {a : Word} {v : Word} {s : MachineState} :
+    (memIsOn valid a v).holdsFor s ↔ s.getMem a = v ∧ valid a = true := by
+  simp only [Assertion.holdsFor, memIsOn]
   constructor
   · rintro ⟨h, hcompat, rfl, hvalid⟩
     exact ⟨PartialState.CompatibleWith_singletonMem.mp hcompat, hvalid⟩
   · rintro ⟨heq, hvalid⟩
     exact ⟨_, PartialState.CompatibleWith_singletonMem.mpr heq, rfl, hvalid⟩
+
+theorem holdsFor_memIs {a : Word} {v : Word} {s : MachineState} :
+    (memIs a v).holdsFor s ↔ s.getMem a = v ∧ isValidDwordAccess a = true :=
+  holdsFor_memIsOn
 
 /-- The validity hypothesis that `memIs` now encodes: if `(a ↦ₘ v).holdsFor s`
     then `a` is a valid dword-aligned memory address. -/
@@ -611,6 +631,10 @@ theorem holdsFor_sepConj_elim_right {P Q : Assertion} {s : MachineState}
 
 theorem pcFree_regIs {r : Reg} {v : Word} : (regIs r v).pcFree := by
   intro h hp; rw [regIs] at hp; subst hp; rfl
+
+theorem pcFree_memIsOn {valid : Word → Bool} {a : Word} {v : Word} :
+    (memIsOn valid a v).pcFree := by
+  intro h ⟨hh, _⟩; subst hh; rfl
 
 theorem pcFree_memIs {a : Word} {v : Word} : (memIs a v).pcFree := by
   intro h ⟨hp, _⟩; subst hp; rfl
@@ -1718,12 +1742,14 @@ theorem holdsFor_sepConj_regIs_regIs_regIs_setReg
 -- holdsFor preservation through setMem
 -- ============================================================================
 
-/-- If `(a ↦ₘ v) ** R` holds for `s`, then `(a ↦ₘ v') ** R` holds for `s.setMem a v'`.
-    The frame R is preserved because it's disjoint from the memory being modified. -/
-theorem holdsFor_sepConj_memIs_setMem {a : Word} {v v' : Word} {R : Assertion}
-    {s : MachineState}
-    (hPR : ((a ↦ₘ v) ** R).holdsFor s) :
-    ((a ↦ₘ v') ** R).holdsFor (s.setMem a v') := by
+/-- If `memIsOn valid a v ** R` holds for `s`, then `memIsOn valid a v' ** R`
+    holds for `s.setMem a v'`. Generic in the validity predicate: the proof
+    only ever carries the validity witness through, so one proof serves every
+    backend's cell. -/
+theorem holdsFor_sepConj_memIsOn_setMem {valid : Word → Bool} {a : Word} {v v' : Word}
+    {R : Assertion} {s : MachineState}
+    (hPR : ((memIsOn valid a v) ** R).holdsFor s) :
+    ((memIsOn valid a v') ** R).holdsFor (s.setMem a v') := by
   obtain ⟨hp, hcompat, h1, h2, hdisj, hunion, hh1, hh2⟩ := hPR
   obtain ⟨hh1, hvalid⟩ := hh1; subst hh1; rw [← hunion] at hcompat
   -- h2 doesn't own address a (from disjointness)
@@ -1755,6 +1781,15 @@ theorem holdsFor_sepConj_memIs_setMem {a : Word} {v v' : Word} {R : Assertion}
   have hc2' : h2.CompatibleWith (s.setMem a v') := PartialState.CompatibleWith_setMem hc2 ha2
   refine ⟨(PartialState.singletonMem a v').union h2, ?_, PartialState.singletonMem a v', h2, hdisj', rfl, ⟨rfl, hvalid⟩, hh2⟩
   exact (PartialState.CompatibleWith_union hdisj').mpr ⟨hc1', hc2'⟩
+
+/-- If `(a ↦ₘ v) ** R` holds for `s`, then `(a ↦ₘ v') ** R` holds for `s.setMem a v'`.
+    The frame R is preserved because it's disjoint from the memory being modified.
+    The ZisK instance of `holdsFor_sepConj_memIsOn_setMem`. -/
+theorem holdsFor_sepConj_memIs_setMem {a : Word} {v v' : Word} {R : Assertion}
+    {s : MachineState}
+    (hPR : ((a ↦ₘ v) ** R).holdsFor s) :
+    ((a ↦ₘ v') ** R).holdsFor (s.setMem a v') :=
+  holdsFor_sepConj_memIsOn_setMem hPR
 
 /-- setMem preserves holdsFor for any assertion whose partial state doesn't own the address. -/
 theorem holdsFor_setMem {P : Assertion} {a : Word} {v : Word} {s : MachineState}
