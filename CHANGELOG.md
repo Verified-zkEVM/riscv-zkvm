@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — Lean v4.36.0-rc2
+
+- **Toolchain: v4.33.1 to v4.36.0-rc2,** for downstreams that need v4.36
+  (MachineChecked, which also requires Kraken and arm64-semantics).
+  `lean-toolchain` and `sail-import/PROVENANCE.toml` move together.
+- **lean-sail: v5 plus two commits, on the fork `dhsorens/lean-sail`** until
+  rems-project/lean-sail#25 lands. From Lean 4.34, `assert` in a `do` block is
+  Lean's own element, so the generated `assert c m` no longer parsed. A macro
+  scoped to namespace `Sail` turns it back into a call to the model's `assert`.
+  The generated tree is unchanged (`check-model-pin`). Upstream's unambiguous
+  `open` (2c33d84) comes with it.
+- **Deprecated lemma names** in `Rv64/Logic` and `SailEquiv`: `if_pos`,
+  `if_neg`, `dif_pos`, `dif_neg`, `if_true`, `if_false` and
+  `Bool.if_false_right` become the names Lean 4.36 suggests. The statements are
+  the same.
+- The axiom sweep audits 3690 declarations (3705 on v4.33.1). The set of axioms
+  is unchanged.
+
 ## Unreleased — the SP1 backend on `main`; evm-asm compatibility retired
 
 This merges branch `sp1-backend` into `main`. The sections below, down to
