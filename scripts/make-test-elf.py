@@ -82,8 +82,21 @@ LD = lambda rd, off, rs1: itype(0x03, 3, rd, rs1, off)
 LBU = lambda rd, off, rs1: itype(0x03, 4, rd, rs1, off)
 BGE = lambda a, b, off: btype(0x63, 5, a, b, off)
 JAL = lambda rd, off: jtype(0x6F, rd, off)
+ADDIW = lambda rd, rs1, i: itype(0x1B, 0, rd, rs1, i)
+SLLIW = lambda rd, rs1, s: itype(0x1B, 1, rd, rs1, s)
+SRLIW = lambda rd, rs1, s: itype(0x1B, 5, rd, rs1, s)
+SRAIW = lambda rd, rs1, s: itype(0x1B, 5, rd, rs1, 0x400 | s)   # funct7 = 0x20
+ADDW = lambda rd, a, b: rtype(0x3B, 0, 0x00, rd, a, b)
+SUBW = lambda rd, a, b: rtype(0x3B, 0, 0x20, rd, a, b)
+SLLW = lambda rd, a, b: rtype(0x3B, 1, 0x00, rd, a, b)
+SRLW = lambda rd, a, b: rtype(0x3B, 5, 0x00, rd, a, b)
+SRAW = lambda rd, a, b: rtype(0x3B, 5, 0x20, rd, a, b)
+MULW = lambda rd, a, b: rtype(0x3B, 0, 0x01, rd, a, b)
+DIVW = lambda rd, a, b: rtype(0x3B, 4, 0x01, rd, a, b)
+DIVUW = lambda rd, a, b: rtype(0x3B, 5, 0x01, rd, a, b)
+REMW = lambda rd, a, b: rtype(0x3B, 6, 0x01, rd, a, b)
+REMUW = lambda rd, a, b: rtype(0x3B, 7, 0x01, rd, a, b)
 ECALL = 0x73
-ADDW_UNMODELED = rtype(0x3B, 0, 0x00, "a2", "a0", "a1")  # the RV64 word-op gap
 # `csrs 0x800, a0` == `csrrs x0, 0x800, a0`: the ZisK Keccakf accelerator call.
 # Rejected by the sp1 backend, which has no CSR instruction at all.
 CSRS_KECCAK_A0 = itype(0x73, 2, "zero", "a0", 0x800)
@@ -119,13 +132,6 @@ SP1_UINT256_MUL = 0x0001_011D
 SP1_PALLAS_DOUBLE = 0x0000_0137   # vendor id: dmpierre/sp1, not upstream SP1
 SP1_HINT_LEN = 0x0000_00F0
 SP1_HINT_READ = 0x0000_00F1
-
-# The four RV64 word-ops a real SP1 guest emits.
-SUBW  = lambda rd, a, b: rtype(0x3B, 0, 0x20, rd, a, b)
-SRLW  = lambda rd, a, b: rtype(0x3B, 5, 0x00, rd, a, b)
-SLLIW = lambda rd, rs1, sh: itype(0x1B, 1, rd, rs1, sh & 0x1F)
-SRLIW = lambda rd, rs1, sh: itype(0x1B, 5, rd, rs1, sh & 0x1F)
-SRAIW_UNMODELED = itype(0x1B, 5, "a0", "a0", 0x400 | 1)   # funct7 = 0x20
 
 # A high address inside SP1's image window: the exact address the downstream
 # guest dies on (`ld sp, 0(sp)` with sp = 0x780014b0). Above MEM_END = 0x78000000,
@@ -206,13 +212,60 @@ def _trap():
     ]
 
 
-@fixture("wordop")
-def _wordop():
-    """`addw`: a real RV64IM instruction the model does not have. Undecodable."""
+@fixture("addw")
+def _addw():
+    """`addw` wraps at 32 bits and sign-extends: 0x7fffffff + 1 = 0xffffffff80000000."""
     return [
-        ADDI("a0", "zero", 1),
-        ADDI("a1", "zero", 2),
-        ADDW_UNMODELED,
+        LUI("a0", 0x80000),        # 0xffffffff80000000 on RV64
+        ADDIW("a0", "a0", -1),     # 0x7fffffff
+        ADDI("a1", "zero", 1),
+        ADDW("a2", "a0", "a1"),
+        *HALT,
+    ]
+
+
+@fixture("wordalu")
+def _wordalu():
+    """RV64I word ops: 32-bit wrap, sign extension, and 5-bit shift masking."""
+    return [
+        LUI("a0", 0x80000),        # 0xffffffff80000000 on RV64
+        ADDIW("a0", "a0", -1),     # 0x7fffffff
+        ADDI("a1", "zero", 1),
+        ADDI("s0", "zero", 33),    # bit 5 set: word shifts use only 33 % 32 = 1
+        SUBW("a2", "a1", "a0"),    # 1 - 0x7fffffff wraps to 0x80000002
+        SLLW("a3", "a0", "s0"),    # 0xfffffffe
+        SRLW("a4", "a3", "s0"),    # logical: 0x7fffffff
+        SRAW("a5", "a3", "s0"),    # arithmetic: 0xffffffff
+        SLLIW("a6", "a1", 31),     # 0x80000000
+        SRLIW("a7", "a3", 31),     # 1
+        SRAIW("x18", "a3", 31),    # all ones
+        *HALT,
+    ]
+
+
+@fixture("wordmext")
+def _wordmext():
+    """RV64M word ops, including division by zero and the -2^31 / -1 overflow."""
+    return [
+        LUI("a0", 0x80000),
+        ADDIW("a0", "a0", -1),     # a0 = 0x7fffffff
+        ADDI("a1", "zero", -2),    # a1 = -2
+        LUI("s0", 0x80000),        # s0 = -2^31
+        ADDI("s1", "zero", -1),    # s1 = -1
+        ADDI("t1", "zero", 3),
+        ADDI("t2", "zero", -7),
+        ADDI("x28", "zero", 2),
+        MULW("a2", "a0", "a0"),    # low word of 0x3fffffff00000001
+        MULW("a3", "a0", "a1"),    # low word of 0x7fffffff * 0xfffffffe
+        DIVW("a4", "a0", "zero"),  # divide by zero: -1
+        DIVW("a5", "s0", "s1"),    # overflow: -2^31
+        DIVW("a6", "t2", "x28"),   # rounds toward zero: -3
+        DIVUW("a7", "a1", "t1"),   # 0xfffffffe / 3
+        REMW("x18", "a1", "zero"), # remainder by zero: the dividend
+        REMW("x19", "t2", "x28"),  # sign follows the dividend: -1
+        REMUW("x20", "a1", "t1"),  # 0xfffffffe % 3
+        DIVUW("x21", "a0", "zero"),
+        REMW("x22", "s0", "s1"),   # overflow: 0
         *HALT,
     ]
 
@@ -385,13 +438,15 @@ def _wordops():
 
 @fixture("sraiw")
 def _sraiw():
-    """`sraiw` differs from `srliw` only in funct7, and is still unmodeled.
+    """`sraiw` differs from `srliw` only in funct7.
 
     If the decoder ignored funct7 this would silently execute as srliw -- a
-    wrong answer rather than a stop. It must report undecodable."""
+    wrong answer rather than a stop. On 0x8000_0000 the two differ:
+    sraiw(0x8000_0000, 4) = 0xfffffffff8000000, srliw would give 0x0800_0000."""
     return [
         ADDI("a0", "zero", 1),
-        SRAIW_UNMODELED,
+        SLLIW("a0", "a0", 31),              # 0xffffffff80000000
+        SRAIW("a0", "a0", 4),               # arithmetic: 0xfffffffff8000000
         *HALT,
     ]
 

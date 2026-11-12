@@ -8,7 +8,7 @@ default, and SP1). It publishes four things:
 |---|---|
 | `RiscvZkvm.Sail` | Lean extraction of the official [`riscv/sail-riscv`](https://github.com/riscv/sail-riscv) specification — **generated**, not hand-maintained |
 | `RiscvZkvm.Rv64` | a hand-written, computable RV64IM machine model (`Instr`, `MachineState`, `step`) |
-| `RiscvZkvm.Rv64.SailEquiv` | the tie between them: 51 per-instruction `*_sail_equiv` theorems plus step/run simulation |
+| `RiscvZkvm.Rv64.SailEquiv` | the tie between them: 64 per-instruction `*_sail_equiv` theorems plus step/run simulation |
 | `RiscvZkvm.Rv64.Logic` | the program logic: separation logic over `MachineState`, the CPS specification layer, a weakest-precondition framework, and the symbolic-execution tactics that drive them |
 
 plus `RiscvZkvm.Interpreter` and the `riscv-zkvm-run` CLI, which execute the
@@ -100,7 +100,7 @@ definition, so every existing proof stands untouched. SP1's ids and operand
 layouts are pinned in [`sp1-import/`](sp1-import/PROVENANCE.toml) and gated by
 `scripts/check-sp1-pin.sh`. **`--backend sp1` cannot run an ELF from the real
 SP1 toolchain** — SP1 links its code and data above `0x78000000`, where this
-model's memory map ends. See [validation](docs/validation.md) gap 5 for what it
+model's memory map ends. See [validation](docs/validation.md) gap 4 for what it
 is and is not evidence of.
 
 ## Public API

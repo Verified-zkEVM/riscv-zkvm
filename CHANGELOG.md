@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — the remaining RV64 word ops, tied to Sail
+
+- **Nine new `Instr` constructors:** `ADDW SLLW SRAW SRAIW MULW DIVW DIVUW REMW REMUW`.
+  With the four from `sp1-backend`, the RV64IM word-op family is complete.
+- **Sail equivalence for all thirteen**, including `SUBW SRLW SLLIW SRLIW`,
+  which were `no_sim`. `toSailInstr?` maps them to `RTYPEW`, `SHIFTIWOP`,
+  `MULW`, `DIVW` and `REMW`; `simulable`/`simulableUncond` no longer exclude them.
+- Decoder arms for all of OP-32 and OP-IMM-32; `sraiw` now executes.
+- Ported from #13 onto the `sp1-backend` merge.
+
 ## Unreleased — the SP1 backend on `main`; evm-asm compatibility retired
 
 This merges branch `sp1-backend` into `main`. The sections below, down to
