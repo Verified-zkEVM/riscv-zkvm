@@ -44,7 +44,7 @@ scripts/check-no-warnings.sh          # builds and checks its own log
 Each gate takes `--report` to print its census and exit 0.
 
 `scripts/check-axioms.sh` is the load-bearing one: it walks every declaration
-under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` (3705 of them today) and
+under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` (3690 of them today) and
 fails on any axiom outside the seven `docs/validation.md` documents. If a Sail
 pin bump adds a platform axiom, update `scripts/AxiomSweep.lean`'s
 `allowedAxioms` and that document in the same change -- the list is the

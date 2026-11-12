@@ -50,7 +50,7 @@ theorem bytesRegion_dword_at_set (regionBase : Word) (bs : List (BitVec 8)) (q r
       rw [bytesRegion_eq_cons regionBase (bs.set (8 * 0 + r) b) hset_ne]
       have htake : (bs.set (8 * 0 + r) b).take 8 = (bs.take 8).set (8 * 0 + r) b := List.take_set
       have hdrop : (bs.set (8 * 0 + r) b).drop 8 = bs.drop 8 := by
-        rw [List.drop_set]; simp only [if_pos (show 8 * 0 + r < 8 from by omega)]
+        rw [List.drop_set]; simp only [ite_eq_left (show 8 * 0 + r < 8 from by omega)]
       rw [htake, hdrop,
         show regionBase + BitVec.ofNat 64 (8 * 0) = regionBase from by bv_omega]
       simp only [Nat.mul_zero, Nat.zero_add, List.drop_zero, sepConj_emp_left']
@@ -70,7 +70,7 @@ theorem bytesRegion_dword_at_set (regionBase : Word) (bs : List (BitVec 8)) (q r
     have htake_first : (bs.set (8 * (k + 1) + r) b).take 8 = bs.take 8 := by
       rw [List.take_set, List.set_eq_of_length_le (by rw [List.length_take]; omega)]
     have hdrop_first : (bs.set (8 * (k + 1) + r) b).drop 8 = (bs.drop 8).set (8 * k + r) b := by
-      rw [List.drop_set]; simp only [show ¬ (8 * (k + 1) + r < 8) from by omega, if_false]
+      rw [List.drop_set]; simp only [show ¬ (8 * (k + 1) + r < 8) from by omega, ite_false]
       congr 1; omega
     refine ⟨(regionBase ↦ₘ packBytes (bs.take 8)) ** front', rest',
       pcFree_sepConj pcFree_memIs hf', hr', ?_, ?_⟩

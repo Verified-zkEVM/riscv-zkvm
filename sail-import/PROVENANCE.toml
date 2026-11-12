@@ -10,10 +10,13 @@ sail_compiler_version = "0.20.3"
 sail_compiler_rev = "60695b1ea377048f0adc39c62671cd099b2ed9f6"
 
 [runtime]
-# Official lean-sail v5 passes Sail and SailTest on Lean 4.33.1 without patches.
-lean_sail_repo = "https://github.com/rems-project/lean-sail.git"
-lean_sail_rev = "079463134b9c50450b8393e1566a09fc492a34d9"
-lean_toolchain = "leanprover/lean4:v4.33.1"
+# lean-sail v5 (079463134) plus two commits, on the fork until rems-project/lean-sail#25
+# lands: upstream's unambiguous `open` (2c33d84), and a macro scoped to `Sail` that keeps the
+# generated `assert c m` a call to the model's `assert` on Lean >= 4.34, where `assert` in a
+# `do` block is Lean's own element. The generated tree is unchanged.
+lean_sail_repo = "https://github.com/dhsorens/lean-sail.git"
+lean_sail_rev = "f2eb54a2f137072afe561c1bacb759a38eaa8743"
+lean_toolchain = "leanprover/lean4:v4.36.0-rc2"
 
 [extraction]
 root_module = "RiscvZkvm.Sail"

@@ -71,27 +71,27 @@ theorem getByteAt_setBytes (ns bs : List (BitVec 8)) (i j : Nat)
   induction ns generalizing bs i with
   | nil =>
       simp only [setBytes_nil, List.length_nil, Nat.add_zero]
-      rw [if_neg (by omega)]
+      rw [ite_eq_right (by omega)]
   | cons b rest ih =>
       simp only [List.length_cons] at hin
       simp only [setBytes_cons]
       rw [ih _ (i + 1) (by rw [List.length_set]; omega)]
       by_cases h1 : i + 1 ≤ j ∧ j < i + 1 + rest.length
-      · rw [if_pos h1, if_pos (by simp only [List.length_cons]; omega)]
+      · rw [ite_eq_left h1, ite_eq_left (by simp only [List.length_cons]; omega)]
         have hj : j - i = (j - (i + 1)) + 1 := by omega
         rw [hj]
         show getByteAt rest _ = getByteAt (b :: rest) _
         unfold getByteAt
         by_cases hr : j - (i + 1) < rest.length
-        · rw [dif_pos hr, dif_pos (by simp only [List.length_cons]; omega)]
+        · rw [dite_eq_left hr, dite_eq_left (by simp only [List.length_cons]; omega)]
           simp
-        · rw [dif_neg hr, dif_neg (by simp only [List.length_cons]; omega)]
-      · rw [if_neg h1, getByteAt_set bs i b j (by omega)]
+        · rw [dite_eq_right hr, dite_eq_right (by simp only [List.length_cons]; omega)]
+      · rw [ite_eq_right h1, getByteAt_set bs i b j (by omega)]
         by_cases h2 : j = i
         · subst h2
-          rw [if_pos rfl, if_pos (by simp only [List.length_cons]; omega)]
+          rw [ite_eq_left rfl, ite_eq_left (by simp only [List.length_cons]; omega)]
           simp [getByteAt]
-        · rw [if_neg h2, if_neg (by simp only [List.length_cons]; omega)]
+        · rw [ite_eq_right h2, ite_eq_right (by simp only [List.length_cons]; omega)]
 
 -- ============================================================================
 -- setBytes / take / drop commutation (for the region split induction)
@@ -116,7 +116,7 @@ theorem setBytes_drop_of_le (ns bs : List (BitVec 8)) (i n : Nat)
       simp only [List.length_cons] at h
       simp only [setBytes_cons]
       rw [ih _ (i + 1) (by omega), List.drop_set,
-        if_pos (show i < n from by omega)]
+        ite_eq_left (show i < n from by omega)]
 
 theorem setBytes_take_of_ge (ns bs : List (BitVec 8)) (i n : Nat)
     (h : n ≤ i) :
@@ -136,7 +136,7 @@ theorem setBytes_drop_of_ge (ns bs : List (BitVec 8)) (i n : Nat)
   | cons b rest ih =>
       simp only [setBytes_cons]
       rw [ih _ (i + 1) (by omega), List.drop_set,
-        if_neg (show ¬ i < n from by omega),
+        ite_eq_right (show ¬ i < n from by omega),
         show i + 1 - n = i - n + 1 from by omega]
 
 -- ============================================================================
@@ -217,15 +217,15 @@ theorem packBytes_setBytes_halfword (chunk : List (BitVec 8)) (r : Nat)
   obtain ⟨m, rfl⟩ := hr2
   rw [show 2 * m / 2 = m from by omega]
   by_cases h0 : j = 2 * m
-  · rw [if_pos h0, if_pos (by simp only [length_halfwordBytes]; omega)]
+  · rw [ite_eq_left h0, ite_eq_left (by simp only [length_halfwordBytes]; omega)]
     subst h0
     simp [halfwordBytes, getByteAt]
-  · rw [if_neg h0]
+  · rw [ite_eq_right h0]
     by_cases h1 : j = 2 * m + 1
-    · rw [if_pos h1, if_pos (by simp only [length_halfwordBytes]; omega)]
+    · rw [ite_eq_left h1, ite_eq_left (by simp only [length_halfwordBytes]; omega)]
       subst h1
       simp [halfwordBytes, getByteAt]
-    · rw [if_neg h1, if_neg (by simp only [length_halfwordBytes]; omega),
+    · rw [ite_eq_right h1, ite_eq_right (by simp only [length_halfwordBytes]; omega),
         extractByte_packBytes_total _ j hj]
 
 /-- **`replaceWord32` of a packed dword = packing with the payload spliced.** -/
@@ -243,25 +243,25 @@ theorem packBytes_setBytes_word32 (chunk : List (BitVec 8)) (r : Nat)
   obtain ⟨m, rfl⟩ := hr4
   rw [show 4 * m / 4 = m from by omega]
   by_cases h0 : j = 4 * m
-  · rw [if_pos h0, if_pos (by simp only [length_word32Bytes]; omega)]
+  · rw [ite_eq_left h0, ite_eq_left (by simp only [length_word32Bytes]; omega)]
     subst h0
     simp [word32Bytes, getByteAt]
-  · rw [if_neg h0]
+  · rw [ite_eq_right h0]
     by_cases h1 : j = 4 * m + 1
-    · rw [if_pos h1, if_pos (by simp only [length_word32Bytes]; omega)]
+    · rw [ite_eq_left h1, ite_eq_left (by simp only [length_word32Bytes]; omega)]
       subst h1
       simp [word32Bytes, getByteAt]
-    · rw [if_neg h1]
+    · rw [ite_eq_right h1]
       by_cases h2 : j = 4 * m + 2
-      · rw [if_pos h2, if_pos (by simp only [length_word32Bytes]; omega)]
+      · rw [ite_eq_left h2, ite_eq_left (by simp only [length_word32Bytes]; omega)]
         subst h2
         simp [word32Bytes, getByteAt]
-      · rw [if_neg h2]
+      · rw [ite_eq_right h2]
         by_cases h3 : j = 4 * m + 3
-        · rw [if_pos h3, if_pos (by simp only [length_word32Bytes]; omega)]
+        · rw [ite_eq_left h3, ite_eq_left (by simp only [length_word32Bytes]; omega)]
           subst h3
           simp [word32Bytes, getByteAt]
-        · rw [if_neg h3, if_neg (by simp only [length_word32Bytes]; omega),
+        · rw [ite_eq_right h3, ite_eq_right (by simp only [length_word32Bytes]; omega),
             extractByte_packBytes_total _ j hj]
 
 /-- **A stored dword = packing its own payload** (the `SD` core: the whole
@@ -273,7 +273,7 @@ theorem packBytes_setBytes_dword (chunk : List (BitVec 8)) (v : Word)
   intro j hj
   rw [extractByte_packBytes_total _ j hj,
     getByteAt_setBytes _ _ _ _ (by simpa using hlen),
-    if_pos (by simp only [length_dwordBytes]; omega)]
+    ite_eq_left (by simp only [length_dwordBytes]; omega)]
   nat_lt_cases j 8 <;> simp [dwordBytes, getByteAt]
 
 -- ============================================================================
