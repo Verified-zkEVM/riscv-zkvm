@@ -7,13 +7,16 @@
   gate, not part of the published library, so they stay out of the release
   archive. CI builds this module explicitly.
 
-  Each `#guard` fails the build if the decoder drifts. The negative cases are as
+  Each `#guard` fails the build if the decoder drifts. The word-op section also
+  runs each decoded instruction through `execInstrBr`, so it pins the semantics
+  of the RV64 word ops end to end. The negative cases are as
   load-bearing as the positive ones: they pin the reserved word-op encodings and
   the unmodeled CSR forms, so changing either has to be a deliberate edit here
   rather than a silent behaviour change.
 -/
 
 import RiscvZkvm.Interpreter.Decode
+import RiscvZkvm.Rv64.Execution
 
 namespace RiscvZkvm.Interpreter
 
@@ -75,6 +78,65 @@ private def d (w : Nat) : Option Instr := decode (BitVec.ofNat 32 w)
 #guard d 0x0215151B == none   -- slliw a0, a0, 1 with bit 25 set
 #guard d 0x00B5263B == none   -- OP-32, funct3 = 2
 #guard d 0x20B5063B == none   -- OP-32, funct7 = 0x10
+#guard d 0x4215551B == none   -- sraiw a0, a0, 1 with bit 25 set (funct7 = 0x21)
+#guard d 0x02B5163B == none   -- OP-32, funct7 = 0x01, funct3 = 1 (no MULHW)
+#guard d 0x02B5263B == none   -- OP-32, funct7 = 0x01, funct3 = 2
+#guard d 0x02B5363B == none   -- OP-32, funct7 = 0x01, funct3 = 3
+
+-- Decode, then execute: word-op edge cases. `run w x y rd` decodes `w`, runs it
+-- with a0 = x and a1 = y, and reads `rd`. Expected values are hand-computed from
+-- the ISA manual (RV64I §4.2, M §13.2-13.3), not from the model: 32-bit
+-- wrap-around, upper input bits ignored, shift amounts from rs2[4:0], sign
+-- extension of the 32-bit result (including DIVUW/REMUW), division by zero and
+-- the -2^31 / -1 overflow row.
+private def run (w : Nat) (x y : Word) (rd : Reg := .x12) : Option Word := do
+  let i ← d w
+  let s : MachineState :=
+    { regs := fun r => if r == .x10 then x else if r == .x11 then y else 0
+      mem := fun _ => 0, pc := 0 }
+  return (execInstrBr s i).getReg rd
+
+-- ADDW / SUBW
+#guard run 0x00B5063B 0x7FFFFFFF 1 == some 0xFFFFFFFF80000000
+#guard run 0x00B5063B 0x100000001 0xFFFFFFFF00000002 == some 3
+#guard run 0x40B5063B 0 1 == some 0xFFFFFFFFFFFFFFFF
+#guard run 0x40B5063B 0x80000000 1 == some 0x7FFFFFFF
+-- SLLW / SRLW / SRAW: shift amount is rs2[4:0]
+#guard run 0x00B5163B 1 31 == some 0xFFFFFFFF80000000
+#guard run 0x00B5163B 1 33 == some 2
+#guard run 0x00B5163B 1 32 == some 1
+#guard run 0x00B5563B 0x80000000 4 == some 0x08000000
+#guard run 0x00B5563B 0x80000000 31 == some 1
+#guard run 0x00B5563B 0x80000000 0 == some 0xFFFFFFFF80000000
+#guard run 0x40B5563B 0x80000000 4 == some 0xFFFFFFFFF8000000
+#guard run 0x40B5563B 0x80000000 36 == some 0xFFFFFFFFF8000000
+#guard run 0x40B5563B 0x7FFFFFFF 31 == some 0
+-- SLLIW / SRLIW / SRAIW (rd = a0, rs1 = a0)
+#guard run 0x01F5151B 1 0 .x10 == some 0xFFFFFFFF80000000   -- slliw a0, a0, 31
+#guard run 0x01F5551B 0xFFFFFFFF80000000 0 .x10 == some 1   -- srliw a0, a0, 31
+#guard run 0x41F5551B 0x80000000 0 .x10 == some 0xFFFFFFFFFFFFFFFF   -- sraiw a0, a0, 31
+#guard run 0x41F5551B 0x7FFFFFFF 0 .x10 == some 0          -- sraiw a0, a0, 31
+-- MULW
+#guard run 0x02B5063B 0x10000 0x10000 == some 0
+#guard run 0x02B5063B 0x7FFFFFFF 2 == some 0xFFFFFFFFFFFFFFFE
+#guard run 0x02B5063B 0x100000003 5 == some 15
+-- DIVW: x / 0 = -1; -2^31 / -1 = -2^31; rounds toward zero
+#guard run 0x02B5463B 7 0 == some 0xFFFFFFFFFFFFFFFF
+#guard run 0x02B5463B 0x80000000 0xFFFFFFFFFFFFFFFF == some 0xFFFFFFFF80000000
+#guard run 0x02B5463B 0xFFFFFFF9 2 == some 0xFFFFFFFFFFFFFFFD
+#guard run 0x02B5463B 7 0x100000000 == some 0xFFFFFFFFFFFFFFFF   -- rs2[31:0] = 0
+-- DIVUW: x / 0 = 2^32 - 1, sign-extended; a quotient with bit 31 set sign-extends
+#guard run 0x02B5563B 7 0 == some 0xFFFFFFFFFFFFFFFF
+#guard run 0x02B5563B 0x80000000 1 == some 0xFFFFFFFF80000000
+#guard run 0x02B5563B 0xFFFFFFFF 2 == some 0x7FFFFFFF
+-- REMW: x % 0 = x (sign-extended); -2^31 % -1 = 0; sign follows the dividend
+#guard run 0x02B5663B 7 0 == some 7
+#guard run 0x02B5663B 0xFFFFFFF9 0 == some 0xFFFFFFFFFFFFFFF9
+#guard run 0x02B5663B 0x80000000 0xFFFFFFFF == some 0
+#guard run 0x02B5663B 0xFFFFFFF9 2 == some 0xFFFFFFFFFFFFFFFF
+-- REMUW: x % 0 = x (sign-extended)
+#guard run 0x02B5763B 0x80000005 0 == some 0xFFFFFFFF80000005
+#guard run 0x02B5763B 0xFFFFFFFF 0x10 == some 0xF
 
 -- KNOWN GAP: CSR access other than the accelerator form is not modeled.
 -- 0x34202F73 is `csrr t5, mcause`, the second instruction of every riscv-tests
