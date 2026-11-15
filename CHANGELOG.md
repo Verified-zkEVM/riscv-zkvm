@@ -89,9 +89,10 @@ compatibility", and `v0.4.0` is the last release evm-asm builds against.
   It also imposes `MAX_OUTPUT_BYTES = 16 MiB`, which is a deliberate pessimism
   rather than a fact about any zkVM. The extent check cannot bound the size on
   its own: the legacy zone spans ~2 GB, so an in-zone request can still exhaust
-  the host evaluating the non-tail-recursive `readBytes`. Recorded as
-  `docs/validation.md` gap 6, together with the honest fix (a tail-recursive
-  `readBytes`, which would let the cap rise to the zone size).
+  the host evaluating the non-tail-recursive `readBytes`. Recorded in
+  `docs/validation.md`'s known gaps ("The output syscalls are capped"),
+  together with the honest fix (a tail-recursive `readBytes`, which would let
+  the cap rise to the zone size).
 
   Both predicates live in `Execution.lean` rather than beside the other access
   predicates in `Word.lean`, so that the memory map stays byte-identical to its
@@ -282,7 +283,8 @@ relocation gate — see the last item.
   for Sail: nothing under `RiscvZkvm/Sail*` imports `RiscvZkvm.Rv64`, so
   `riscv-zkvm-run`'s import closure is 14 modules with no Sail in it.
 
-- **Known limitation**, recorded as `docs/validation.md` gap 5: the memory map
+- **Known limitation**, recorded in `docs/validation.md`'s known gaps ("The
+  `sp1` backend models SP1's precompile ABI"): the memory map
   is unchanged, so `--backend sp1` runs SP1-ABI guests laid out for *this*
   model's map. It cannot run an ELF from the SP1 toolchain, which links code and
   data above `0x78000000` where `isValidMemAddr` ends.

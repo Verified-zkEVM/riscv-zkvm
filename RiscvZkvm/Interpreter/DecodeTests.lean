@@ -134,9 +134,10 @@ private def run (w : Nat) (x y : Word) (rd : Reg := .x12) : Option Word := do
 #guard run 0x02B5663B 0xFFFFFFF9 0 == some 0xFFFFFFFFFFFFFFF9
 #guard run 0x02B5663B 0x80000000 0xFFFFFFFF == some 0
 #guard run 0x02B5663B 0xFFFFFFF9 2 == some 0xFFFFFFFFFFFFFFFF
--- REMUW: x % 0 = x (sign-extended)
+-- REMUW: x % 0 = x (sign-extended); a remainder with bit 31 set sign-extends
 #guard run 0x02B5763B 0x80000005 0 == some 0xFFFFFFFF80000005
 #guard run 0x02B5763B 0xFFFFFFFF 0x10 == some 0xF
+#guard run 0x02B5763B 0xFFFFFFFE 0xFFFFFFFF == some 0xFFFFFFFFFFFFFFFE
 
 -- KNOWN GAP: CSR access other than the accelerator form is not modeled.
 -- 0x34202F73 is `csrr t5, mcause`, the second instruction of every riscv-tests
