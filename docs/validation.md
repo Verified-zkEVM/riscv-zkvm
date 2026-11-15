@@ -98,7 +98,7 @@ second set of instruction semantics. See `RiscvZkvm/Interpreter/State.lean`.
 
 ```bash
 lake build riscv-zkvm-run
-scripts/run-interpreter-tests.sh      # hand-assembled fixtures, 7 cases
+scripts/run-interpreter-tests.sh      # hand-assembled fixtures, 28 cases
 ```
 
 ## Known gaps
