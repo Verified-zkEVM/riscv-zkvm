@@ -8,7 +8,7 @@ default, and SP1). It publishes four things:
 |---|---|
 | `RiscvZkvm.Sail` | Lean extraction of the official [`riscv/sail-riscv`](https://github.com/riscv/sail-riscv) specification — **generated**, not hand-maintained |
 | `RiscvZkvm.Rv64` | a hand-written, computable RV64IM machine model (`Instr`, `MachineState`, `step`) |
-| `RiscvZkvm.Rv64.SailEquiv` | the tie between them: 64 per-instruction `*_sail_equiv` theorems plus step/run simulation |
+| `RiscvZkvm.Rv64.SailEquiv` | the tie between them: 64 per-instruction `*_sail_equiv` theorems (72 with the step-level variants for the 8 branches and jumps) plus step/run simulation |
 | `RiscvZkvm.Rv64.Logic` | the program logic: separation logic over `MachineState`, the CPS specification layer, a weakest-precondition framework, and the symbolic-execution tactics that drive them |
 
 plus `RiscvZkvm.Interpreter` and the `riscv-zkvm-run` CLI, which execute the

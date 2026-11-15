@@ -2,6 +2,8 @@
 
 ## Unreleased — the remaining RV64 word ops, tied to Sail
 
+**Breaking**, in the same release as the `sp1-backend` merge below:
+
 - **Nine new `Instr` constructors:** `ADDW SLLW SRAW SRAIW MULW DIVW DIVUW REMW REMUW`.
   With the four from `sp1-backend`, the RV64IM word-op family is complete.
 - **Sail equivalence for all thirteen**, including `SUBW SRLW SLLIW SRLIW`,
@@ -17,8 +19,8 @@ v0.4.0, are that branch's history. **Breaking** against v0.4.0:
 
 - **Four new `Instr` constructors**, `SUBW`, `SRLW`, `SLLIW` and `SRLIW`, which a
   real SP1 guest needs. Exhaustive matches over `Instr` downstream must handle
-  them. They have no Sail equivalence yet: `SailEquiv/StepSim.lean` marks them
-  `no_sim`.
+  them. The section above ties them to Sail; on the `sp1-backend` branch they
+  were `no_sim`.
 - **`step` range-checks the two output syscalls** for every backend: `WRITE` to
   fd 13 and `write_output` return `none` when their buffer leaves the memory map
   or exceeds `MAX_OUTPUT_BYTES` (16 MiB), instead of reading it.

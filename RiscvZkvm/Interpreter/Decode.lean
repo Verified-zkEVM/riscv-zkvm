@@ -63,8 +63,8 @@ end Fields
 /-- Decode one 32-bit RV64IM encoding.
 
     `none` means "this repository's `Instr` does not model that encoding" — it
-    covers both genuinely invalid words and the known word-op gap above. Callers
-    must treat `none` as a trap, never as a no-op. -/
+    covers genuinely invalid words, reserved forms and encodings outside the
+    modeled subset. Callers must treat `none` as a trap, never as a no-op. -/
 def decode (w : BitVec 32) : Option Instr :=
   let opcode := (w.extractLsb' 0 7).toNat
   let rd     := regOfBits (w.extractLsb' 7 5)

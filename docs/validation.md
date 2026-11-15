@@ -80,7 +80,8 @@ and Lean emulators.
 `RiscvZkvm.Rv64` is a hand-written, computable RV64IM machine model
 (`Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`). `RiscvZkvm.Rv64.SailEquiv`
 ties it to the generated extraction by 64 per-instruction `*_sail_equiv`
-theorems plus the consolidated `sailStep_run_sim` / `sailStepN_run_sim`. Both
+theorems (72 with the step-level variants for the 8 branches and jumps) plus
+the consolidated `sailStep_run_sim` / `sailStepN_run_sim`. Both
 were relocated here from EvmAsm, where they lived under `EvmAsm.Rv64`.
 
 `RiscvZkvm.Rv64.Logic` is the program logic built on that model: separation
@@ -220,7 +221,7 @@ Two CI gates keep it that way:
   `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
   `bv_decide` fails the build rather than silently widening the base.
 * `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
-  environment (3705 declarations today) and fails on any axiom outside the table
+  environment (3870 declarations today) and fails on any axiom outside the table
   above, including `sorryAx`.
 
 The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the

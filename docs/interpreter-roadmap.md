@@ -12,7 +12,7 @@ moved here instead:
 | Library | Contents |
 |---|---|
 | `RiscvZkvm.Rv64` | `Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`, the ZisK accelerator CSR semantics, and the optional `Backend` / `stepOn` / SP1 accelerator layer |
-| `RiscvZkvm.Rv64.SailEquiv` | 51 per-instruction `*_sail_equiv` theorems, `sailStep_run_sim`, `sailStepN_run_sim` |
+| `RiscvZkvm.Rv64.SailEquiv` | 64 per-instruction `*_sail_equiv` theorems (72 with the 8 branch and jump step variants), `sailStep_run_sim`, `sailStepN_run_sim` |
 | `RiscvZkvm.Interpreter` | instruction decode, ELF64 loading, executable state, fuel-limited driver |
 | `riscv-zkvm-run` | the CLI |
 
