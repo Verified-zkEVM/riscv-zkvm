@@ -12,7 +12,7 @@ moved here instead:
 | Library | Contents |
 |---|---|
 | `RiscvZkvm.Rv64` | `Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`, the ZisK accelerator CSR semantics, and the optional `Backend` / `stepOn` / SP1 accelerator layer |
-| `RiscvZkvm.Rv64.SailEquiv` | 51 per-instruction `*_sail_equiv` theorems, `sailStep_run_sim`, `sailStepN_run_sim` |
+| `RiscvZkvm.Rv64.SailEquiv` | 64 per-instruction `*_sail_equiv` theorems (72 with the 8 branch and jump step variants), `sailStep_run_sim`, `sailStepN_run_sim` |
 | `RiscvZkvm.Interpreter` | instruction decode, ELF64 loading, executable state, fuel-limited driver |
 | `riscv-zkvm-run` | the CLI |
 
@@ -38,22 +38,7 @@ are closed, interpreter results are evidence about the executable path only.
    `SailEquiv.InstrMap`'s existing `toSailInstr?` / `fromSailInstr?` bridge.
    This cannot be tested — `encdec_backwards` is `noncomputable` — so it has to
    be a theorem.
-3. **Close the RV64 word-op gap.** Add `ADDW SUBW SLLW SRLW SRAW SLLIW SRLIW
-   SRAIW MULW DIVW DIVUW REMW REMUW` to `Instr`, their semantics, decoder arms,
-   and `*_sail_equiv` lemmas. Additive to `Instr`, so it does not disturb
-   existing proofs — but it does trip EvmAsm's
-   `scripts/check-roundtrip-coverage.sh` ratchet, which wants a round-trip guard
-   per constructor.
-
-   One measurement, from a real SP1 guest (41,783 instructions) reported on
-   PR #10: 739 unmodelled words, 1.8% of the image, spanning **only four** of
-   the thirteen encodings — `SRLIW` (715), `SUBW` (19, eight of them `negw`),
-   `SLLIW` (1), `SRLW` (1). No `ADDW`, `MULW`, `DIVW` or `REMW` at all. So a
-   staged change covering `SRLIW SUBW SLLIW SRLW` would unblock a real consumer
-   at four constructors rather than thirteen, if the ratchet cost ever makes
-   the full set unattractive. One data point, not a distribution.
-
-   Relatedly: `unimp` (`0xc0001073`) appears at panic landing pads, and because
+3. **Explicit `ILLEGAL` constructor** (optional). `unimp` (`0xc0001073`) appears at panic landing pads, and because
    `Program = List Instr` has no representation for a word the decoder rejects,
    any function containing one is unemittable as a `Program` at all. A consumer
    can map it to `.EBREAK` downstream — both trap, and the instruction count is

@@ -7,13 +7,14 @@
 
   ## Scope (tiers)
 
-  The 49 `Instr` constructors that `toSailInstr?` maps (everything except the pseudo
+  The 62 `Instr` constructors that `toSailInstr?` maps (everything except the pseudo
   `MV`/`LI`/`NOP` and the ZisK accelerator call `CSRS`, which map to `none`) split by
   the preconditions their equivalence needs:
 
-  * **Unconditional (29)** — ALU (`ADD … SLTU`, `LUI`, `ADDIW`, `MUL`), immediate
-    (`ADDI … SLTIU`), shift-immediate (`SLLI`/`SRLI`/`SRAI`), and M-extension
-    (`MULH … REMU`). These follow from `StateRel` alone;
+  * **Unconditional (42)** — ALU (`ADD … SLTU`, `LUI`, `ADDIW`, `MUL`), immediate
+    (`ADDI … SLTIU`), shift-immediate (`SLLI`/`SRLI`/`SRAI`), M-extension
+    (`MULH … REMU`), and the RV64 word ops (`ADDW … SRAIW`, `MULW … REMUW`).
+    These follow from `StateRel` alone;
     `step_execute_sail_sim_uncond` covers exactly this tier.
   * **Control-flow (9)** — `AUIPC`, the six conditional branches, `JAL`, `JALR`.
     Need PC/`nextPC`/`misa` agreement and jump-target alignment (per-instruction
@@ -24,7 +25,7 @@
     `VmemReductionLoads.lean` / `VmemReductionStores.lean`).
 
   The full theorem `step_execute_sail_sim` (bottom of this file) already folds
-  **all 49** in: the strengthened invariant exists — it is `StateRelPC`
+  **all 62** in: the strengthened invariant exists — it is `StateRelPC`
   (registers + memory + committed PC) — and the per-instruction facts are
   packaged as `instrSideCond`. Loads no longer carry one hypothesis per accessed
   byte: `instrSideCond` states a single `BytesPresent` predicate, dischargeable
@@ -61,12 +62,6 @@ namespace RiscvZkvm.Rv64
     need PC/CSR agreement and jump-target alignment). -/
 def Instr.simulableUncond : Instr → Bool
   | .ECALL | .EBREAK | .FENCE | .MV .. | .LI .. | .NOP | .CSRS .. => false
-  -- The four *W ops are modeled and decoded, but not mapped in `toSailInstr?`,
-  -- so they sit outside the Sail bridge exactly like MV/LI/NOP. Both of these
-  -- predicates are BLACKLISTS ending `| _ => true`: omitting a new constructor
-  -- here silently claims Sail coverage the bridge does not have, and makes
-  -- `toSailInstr?_isSome_of_simulable` (StepRun.lean) a false statement.
-  | .SUBW .. | .SRLW .. | .SLLIW .. | .SRLIW .. => false
   | .LD .. | .LW .. | .LWU .. | .LB .. | .LBU .. | .LH .. | .LHU .. => false
   | .SD .. | .SW .. | .SB .. | .SH .. => false
   | .AUIPC .. => false
@@ -86,8 +81,6 @@ def Instr.simulableUncond : Instr → Bool
     seed source out of the equivalence's axioms. -/
 def Instr.simulable : Instr → Bool
   | .ECALL | .EBREAK | .FENCE | .MV .. | .LI .. | .NOP | .CSRS .. => false
-  -- See the blacklist note on `simulableUncond`.
-  | .SUBW .. | .SRLW .. | .SLLIW .. | .SRLIW .. => false
   | _ => true
 
 namespace SailEquiv
@@ -252,7 +245,7 @@ local macro "no_sim" : tactic =>
     bridged SAIL instruction `si = toSailInstr? i` retires successfully and lands in a
     state related (by `StateRel`) to the toy model's `execInstrBr` result, preserving
     `nextPC` agreement (the per-instruction lemmas thread `nextPC = pc + 4` through, so
-    the consolidated form does too). One object subsuming the 29 unconditional
+    the consolidated form does too). One object subsuming the 42 unconditional
     per-instruction `*_sail_equiv` lemmas. -/
 theorem step_execute_sail_sim_uncond
     (sRv : MachineState) (sSail : SailState) (hrel : StateRel sRv sSail)
@@ -286,10 +279,6 @@ theorem step_execute_sail_sim_uncond
   | SRLI _ _ _   => sim_step srli_sail_equiv
   | SRAI _ _ _   => sim_step srai_sail_equiv
   | LUI _ _      => sim_step lui_sail_equiv
-  | SUBW _ _ _   => no_sim
-  | SRLW _ _ _   => no_sim
-  | SLLIW _ _ _  => no_sim
-  | SRLIW _ _ _  => no_sim
   | AUIPC _ _    => no_sim
   | LD _ _ _     => no_sim
   | SD _ _ _     => no_sim
@@ -315,6 +304,19 @@ theorem step_execute_sail_sim_uncond
   | NOP          => no_sim
   | CSRS _ _     => no_sim
   | ADDIW _ _ _  => sim_step addiw_sail_equiv
+  | ADDW _ _ _   => sim_step addw_sail_equiv
+  | SUBW _ _ _  => sim_step subw_sail_equiv
+  | SLLW _ _ _  => sim_step sllw_sail_equiv
+  | SRLW _ _ _  => sim_step srlw_sail_equiv
+  | SRAW _ _ _  => sim_step sraw_sail_equiv
+  | SLLIW _ _ _ => sim_step slliw_sail_equiv
+  | SRLIW _ _ _ => sim_step srliw_sail_equiv
+  | SRAIW _ _ _ => sim_step sraiw_sail_equiv
+  | MULW _ _ _  => sim_step mulw_sail_equiv
+  | DIVW _ _ _  => sim_step divw_sail_equiv
+  | DIVUW _ _ _ => sim_step divuw_sail_equiv
+  | REMW _ _ _  => sim_step remw_sail_equiv
+  | REMUW _ _ _ => sim_step remuw_sail_equiv
   | ECALL        => no_sim
   | FENCE        => no_sim
   | EBREAK       => no_sim
@@ -387,6 +389,19 @@ theorem step_execute_sail_sim
   | SRAI _ _ _   => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
   | LUI _ _      => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
   | ADDIW _ _ _  => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | ADDW _ _ _   => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | SUBW _ _ _  => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | SLLW _ _ _  => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | SRLW _ _ _  => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | SRAW _ _ _  => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | SLLIW _ _ _ => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | SRLIW _ _ _ => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | SRAIW _ _ _ => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | MULW _ _ _  => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | DIVW _ _ _  => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | DIVUW _ _ _ => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | REMW _ _ _  => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
+  | REMUW _ _ _ => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
   | MUL _ _ _    => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
   | MULH _ _ _   => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
   | MULHSU _ _ _ => exact step_execute_sail_sim_of_uncond sRv sSail hrelpc.toStateRel h_nextpc _ _ h (by simp [Instr.simulableUncond])
@@ -587,14 +602,6 @@ theorem step_execute_sail_sim
           refine ⟨sSail', hpair.left, hpair.right.left, ?_, hpair.right.right.right⟩
           rw [hpair.right.right.left, h_nextpc]
           simp [execInstrBr, MachineState.setPC]
-  | SUBW _ _ _ =>
-      exact absurd hsim (by simp only [Instr.simulable]; decide)
-  | SRLW _ _ _ =>
-      exact absurd hsim (by simp only [Instr.simulable]; decide)
-  | SLLIW _ _ _ =>
-      exact absurd hsim (by simp only [Instr.simulable]; decide)
-  | SRLIW _ _ _ =>
-      exact absurd hsim (by simp only [Instr.simulable]; decide)
   | MV _ _ =>
       exact absurd hsim (by simp only [Instr.simulable]; decide)
   | LI _ _ =>

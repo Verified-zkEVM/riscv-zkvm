@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — the remaining RV64 word ops, tied to Sail
+
+**Breaking**, in the same release as the `sp1-backend` merge below:
+
+- **Nine new `Instr` constructors:** `ADDW SLLW SRAW SRAIW MULW DIVW DIVUW REMW REMUW`.
+  With the four from `sp1-backend`, the RV64IM word-op family is complete.
+- **Sail equivalence for all thirteen**, including `SUBW SRLW SLLIW SRLIW`,
+  which were `no_sim`. `toSailInstr?` maps them to `RTYPEW`, `SHIFTIWOP`,
+  `MULW`, `DIVW` and `REMW`; `simulable`/`simulableUncond` no longer exclude them.
+- Decoder arms for all of OP-32 and OP-IMM-32; `sraiw` now executes.
+- Ported from #13 onto the `sp1-backend` merge.
+
 ## Unreleased — the SP1 backend on `main`; evm-asm compatibility retired
 
 This merges branch `sp1-backend` into `main`. The sections below, down to
@@ -7,8 +19,8 @@ v0.4.0, are that branch's history. **Breaking** against v0.4.0:
 
 - **Four new `Instr` constructors**, `SUBW`, `SRLW`, `SLLIW` and `SRLIW`, which a
   real SP1 guest needs. Exhaustive matches over `Instr` downstream must handle
-  them. They have no Sail equivalence yet: `SailEquiv/StepSim.lean` marks them
-  `no_sim`.
+  them. The section above ties them to Sail; on the `sp1-backend` branch they
+  were `no_sim`.
 - **`step` range-checks the two output syscalls** for every backend: `WRITE` to
   fd 13 and `write_output` return `none` when their buffer leaves the memory map
   or exceeds `MAX_OUTPUT_BYTES` (16 MiB), instead of reading it.
@@ -77,9 +89,10 @@ compatibility", and `v0.4.0` is the last release evm-asm builds against.
   It also imposes `MAX_OUTPUT_BYTES = 16 MiB`, which is a deliberate pessimism
   rather than a fact about any zkVM. The extent check cannot bound the size on
   its own: the legacy zone spans ~2 GB, so an in-zone request can still exhaust
-  the host evaluating the non-tail-recursive `readBytes`. Recorded as
-  `docs/validation.md` gap 6, together with the honest fix (a tail-recursive
-  `readBytes`, which would let the cap rise to the zone size).
+  the host evaluating the non-tail-recursive `readBytes`. Recorded in
+  `docs/validation.md`'s known gaps ("The output syscalls are capped"),
+  together with the honest fix (a tail-recursive `readBytes`, which would let
+  the cap rise to the zone size).
 
   Both predicates live in `Execution.lean` rather than beside the other access
   predicates in `Word.lean`, so that the memory map stays byte-identical to its
@@ -270,7 +283,8 @@ relocation gate — see the last item.
   for Sail: nothing under `RiscvZkvm/Sail*` imports `RiscvZkvm.Rv64`, so
   `riscv-zkvm-run`'s import closure is 14 modules with no Sail in it.
 
-- **Known limitation**, recorded as `docs/validation.md` gap 5: the memory map
+- **Known limitation**, recorded in `docs/validation.md`'s known gaps ("The
+  `sp1` backend models SP1's precompile ABI"): the memory map
   is unchanged, so `--backend sp1` runs SP1-ABI guests laid out for *this*
   model's map. It cannot run an ELF from the SP1 toolchain, which links code and
   data above `0x78000000` where `isValidMemAddr` ends.

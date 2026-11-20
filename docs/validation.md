@@ -79,8 +79,9 @@ and Lean emulators.
 
 `RiscvZkvm.Rv64` is a hand-written, computable RV64IM machine model
 (`Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`). `RiscvZkvm.Rv64.SailEquiv`
-ties it to the generated extraction by 51 per-instruction `*_sail_equiv`
-theorems plus the consolidated `sailStep_run_sim` / `sailStepN_run_sim`. Both
+ties it to the generated extraction by 64 per-instruction `*_sail_equiv`
+theorems (72 with the step-level variants for the 8 branches and jumps) plus
+the consolidated `sailStep_run_sim` / `sailStepN_run_sim`. Both
 were relocated here from EvmAsm, where they lived under `EvmAsm.Rv64`.
 
 `RiscvZkvm.Rv64.Logic` is the program logic built on that model: separation
@@ -98,7 +99,7 @@ second set of instruction semantics. See `RiscvZkvm/Interpreter/State.lean`.
 
 ```bash
 lake build riscv-zkvm-run
-scripts/run-interpreter-tests.sh      # hand-assembled fixtures, 5 cases
+scripts/run-interpreter-tests.sh      # hand-assembled fixtures, 28 cases
 ```
 
 ## Known gaps
@@ -125,20 +126,14 @@ closing it has to be a deliberate edit.
    **Sail** model (50/50 as of 2026-10-06). The interpreter's own tests use
    hand-assembled fixtures laid out for the zkVM memory map instead.
 
-2. **The RV64 word-op family is absent from `Instr`.** `ADDW SUBW SLLW SRLW SRAW
-   SLLIW SRLIW SRAIW MULW DIVW DIVUW REMW REMUW` — only `ADDIW` is modeled.
-   `decode` returns `none` for them rather than mapping them to something else,
-   and `riscv-zkvm-run` reports "undecodable instruction". This is the same gap
-   EvmAsm records in `docs/riscv-zkvm-compliance.md` §2.7.
-
-3. **`decode` is not tied to Sail.** No theorem relates
+2. **`decode` is not tied to Sail.** No theorem relates
    `RiscvZkvm.Interpreter.decode` to `RiscvZkvm.Sail.Functions.encdec_backwards`,
    and it cannot be checked by testing either: the proof extraction is
    `noncomputable`, so the Sail decoder does not evaluate. This has to become a
    theorem. `RiscvZkvm/Interpreter/DecodeTests.lean` pins the decoder against
    hand-computed encodings in the meantime, which is evidence, not a tie.
 
-4. **`stepExec` is not proved to simulate `step`.** `ExecState.toMachineState`
+3. **`stepExec` is not proved to simulate `step`.** `ExecState.toMachineState`
    states the refinement; nothing proves the hash-map memory and the model's
    function memory stay in step. The construction makes it very likely — the
    semantics *is* `stepOn`, and only the written-address set is hand-written —
@@ -148,7 +143,7 @@ closing it has to be a deliberate edit.
    precompile's writes silently, which is why `sp1keccak` reads its result back
    and compares it against the ZisK path.
 
-5. **The `sp1` backend models SP1's precompile ABI, not SP1.** What is modeled
+4. **The `sp1` backend models SP1's precompile ABI, not SP1.** What is modeled
    is the syscall ids and operand layouts pinned in `sp1-import/`, dispatched to
    the same `Accel.*` functions the ZisK accelerators use — 13 precompiles
    (Keccak-f, the three curves' add/double, the two Fp2 towers). Three things
@@ -184,7 +179,7 @@ closing it has to be a deliberate edit.
      precompiles. The SP1 path has no ISA-conformance evidence behind it, only
      the pin and the cross-backend fixture.
 
-6. **The output syscalls are capped, not merely range checked.** WRITE
+5. **The output syscalls are capped, not merely range checked.** WRITE
    (`t0 = 0x02`, fd 13) and `write_output` (`t0 = 0x10`) read a
    guest-controlled number of bytes, and until now were the only unchecked
    memory accesses in `step`. They now require the whole byte extent to lie in
@@ -204,7 +199,7 @@ closing it has to be a deliberate edit.
    it is worth revisiting if a real guest ever needs it: the honest fix is a
    tail-recursive `readBytes`, which would let the cap rise to the zone size.
 
-Gaps 3 and 4 mean interpreter results are evidence about the executable path.
+Gaps 2 and 3 mean interpreter results are evidence about the executable path.
 They are not, on their own, evidence about the model the `SailEquiv` theorems
 talk about.
 
@@ -226,7 +221,7 @@ Two CI gates keep it that way:
   `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
   `bv_decide` fails the build rather than silently widening the base.
 * `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
-  environment (3705 declarations today) and fails on any axiom outside the table
+  environment (3870 declarations today) and fails on any axiom outside the table
   above, including `sorryAx`.
 
 The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the
