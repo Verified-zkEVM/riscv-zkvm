@@ -81,8 +81,9 @@ and Lean emulators.
 
 `RiscvZkvm.Rv64` is a hand-written, computable RV64IM machine model
 (`Instr`, `MachineState`, `execInstrBr`, `step`, `stepN`). `RiscvZkvm.Rv64.SailEquiv`
-ties it to the generated extraction by 51 per-instruction `*_sail_equiv`
-theorems plus the consolidated `sailStep_run_sim` / `sailStepN_run_sim`. Both
+ties it to the generated extraction by 64 per-instruction `*_sail_equiv`
+theorems (72 with the step-level variants for the 8 branches and jumps) plus
+the consolidated `sailStep_run_sim` / `sailStepN_run_sim`. Both
 were relocated here from EvmAsm, where they lived under `EvmAsm.Rv64`.
 
 `RiscvZkvm.Rv64.Logic` is the program logic built on that model: separation
@@ -100,7 +101,7 @@ second set of instruction semantics. See `RiscvZkvm/Interpreter/State.lean`.
 
 ```bash
 lake build riscv-zkvm-run
-scripts/run-interpreter-tests.sh      # hand-assembled fixtures, 5 cases
+scripts/run-interpreter-tests.sh      # hand-assembled fixtures, 28 cases
 ```
 
 ## Known gaps
@@ -118,34 +119,89 @@ closing it has to be a deliberate edit.
      not something to relax for the sake of a test suite;
    - the second instruction of every image is `csrr t5, mcause`
      (`0x34202f73`). `Instr`'s only CSR form is `CSRS`, the ZisK accelerator
-     call `csrrs x0, csr, rs1`; general M-mode CSR access, `mtvec` setup and
-     `mret` are not modeled at all.
+     call `csrrs x0, csr, rs1` (which the `sp1` backend rejects, SP1 having no
+     CSR instruction); general M-mode CSR access, `mtvec` setup and `mret` are
+     not modeled at all.
 
    ISA-conformance evidence therefore continues to come from
    `scripts/validate-lean-emulator.sh`, which runs those same ELFs against the
    **Sail** model (50/50 as of 2026-10-22). The interpreter's own tests use
    hand-assembled fixtures laid out for the zkVM memory map instead.
 
-2. **The RV64 word-op family is absent from `Instr`.** `ADDW SUBW SLLW SRLW SRAW
-   SLLIW SRLIW SRAIW MULW DIVW DIVUW REMW REMUW` — only `ADDIW` is modeled.
-   `decode` returns `none` for them rather than mapping them to something else,
-   and `riscv-zkvm-run` reports "undecodable instruction". This is the same gap
-   EvmAsm records in `docs/riscv-zkvm-compliance.md` §2.7.
-
-3. **`decode` is not tied to Sail.** No theorem relates
+2. **`decode` is not tied to Sail.** No theorem relates
    `RiscvZkvm.Interpreter.decode` to `RiscvZkvm.Sail.Functions.encdec_backwards`,
    and it cannot be checked by testing either: the proof extraction is
    `noncomputable`, so the Sail decoder does not evaluate. This has to become a
    theorem. `RiscvZkvm/Interpreter/DecodeTests.lean` pins the decoder against
    hand-computed encodings in the meantime, which is evidence, not a tie.
 
-4. **`stepExec` is not proved to simulate `step`.** `ExecState.toMachineState`
+3. **`stepExec` is not proved to simulate `step`.** `ExecState.toMachineState`
    states the refinement; nothing proves the hash-map memory and the model's
    function memory stay in step. The construction makes it very likely — the
-   semantics *is* `step`, and only the written-address set is hand-written — but
-   that is an argument, not a theorem.
+   semantics *is* `stepOn`, and only the written-address set is hand-written —
+   but that is an argument, not a theorem. Note `writtenAddrs` is now
+   backend-dependent: under `sp1` an accelerator arrives as `.ECALL`, so its
+   write set has to be computed there too. Omitting that would drop a
+   precompile's writes silently, which is why `sp1keccak` reads its result back
+   and compares it against the ZisK path.
 
-Gaps 3 and 4 mean interpreter results are evidence about the executable path.
+4. **The `sp1` backend models SP1's precompile ABI, not SP1.** What is modeled
+   is the syscall ids and operand layouts pinned in `sp1-import/`, dispatched to
+   the same `Accel.*` functions the ZisK accelerators use — 13 precompiles
+   (Keccak-f, the three curves' add/double, the two Fp2 towers). Three things
+   are deliberately *not* modeled, and each is a real limitation:
+
+   - **The memory profile is coarser than SP1's.** `isValidMemAddrSp1`
+     (`Rv64/StepOn.lean`) admits any address below `SP1_MAX_MEMORY = 1 <<< 37`,
+     mirroring `zkvm.ld`'s single addressable space. SP1 v6 has real page
+     protection (`MPROTECT`, per-page protection records), so this admits stores
+     SP1 might fault on — the *permissive* direction, which is the unsound one.
+     Misaligned accesses still trap, which is this model's choice and not SP1's.
+     `isValidMemAddr` itself is unchanged and remains the ZisK profile.
+   - **Stores are gated against the `code` map, not an address window.** Under
+     ZisK, `Word.lean`'s excluded text window makes "code is unreachable by
+     stores" structural. Under SP1 no contiguous window carves code out — stack
+     below the image, heap above — so `storeOkSp1` instead asks whether any
+     4-aligned word the access covers holds code. That is a sharper question
+     than any window, and it needs no declared text extent. Loads are
+     deliberately *not* gated this way: reading `.rodata` is legitimate, and is
+     exactly what a real SP1 guest does four instructions in. The obligation
+     this leaves is that `code` actually covers the image's code — which every
+     existing theorem already assumes, and which `Run.load` establishes from the
+     ELF's executable segments.
+   - **Not the whole syscall surface.** `sp1-import/syscall-ids.json` records
+     every id left out and why — SHA-256 because SP1 splits the message
+     schedule from the compression and `Accel.sha256Compress` does both at once;
+     `UINT256_MUL` because the pinned source does not fix its modulus-zero
+     behaviour; decompression and Edwards curves because `Accel` has no modular
+     square root. Every omitted id **traps**, so an unimplemented precompile
+     cannot be mistaken for a no-op.
+   - **Not related to Sail.** `Instr.simulable` already excludes `ECALL` and
+     `CSRS`, so no `*_sail_equiv` theorem says anything about either backend's
+     precompiles. The SP1 path has no ISA-conformance evidence behind it, only
+     the pin and the cross-backend fixture.
+
+5. **The output syscalls are capped, not merely range checked.** WRITE
+   (`t0 = 0x02`, fd 13) and `write_output` (`t0 = 0x10`) read a
+   guest-controlled number of bytes, and until now were the only unchecked
+   memory accesses in `step`. They now require the whole byte extent to lie in
+   one valid zone **and** the count to be at most
+   `MAX_OUTPUT_BYTES = 16 MiB` (`Rv64/Execution.lean`).
+
+   The cap is a **deliberate pessimism**, not a fact about any zkVM: a real host
+   would copy more. It is there because the extent check cannot bound the size
+   on its own — the legacy zone alone spans ~2 GB, so an in-zone request can
+   still be large enough to exhaust the host evaluating the non-tail-recursive
+   `readBytes`. A guest that legitimately needs a larger output must split the
+   call; the model refuses rather than crashing. Both halves are pinned
+   separately by the `wroutbad` (invalid address) and `wroutbig` (in zone, 512
+   MiB) fixtures, and `wroutput` pins that a valid 8-byte call still succeeds.
+
+   This is the one place the model is knowingly *narrower* than the machine, so
+   it is worth revisiting if a real guest ever needs it: the honest fix is a
+   tail-recursive `readBytes`, which would let the cap rise to the zone size.
+
+Gaps 2 and 3 mean interpreter results are evidence about the executable path.
 They are not, on their own, evidence about the model the `SailEquiv` theorems
 talk about.
 
@@ -176,7 +232,7 @@ Two CI gates keep it that way:
   `RiscvZkvm/Sail/**` tree too, so a future Sail backend that starts emitting
   `bv_decide` fails the build rather than silently widening the base.
 * `scripts/check-axioms.sh` — the kernel-truth backstop. It walks the built
-  environment (3498 declarations in the Lean 4.35.0 candidate) and fails on any axiom outside the table
+  environment (3870 declarations today) and fails on any axiom outside the table
   above, including `sorryAx`.
 
 The allowed set lives in `scripts/AxiomSweep.lean` as `allowedAxioms`. It is the

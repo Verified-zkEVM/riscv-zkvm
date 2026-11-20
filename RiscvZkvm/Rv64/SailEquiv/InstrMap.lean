@@ -14,11 +14,14 @@
   - SHIFTIOP: SLLI, SRLI, SRAI
   - UTYPE: LUI, AUIPC
   - ADDIW
+  - RTYPEW: ADDW, SUBW, SLLW, SRLW, SRAW
+  - SHIFTIWOP: SLLIW, SRLIW, SRAIW
   - LOAD / STORE: LD, LW, LWU, LB, LBU, LH, LHU, SD, SW, SB, SH
   - BTYPE: BEQ, BNE, BLT, BGE, BLTU, BGEU
   - JAL, JALR
   - System: ECALL, EBREAK, FENCE
   - M-extension: MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU
+  - RV64M word ops: MULW, DIVW, DIVUW, REMW, REMUW
 
   The pseudo-instruction constructors `.MV`, `.LI`, and `.NOP` are
   intentionally **not** mapped: they re-encode pre-existing real
@@ -217,6 +220,19 @@ def toSailInstr? : Instr → Option SailInstr
   | .LUI rd imm       => some <| instruction.UTYPE (imm, regToRegidx rd, uop.LUI)
   | .AUIPC rd imm     => some <| instruction.UTYPE (imm, regToRegidx rd, uop.AUIPC)
   | .ADDIW rd rs1 imm => some <| instruction.ADDIW (imm, regToRegidx rs1, regToRegidx rd)
+  | .ADDW rd rs1 rs2  => some <| instruction.RTYPEW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.ADDW)
+  | .SUBW rd rs1 rs2  => some <| instruction.RTYPEW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.SUBW)
+  | .SLLW rd rs1 rs2  => some <| instruction.RTYPEW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.SLLW)
+  | .SRLW rd rs1 rs2  => some <| instruction.RTYPEW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.SRLW)
+  | .SRAW rd rs1 rs2  => some <| instruction.RTYPEW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.SRAW)
+  | .SLLIW rd rs1 shamt => some <| instruction.SHIFTIWOP (shamt, regToRegidx rs1, regToRegidx rd, sopw.SLLIW)
+  | .SRLIW rd rs1 shamt => some <| instruction.SHIFTIWOP (shamt, regToRegidx rs1, regToRegidx rd, sopw.SRLIW)
+  | .SRAIW rd rs1 shamt => some <| instruction.SHIFTIWOP (shamt, regToRegidx rs1, regToRegidx rd, sopw.SRAIW)
+  | .MULW rd rs1 rs2  => some <| instruction.MULW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd)
+  | .DIVW rd rs1 rs2  => some <| instruction.DIVW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, false)
+  | .DIVUW rd rs1 rs2 => some <| instruction.DIVW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, true)
+  | .REMW rd rs1 rs2  => some <| instruction.REMW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, false)
+  | .REMUW rd rs1 rs2 => some <| instruction.REMW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, true)
   | .ECALL            => some <| instruction.ECALL ()
   | .FENCE            => some <| instruction.FENCE (0, 0, 0, regToRegidx .x0, regToRegidx .x0)
   | .EBREAK           => some <| instruction.EBREAK ()
@@ -234,6 +250,13 @@ def rtypeToInstr? (rs2 rs1 rd : regidx) : rop → Option Instr
   | rop.SLT  => return .SLT  (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
   | rop.SLTU => return .SLTU (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
 
+def rtypewToInstr? (rs2 rs1 rd : regidx) : ropw → Option Instr
+  | ropw.ADDW => return .ADDW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+  | ropw.SUBW => return .SUBW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+  | ropw.SLLW => return .SLLW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+  | ropw.SRLW => return .SRLW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+  | ropw.SRAW => return .SRAW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+
 def itypeToInstr? (imm : BitVec 12) (rs1 rd : regidx) : iop → Option Instr
   | iop.ADDI  => return .ADDI  (← regidxToReg? rd) (← regidxToReg? rs1) imm
   | iop.ANDI  => return .ANDI  (← regidxToReg? rd) (← regidxToReg? rs1) imm
@@ -246,6 +269,11 @@ def shiftIToInstr? (shamt : BitVec 6) (rs1 rd : regidx) : sop → Option Instr
   | sop.SLLI => return .SLLI (← regidxToReg? rd) (← regidxToReg? rs1) shamt
   | sop.SRLI => return .SRLI (← regidxToReg? rd) (← regidxToReg? rs1) shamt
   | sop.SRAI => return .SRAI (← regidxToReg? rd) (← regidxToReg? rs1) shamt
+
+def shiftIWToInstr? (shamt : BitVec 5) (rs1 rd : regidx) : sopw → Option Instr
+  | sopw.SLLIW => return .SLLIW (← regidxToReg? rd) (← regidxToReg? rs1) shamt
+  | sopw.SRLIW => return .SRLIW (← regidxToReg? rd) (← regidxToReg? rs1) shamt
+  | sopw.SRAIW => return .SRAIW (← regidxToReg? rd) (← regidxToReg? rs1) shamt
 
 def btypeToInstr? (off : BitVec 13) (rs2 rs1 : regidx) : bop → Option Instr
   | bop.BEQ  => return .BEQ  (← regidxToReg? rs1) (← regidxToReg? rs2) off
@@ -318,6 +346,18 @@ def remToInstr? (rs2 rs1 rd : regidx) (isUnsigned : Bool) : Option Instr := do
   else
     return .REM (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
 
+def divwToInstr? (rs2 rs1 rd : regidx) (isUnsigned : Bool) : Option Instr := do
+  if isUnsigned then
+    return .DIVUW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+  else
+    return .DIVW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+
+def remwToInstr? (rs2 rs1 rd : regidx) (isUnsigned : Bool) : Option Instr := do
+  if isUnsigned then
+    return .REMUW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+  else
+    return .REMW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+
 def utypeToInstr? (imm : BitVec 20) (rd : regidx) : uop → Option Instr
   | uop.LUI => return .LUI (← regidxToReg? rd) imm
   | uop.AUIPC => return .AUIPC (← regidxToReg? rd) imm
@@ -337,10 +377,16 @@ def fromSailInstr? : SailInstr → Option Instr
   | instruction.MUL (rs2, rs1, rd, op) => mulToInstr? rs2 rs1 rd op
   | instruction.DIV (rs2, rs1, rd, isUnsigned) => divToInstr? rs2 rs1 rd isUnsigned
   | instruction.REM (rs2, rs1, rd, isUnsigned) => remToInstr? rs2 rs1 rd isUnsigned
+  | instruction.MULW (rs2, rs1, rd) =>
+      return .MULW (← regidxToReg? rd) (← regidxToReg? rs1) (← regidxToReg? rs2)
+  | instruction.DIVW (rs2, rs1, rd, isUnsigned) => divwToInstr? rs2 rs1 rd isUnsigned
+  | instruction.REMW (rs2, rs1, rd, isUnsigned) => remwToInstr? rs2 rs1 rd isUnsigned
   | instruction.ADDIW (imm, rs1, rd) => return .ADDIW (← regidxToReg? rd) (← regidxToReg? rs1) imm
   | instruction.RTYPE (rs2, rs1, rd, op) => rtypeToInstr? rs2 rs1 rd op
+  | instruction.RTYPEW (rs2, rs1, rd, op) => rtypewToInstr? rs2 rs1 rd op
   | instruction.ITYPE (imm, rs1, rd, op) => itypeToInstr? imm rs1 rd op
   | instruction.SHIFTIOP (shamt, rs1, rd, op) => shiftIToInstr? shamt rs1 rd op
+  | instruction.SHIFTIWOP (shamt, rs1, rd, op) => shiftIWToInstr? shamt rs1 rd op
   | _ => none
 
 theorem fromSailInstr?_toSailInstr?_of_some
@@ -349,9 +395,9 @@ theorem fromSailInstr?_toSailInstr?_of_some
   cases i <;> simp [toSailInstr?] at h
   all_goals
     cases h
-    simp [fromSailInstr?, rtypeToInstr?, itypeToInstr?, shiftIToInstr?,
-      btypeToInstr?, loadToInstr?, storeToInstr?, mulToInstr?, divToInstr?,
-      remToInstr?, utypeToInstr?, sailMulOp, sailMulhOp, sailMulhsuOp, sailMulhuOp,
+    simp [fromSailInstr?, rtypeToInstr?, rtypewToInstr?, itypeToInstr?, shiftIToInstr?,
+      shiftIWToInstr?, btypeToInstr?, loadToInstr?, storeToInstr?, mulToInstr?, divToInstr?,
+      remToInstr?, divwToInstr?, remwToInstr?, utypeToInstr?, sailMulOp, sailMulhOp, sailMulhsuOp, sailMulhuOp,
       regidxToReg?_regToRegidx]
 
 theorem fromSailInstr?_toSailInstr?_ADD (rd rs1 rs2 : Reg) :
@@ -467,6 +513,90 @@ theorem fromSailInstr?_toSailInstr?_ADDIW
     fromSailInstr? (instruction.ADDIW (imm, regToRegidx rs1, regToRegidx rd)) =
     some (.ADDIW rd rs1 imm) := by
   simp [fromSailInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_ADDW (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.RTYPEW
+      (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.ADDW)) =
+    some (.ADDW rd rs1 rs2) := by
+  simp [fromSailInstr?, rtypewToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_SUBW (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.RTYPEW
+      (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.SUBW)) =
+    some (.SUBW rd rs1 rs2) := by
+  simp [fromSailInstr?, rtypewToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_SLLW (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.RTYPEW
+      (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.SLLW)) =
+    some (.SLLW rd rs1 rs2) := by
+  simp [fromSailInstr?, rtypewToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_SRLW (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.RTYPEW
+      (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.SRLW)) =
+    some (.SRLW rd rs1 rs2) := by
+  simp [fromSailInstr?, rtypewToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_SRAW (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.RTYPEW
+      (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, ropw.SRAW)) =
+    some (.SRAW rd rs1 rs2) := by
+  simp [fromSailInstr?, rtypewToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_SLLIW
+    (rd rs1 : Reg) (shamt : BitVec 5) :
+    fromSailInstr? (instruction.SHIFTIWOP
+      (shamt, regToRegidx rs1, regToRegidx rd, sopw.SLLIW)) =
+    some (.SLLIW rd rs1 shamt) := by
+  simp [fromSailInstr?, shiftIWToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_SRLIW
+    (rd rs1 : Reg) (shamt : BitVec 5) :
+    fromSailInstr? (instruction.SHIFTIWOP
+      (shamt, regToRegidx rs1, regToRegidx rd, sopw.SRLIW)) =
+    some (.SRLIW rd rs1 shamt) := by
+  simp [fromSailInstr?, shiftIWToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_SRAIW
+    (rd rs1 : Reg) (shamt : BitVec 5) :
+    fromSailInstr? (instruction.SHIFTIWOP
+      (shamt, regToRegidx rs1, regToRegidx rd, sopw.SRAIW)) =
+    some (.SRAIW rd rs1 shamt) := by
+  simp [fromSailInstr?, shiftIWToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_MULW (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.MULW (regToRegidx rs2, regToRegidx rs1, regToRegidx rd)) =
+    some (.MULW rd rs1 rs2) := by
+  simp [fromSailInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_DIVW
+    (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.DIVW
+      (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, false)) =
+    some (.DIVW rd rs1 rs2) := by
+  simp [fromSailInstr?, divwToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_DIVUW
+    (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.DIVW
+      (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, true)) =
+    some (.DIVUW rd rs1 rs2) := by
+  simp [fromSailInstr?, divwToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_REMW
+    (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.REMW
+      (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, false)) =
+    some (.REMW rd rs1 rs2) := by
+  simp [fromSailInstr?, remwToInstr?, regidxToReg?_regToRegidx]
+
+theorem fromSailInstr?_toSailInstr?_REMUW
+    (rd rs1 rs2 : Reg) :
+    fromSailInstr? (instruction.REMW
+      (regToRegidx rs2, regToRegidx rs1, regToRegidx rd, true)) =
+    some (.REMUW rd rs1 rs2) := by
+  simp [fromSailInstr?, remwToInstr?, regidxToReg?_regToRegidx]
 
 theorem fromSailInstr?_toSailInstr?_ECALL :
     fromSailInstr? (instruction.ECALL ()) = some .ECALL := by

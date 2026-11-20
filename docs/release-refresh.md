@@ -104,8 +104,8 @@ signal exit is not another extraction defect.
 
 The same comparison remains in upstream master. A reduced Sail-to-Lean control
 fails with equality and compiles with constructor matching. The minimal source
-fix is [upstream draft PR #2053](https://github.com/riscv/sail-riscv/pull/2053);
-full patched-model and architectural checks remain pending. No generated Lean
+fix was proposed upstream in draft PR #2053, which was closed. Full patched-model and
+architectural checks remain pending. No generated Lean
 was edited.
 
 The model-0.13.1 trial retains its exact JSON and eight modules. Both full
@@ -129,7 +129,8 @@ configuration are unchanged.
 ## Repository PRs and compatibility
 
 PR #9 and the issue #14 alias-register fix remain included. PR #13's thirteen
-word-operation constructors remain deferred as requested.
+word-operation constructors were deferred at the time; #99 later ported them onto the
+SP1 backend, and v0.5.0 includes them.
 [PR #18](https://github.com/Verified-zkEVM/riscv-zkvm/pull/18), a separate
 hint-interface/CLI feature, now has
 [passing repository CI](https://github.com/Verified-zkEVM/riscv-zkvm/actions/runs/39813175232)
@@ -221,7 +222,7 @@ zkVM conformance.
 
 | Area | Current implementation and remaining obligations |
 | --- | --- |
-| RISC-V target | Target remains RV64IM + Zicclsm, LP64, little endian, machine mode, flat memory, static ELF, without C/F/D. The hand model lacks the 13 word operations in deferred PR #13. The generated Sail configuration retains broader register/extension metadata; it is not the hand model's supported-instruction list. |
+| RISC-V target | Target remains RV64IM + Zicclsm, LP64, little endian, machine mode, flat memory, static ELF, without C/F/D. The hand model has the 13 RV64 word operations (#99). The generated Sail configuration retains broader register/extension metadata; it is not the hand model's supported-instruction list. |
 | Misaligned data | The hand model requires aligned halfword/word/dword accesses and traps otherwise. Zicclsm requires transparent main-memory handling and unaligned-access observability. This remains a conformance gap; changing it requires a separately reviewed machine/proof/downstream migration. |
 | Instruction-address alignment | The standard requires abnormal termination when the ISA raises instruction-address-misaligned. `CodeMem` is an arbitrary map, `step` has no universal PC-alignment guard, and the ELF loader does not validate entry alignment. Missing code may stop execution, but is not a proof of the required exception semantics for all states. |
 | Termination | SP1/ZisK HALT/ECALL conventions remain preserved. Interpreter reporting of `a0` is a host convention; the model does not prove the standard's zero/nonzero `main` return contract or Type 1/Type 2 verifier soundness. Those are end-to-end runtime/verifier obligations. |

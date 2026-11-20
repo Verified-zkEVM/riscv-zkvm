@@ -141,6 +141,34 @@ def rv64_remu (a b : Word) : Word :=
   else
     a % b
 
+/-- RV64IM DIVW: signed division of the low 32 bits, sign-extended to 64 bits.
+    Division by zero returns -1; the overflow case (-2^31 / -1) returns -2^31. -/
+def rv64_divw (a b : Word) : Word :=
+  let a32 : BitVec 32 := a.truncate 32
+  let b32 : BitVec 32 := b.truncate 32
+  (if b32 == 0#32 then BitVec.allOnes 32 else BitVec.sdiv a32 b32).signExtend 64
+
+/-- RV64IM DIVUW: unsigned division of the low 32 bits, sign-extended to 64 bits.
+    Division by zero returns 2^32-1 (sign-extended: -1). -/
+def rv64_divuw (a b : Word) : Word :=
+  let a32 : BitVec 32 := a.truncate 32
+  let b32 : BitVec 32 := b.truncate 32
+  (if b32 == 0#32 then BitVec.allOnes 32 else a32 / b32).signExtend 64
+
+/-- RV64IM REMW: signed remainder of the low 32 bits, sign-extended to 64 bits.
+    Remainder by zero returns the dividend. -/
+def rv64_remw (a b : Word) : Word :=
+  let a32 : BitVec 32 := a.truncate 32
+  let b32 : BitVec 32 := b.truncate 32
+  (if b32 == 0#32 then a32 else BitVec.srem a32 b32).signExtend 64
+
+/-- RV64IM REMUW: unsigned remainder of the low 32 bits, sign-extended to 64 bits.
+    Remainder by zero returns the dividend. -/
+def rv64_remuw (a b : Word) : Word :=
+  let a32 : BitVec 32 := a.truncate 32
+  let b32 : BitVec 32 := b.truncate 32
+  (if b32 == 0#32 then a32 else a32 % b32).signExtend 64
+
 /-- MULH: signed × signed, upper 64 bits. Uses 128-bit intermediate. -/
 def rv64_mulh (a b : Word) : Word :=
   let a128 : BitVec 128 := a.signExtend 128
@@ -259,6 +287,28 @@ def execInstr (s : MachineState) (i : Instr) : MachineState :=
         -- ADDIW: word-size add, result sign-extended to 64 bits
         let sum32 : BitVec 32 := ((s.getReg rs1).truncate 32) + ((signExtend12 imm).truncate 32)
         s.setReg rd (sum32.signExtend 64)
+    | .ADDW rd rs1 rs2 =>
+        -- ADDW: word-size add, result sign-extended to 64 bits
+        let sum32 : BitVec 32 := ((s.getReg rs1).truncate 32) + ((s.getReg rs2).truncate 32)
+        s.setReg rd (sum32.signExtend 64)
+    | .SUBW rd rs1 rs2 =>
+        let diff32 : BitVec 32 := ((s.getReg rs1).truncate 32) - ((s.getReg rs2).truncate 32)
+        s.setReg rd (diff32.signExtend 64)
+    | .SLLW rd rs1 rs2 =>
+        let shamt := (s.getReg rs2).toNat % 32
+        s.setReg rd ((((s.getReg rs1).truncate 32 : BitVec 32) <<< shamt).signExtend 64)
+    | .SRLW rd rs1 rs2 =>
+        let shamt := (s.getReg rs2).toNat % 32
+        s.setReg rd ((((s.getReg rs1).truncate 32 : BitVec 32) >>> shamt).signExtend 64)
+    | .SRAW rd rs1 rs2 =>
+        let shamt := (s.getReg rs2).toNat % 32
+        s.setReg rd ((BitVec.sshiftRight ((s.getReg rs1).truncate 32 : BitVec 32) shamt).signExtend 64)
+    | .SLLIW rd rs1 shamt =>
+        s.setReg rd ((((s.getReg rs1).truncate 32 : BitVec 32) <<< shamt.toNat).signExtend 64)
+    | .SRLIW rd rs1 shamt =>
+        s.setReg rd ((((s.getReg rs1).truncate 32 : BitVec 32) >>> shamt.toNat).signExtend 64)
+    | .SRAIW rd rs1 shamt =>
+        s.setReg rd ((BitVec.sshiftRight ((s.getReg rs1).truncate 32 : BitVec 32) shamt.toNat).signExtend 64)
     | .FENCE => s
     | .EBREAK => s
     -- M extension
@@ -278,6 +328,17 @@ def execInstr (s : MachineState) (i : Instr) : MachineState :=
         s.setReg rd (rv64_rem (s.getReg rs1) (s.getReg rs2))
     | .REMU rd rs1 rs2 =>
         s.setReg rd (rv64_remu (s.getReg rs1) (s.getReg rs2))
+    | .MULW rd rs1 rs2 =>
+        let prod32 : BitVec 32 := ((s.getReg rs1).truncate 32) * ((s.getReg rs2).truncate 32)
+        s.setReg rd (prod32.signExtend 64)
+    | .DIVW rd rs1 rs2 =>
+        s.setReg rd (rv64_divw (s.getReg rs1) (s.getReg rs2))
+    | .DIVUW rd rs1 rs2 =>
+        s.setReg rd (rv64_divuw (s.getReg rs1) (s.getReg rs2))
+    | .REMW rd rs1 rs2 =>
+        s.setReg rd (rv64_remw (s.getReg rs1) (s.getReg rs2))
+    | .REMUW rd rs1 rs2 =>
+        s.setReg rd (rv64_remuw (s.getReg rs1) (s.getReg rs2))
     | .CSRS csr rs1 => s.execCsrs csr rs1
     | .BEQ _ _ _ | .BNE _ _ _ | .BLT _ _ _ | .BGE _ _ _
     | .BLTU _ _ _ | .BGEU _ _ _ | .JAL _ _ | .JALR _ _ _ | .ECALL => s
