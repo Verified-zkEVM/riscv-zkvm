@@ -149,7 +149,20 @@ jobs:
 
       # A cold build alone did not catch v0.4.0's warning-induced cache
       # invalidation. Publish as a prerelease until the real consumer passes.
+      # `--prerelease=false` alone leaves GitHub's Latest flag where it was (v0.5.0
+      # stayed behind v0.4.0). Mark the release Latest only when its tag is the
+      # highest version so far, so that a patch on an older line, such as v0.4.1
+      # after v0.5.0, does not become Latest.
       - name: Promote verified release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "${{ steps.resolve.outputs.tag }}" --prerelease=false
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          latest=$(gh release view --json tagName --jq .tagName || true)
+          highest=$(printf '%s\n%s\n' "$latest" "$TAG" | sed '/^$/d' | sort -V | tail -n 1)
+          if [ "$highest" = "$TAG" ]; then
+            gh release edit "$TAG" --prerelease=false --latest
+          else
+            echo "$TAG is older than $latest, which stays Latest"
+            gh release edit "$TAG" --prerelease=false
+          fi
