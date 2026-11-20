@@ -25,12 +25,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The tag reaches every script through `env`, never by expression
+      # interpolation: a dispatched tag is user input until it is checked below.
       - name: Resolve release tag
         id: resolve
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          case "${{ github.event_name }}" in
-            workflow_dispatch) tag='${{ inputs.tag }}' ;;
-            push) tag='${{ github.ref_name }}' ;;
+          case "$EVENT" in
+            workflow_dispatch) tag=$INPUT_TAG ;;
+            push) tag=$REF_NAME ;;
           esac
           test -n "$tag" || { echo "::error::could not resolve release tag"; exit 1; }
           git fetch --tags --force --quiet
@@ -42,10 +48,10 @@ jobs:
       - name: Create release if needed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
-          tag='${{ steps.resolve.outputs.tag }}'
-          gh release view "$tag" >/dev/null 2>&1 \
-            || gh release create "$tag" --verify-tag --title "$tag" --generate-notes --prerelease
+          gh release view "$TAG" >/dev/null 2>&1 \
+            || gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes --prerelease
 
       # Keep this job uncached, unlike build.yml. A release archive is the one
       # artifact that must be reproducible from source at the tag: restoring
@@ -83,7 +89,8 @@ jobs:
       - name: Pack and attach archive
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: lake upload "${{ steps.resolve.outputs.tag }}"
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: lake upload "$TAG"
 
       - name: Verify a tagged consumer uses the release archive
         env:
@@ -136,11 +143,13 @@ jobs:
           done
 
       - name: Report archive
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
           archive=.lake/riscv-zkvm-oleans.tar.gz
           test -f "$archive"
           {
-            echo "### riscv-zkvm oleans for \`${{ steps.resolve.outputs.tag }}\`"
+            echo "### riscv-zkvm oleans for \`$TAG\`"
             echo
             echo "- Archive size: $(du -h "$archive" | cut -f1)"
             echo "- Entries: $(tar tzf "$archive" | wc -l | tr -d ' ')"
@@ -149,7 +158,22 @@ jobs:
 
       # A cold build alone did not catch v0.4.0's warning-induced cache
       # invalidation. Publish as a prerelease until the real consumer passes.
+      # `--prerelease=false` alone leaves GitHub's Latest flag where it was (v0.5.0
+      # stayed behind v0.4.0). Mark the release Latest only when its tag is the
+      # highest version so far, so that a patch on an older line, such as v0.4.1
+      # after v0.5.0, does not become Latest. If the current Latest cannot be
+      # read, the step fails and the release stays a prerelease until a re-run.
+      # Tags are plain `vX.Y.Z`: `sort -V` would rank `v0.8.0-rc1` above `v0.7.0`.
       - name: Promote verified release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "${{ steps.resolve.outputs.tag }}" --prerelease=false
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          latest=$(gh release view --json tagName --jq .tagName)
+          highest=$(printf '%s\n%s\n' "$latest" "$TAG" | sed '/^$/d' | sort -V | tail -n 1)
+          if [ "$highest" = "$TAG" ]; then
+            gh release edit "$TAG" --prerelease=false --latest
+          else
+            echo "$TAG is older than $latest, which stays Latest"
+            gh release edit "$TAG" --prerelease=false --latest=false
+          fi
