@@ -10,19 +10,13 @@ There are two non-negotiable boundaries.
 Change the upstream pin, module scope, config, or regeneration tooling; run
 `scripts/regen-model.sh --write`; then review the generated diff.
 
-**2. This repository exists to serve `Verified-zkEVM/evm-asm`, and every change
-MUST preserve compatibility with it.** README.md ("Downstream compatibility") is
-the authoritative list of what counts as public API — module paths, `Instr`
-constructors, `MachineState` / `step` semantics, the `SailEquiv` theorem names,
-the axiom set, the narrow `RiscvZkvm.Sail.InstsEnd` import, `platformIndependent`
-and the toolchain pin. Read it before proposing a change to any of them; do not
-restate it here, so the two cannot drift apart.
-
-The trap to understand: evm-asm consumes prebuilt oleans **at a release tag**, so
-none of the gates in this repository can see downstream breakage. A green build
-here says nothing about whether ~2,500 evm-asm modules still compile. If a change
-touches the public surface, build evm-asm against the candidate revision before
-tagging.
+**2. The public API is README.md's "Public API" list** — module paths, `Instr`
+constructors, `MachineState` / `step` semantics and each backend's stepper, the
+`SailEquiv` theorem names, the axiom set, the narrow `RiscvZkvm.Sail.InstsEnd`
+import, `platformIndependent` and the toolchain pin. Read it before proposing a
+change to any of them; do not restate it here, so the two cannot drift apart. A
+breaking change says so in `CHANGELOG.md`. Compatibility with evm-asm is no
+longer required; `v0.4.0` is its last compatible release (README.md, "evm-asm").
 
 ## Required checks
 
@@ -33,6 +27,7 @@ set, in this order.
 scripts/check-model-pin.sh            # generated tree matches PROVENANCE.toml
 scripts/check-forbidden-tactics.sh    # no native_decide / bv_decide anywhere
 scripts/check-unimported.py           # hand-owned Lean reachable from a root
+scripts/check-sp1-pin.sh              # SP1 syscall ids match the pinned table
 lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv \
   RiscvZkvm.Rv64.Logic RiscvZkvm.Interpreter
 scripts/check-axioms.sh               # kernel truth: only documented axioms
@@ -49,14 +44,11 @@ scripts/check-no-warnings.sh          # builds and checks its own log
 Each gate takes `--report` to print its census and exit 0.
 
 `scripts/check-axioms.sh` is the load-bearing one: it walks every declaration
-under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` (3500 of them today) and
+under `RiscvZkvm.Rv64.*` and `RiscvZkvm.Interpreter.*` (3705 of them today) and
 fails on any axiom outside the seven `docs/validation.md` documents. If a Sail
 pin bump adds a platform axiom, update `scripts/AxiomSweep.lean`'s
 `allowedAxioms` and that document in the same change -- the list is the
 machine-readable form of the prose.
-
-None of the above can detect downstream breakage — see boundary 2. For a change
-to the public surface, additionally build evm-asm against the candidate revision.
 
 For a pin or extraction change, also run:
 
@@ -81,11 +73,31 @@ were relocated from EvmAsm.
 Keep changes there reviewable as *relocations*: a behaviour change buried in a
 move is not. The original relocation checks were retired once the Sail
 initialization proofs and program-logic tactics deliberately diverged from the
-pinned evm-asm sources. Review subsequent behavior changes explicitly and run
-the full downstream build; do not restore relocation checks with widened
+pinned evm-asm sources. Review subsequent behavior changes explicitly; do not
+restore relocation checks with widened
 expected deltas. In particular the SP1/ZisK ECALL ABI in `Execution.step` and the
 accelerator CSR semantics in `ZiskAccel.lean` are carried over verbatim and are
-worth generalising only in a separate, clearly-labelled change.
+generalised without touching either file: the backend parameter lives in the
+additive `RiscvZkvm/Rv64/{Backend,Sp1Accel,StepOn}.lean`, and `stepOn .zisk =
+step` holds by `rfl`. Keep it that way: a new backend belongs beside
+`Sp1Accel.lean`, not inside `Execution.step`.
+
+## Backends
+
+`RiscvZkvm.Rv64.Backend` selects which zkVM ABI a stepper is read against, and
+`zisk` is the default in every signature that takes one. Two things are
+backend-dependent — the precompile ABI (ZisK's `csrs` accelerators versus SP1's
+`ecall` syscalls) and, on SP1, which `t0` values are meaningful. Everything else
+is shared, which is why `stepSp1` is a two-case override of `step` rather than a
+second model; `stepSp1_eq_step_of_fetch` states that as a theorem.
+
+SP1's syscall ids and operand layouts are pinned in `sp1-import/PROVENANCE.toml`
+and `sp1-import/syscall-ids.json` and checked by `scripts/check-sp1-pin.sh`.
+That pin is stronger than `ZiskAccel.lean`'s prose provenance on purpose:
+evm-asm's codegen emits the ZisK ids, so a wrong one breaks a guest loudly,
+whereas nothing here emits SP1 syscalls and a wrong id would break no test at
+all. Re-pin both files together, from one SP1 revision, and never hand-edit an
+id in the Lean.
 
 ## This package is Mathlib-free
 

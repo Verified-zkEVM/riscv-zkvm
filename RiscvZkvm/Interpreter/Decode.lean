@@ -80,6 +80,8 @@ def decode (w : BitVec 32) : Option Instr :=
   -- RV64 shifts take a 6-bit shamt, so the discriminating field is funct6.
   let funct6 := (w.extractLsb' 26 6).toNat
   let shamt  := w.extractLsb' 20 6
+  -- The *W shifts take a 5-bit shamt; bit 25 belongs to funct7 there.
+  let shamtW := w.extractLsb' 20 5
   match opcode with
   -- OP: register-register
   | 0x33 =>
@@ -119,10 +121,21 @@ def decode (w : BitVec 32) : Option Instr :=
       else if funct6 == 0x10 then some (.SRAI rd rs1 shamt)
       else none
     | _ => none
-  -- OP-IMM-32: only ADDIW is modeled (SLLIW/SRLIW/SRAIW are the word-op gap).
-  | 0x1b => if funct3 == 0 then some (.ADDIW rd rs1 (immI w)) else none
+  -- OP-IMM-32. SRAIW remains unmodeled: its funct7 is checked explicitly rather
+  -- than ignored, so it keeps returning `none` instead of being decoded as its
+  -- logical sibling SRLIW.
+  | 0x1b =>
+    match funct3 with
+    | 0 => some (.ADDIW rd rs1 (immI w))
+    | 1 => if funct7 == 0x00 then some (.SLLIW rd rs1 shamtW) else none
+    | 5 => if funct7 == 0x00 then some (.SRLIW rd rs1 shamtW) else none
+    | _ => none
   -- OP-32: ADDW/SUBW/SLLW/SRLW/SRAW/MULW/DIVW/DIVUW/REMW/REMUW — word-op gap.
-  | 0x3b => none
+  | 0x3b =>
+    match funct7, funct3 with
+    | 0x20, 0 => some (.SUBW rd rs1 rs2)
+    | 0x00, 5 => some (.SRLW rd rs1 rs2)
+    | _, _ => none    -- ADDW/SLLW/SRAW/MULW/DIVW/DIVUW/REMW/REMUW: still the gap
   | 0x37 => some (.LUI rd (immU w))
   | 0x17 => some (.AUIPC rd (immU w))
   | 0x6f => some (.JAL rd (immJ w))

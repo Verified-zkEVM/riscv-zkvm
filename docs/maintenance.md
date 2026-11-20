@@ -16,6 +16,27 @@ same place. All are edited normally, but see `AGENTS.md` on keeping the
 relocated files reviewable as relocations, and `docs/validation.md` for known
 gaps.
 
+## Trying a branch downstream without building Sail
+
+`RiscvZkvm.Sail` is the ~45-minute target, and it is easy to assume any use of
+this package pays for it. It does not: **nothing under `RiscvZkvm/Sail*` imports
+`RiscvZkvm.Rv64`**, so the interpreter's import closure is 14 modules with zero
+Sail modules in it. Seeding `.lake/build` from the most recent release package
+and then building only what you need gets `riscv-zkvm-run` in a couple of
+seconds:
+
+```bash
+git clone --depth 1 --branch <branch> https://github.com/Verified-zkEVM/riscv-zkvm
+cd riscv-zkvm
+# seed .lake/build from the latest release archive, then:
+lake build riscv-zkvm-run
+```
+
+Sail is needed only for `RiscvZkvm.Sail` itself, `RiscvZkvm.Rv64.SailEquiv`, and
+the full five-import consumer smoke in `release-oleans.yml`. A machine-model or
+interpreter change can be exercised end to end without it. (Reported by a
+downstream consumer on PR #10.)
+
 ## Pinned inputs
 
 [`sail-import/PROVENANCE.toml`](../sail-import/PROVENANCE.toml) is the source of
@@ -28,6 +49,13 @@ truth for:
 - the selected Sail modules;
 - the compile-time JSON configuration;
 - hashes of the configuration and generated Lean tree.
+
+[`sp1-import/PROVENANCE.toml`](../sp1-import/PROVENANCE.toml) plays the same role
+for the SP1 syscall ABI that `RiscvZkvm.Rv64.Sp1Accel` models: the SP1 revision,
+the target triple and its memory parameters, and a digest per pinned source
+file. `sp1-import/syscall-ids.json` is the machine-readable id table, and
+`scripts/check-sp1-pin.sh` diffs the Lean constants against it in CI. Re-pin
+both files together from one SP1 revision; never hand-edit an id in the Lean.
 
 Prefer a stable Sail RISC-V release. A weekly prerelease is appropriate only
 when a required semantic fix has not reached a stable release, and the reason
@@ -137,20 +165,16 @@ When changing Lean:
 3. update `lakefile.toml` and `PROVENANCE.toml` together;
 4. regenerate and build `RiscvZkvm.Sail`;
 5. run the emulator validation;
-6. cut a new `riscv-zkvm` release and update downstream pins.
+6. cut a new `riscv-zkvm` release.
 
 ## Releasing cached oleans
 
 Before starting: if the release touches anything README.md lists under
-**Downstream compatibility** — module paths, `Instr` constructors, `MachineState`
-or `step` semantics, the `SailEquiv` theorem names, the axiom set, the narrow
-`RiscvZkvm.Sail.InstsEnd` import, `platformIndependent`, the toolchain — build
-evm-asm against the candidate revision first. Tagging is the point of no return
-for a cached consumer: nothing in this repository's CI can tell you whether
-~2,500 evm-asm modules still compile.
+**Public API**, say so in `CHANGELOG.md` and bump the minor version. evm-asm is
+not checked; `v0.4.0` is its last compatible release.
 
-Use a separate candidate checkout for the downstream build, or run the builds
-sequentially. Concurrent Lake builds from different workspaces against the same
+When building a consumer against a candidate, use a separate candidate checkout,
+or run the builds sequentially. Concurrent Lake builds from different workspaces against the same
 path dependency share `.lake/build`; dependency-path changes can invalidate
 traces and remove an olean while the other build is importing it. Keep the
 candidate's Lean sources, package pins, and provenance identical.
@@ -169,8 +193,7 @@ candidate's Lean sources, package pins, and provenance identical.
 4. In a clean consumer, pin the tag and run `lake build`. Confirm the log says
    the release archive was downloaded and that no `RiscvZkvm.*` module was
    rebuilt — the workflow's cache smoke test does exactly this for all five
-   libraries, which is what keeps EvmAsm's build from compiling them.
-5. Only after that update evm-asm's dependency pin.
+   libraries, which is what keeps consumers' builds from compiling them.
 
 Lake uses release archives only for tagged dependencies. Pinning `main` or a raw
-commit disables this optimization and is not suitable for evm-asm's normal CI.
+commit disables this optimization.

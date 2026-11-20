@@ -255,6 +255,18 @@ def execInstr (s : MachineState) (i : Instr) : MachineState :=
     | .LI rd imm =>
         s.setReg rd imm
     | .NOP => s
+    | .SUBW rd rs1 rs2 =>
+        let d32 : BitVec 32 := ((s.getReg rs1).truncate 32) - ((s.getReg rs2).truncate 32)
+        s.setReg rd (d32.signExtend 64)
+    | .SRLW rd rs1 rs2 =>
+        let v32 : BitVec 32 := ((s.getReg rs1).truncate 32) >>> ((s.getReg rs2).toNat % 32)
+        s.setReg rd (v32.signExtend 64)
+    | .SLLIW rd rs1 shamt =>
+        let v32 : BitVec 32 := ((s.getReg rs1).truncate 32) <<< shamt.toNat
+        s.setReg rd (v32.signExtend 64)
+    | .SRLIW rd rs1 shamt =>
+        let v32 : BitVec 32 := ((s.getReg rs1).truncate 32) >>> shamt.toNat
+        s.setReg rd (v32.signExtend 64)
     | .ADDIW rd rs1 imm =>
         -- ADDIW: word-size add, result sign-extended to 64 bits
         let sum32 : BitVec 32 := ((s.getReg rs1).truncate 32) + ((signExtend12 imm).truncate 32)
