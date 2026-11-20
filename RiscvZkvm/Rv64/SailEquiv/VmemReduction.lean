@@ -50,6 +50,7 @@ attribute [sail_step]
   bind pure get MonadState.get getThe MonadStateOf.get
   ExceptT.run ExceptT.mk ExceptT.bind ExceptT.bindCont ExceptT.lift ExceptT.pure
   MonadLift.monadLift monadLift liftM Functor.map
+  andM orM toBool
 
 /-- Discharge the Sail monad plumbing of a bare-mode reduction goal: `simp +decide only`
     over the `sail_step` set plus any extra facts/leaf lemmas you supply. -/
@@ -70,14 +71,14 @@ theorem append8_eq_or_shifts (b0 b1 b2 b3 b4 b5 b6 b7 : BitVec 8) :
   apply BitVec.eq_of_getLsbD_eq
   intro i hi
   simp only [BitVec.getLsbD_append, BitVec.getLsbD_or, BitVec.getLsbD_shiftLeft,
-             BitVec.zeroExtend_eq_setWidth, BitVec.getLsbD_setWidth, ← Bool.if_false_right]
+             BitVec.zeroExtend_eq_setWidth, BitVec.getLsbD_setWidth, ← Bool.ite_false_right]
   have h64 : i < 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 := hi
-  simp only [if_pos h64, if_pos (show i - 8  < 8+8+8+8+8+8+8+8 by omega),
-                         if_pos (show i - 16 < 8+8+8+8+8+8+8+8 by omega),
-                         if_pos (show i - 24 < 8+8+8+8+8+8+8+8 by omega),
-                         if_pos (show i - 32 < 8+8+8+8+8+8+8+8 by omega),
-                         if_pos (show i - 40 < 8+8+8+8+8+8+8+8 by omega),
-                         if_pos (show i - 48 < 8+8+8+8+8+8+8+8 by omega)]
+  simp only [ite_eq_left h64, ite_eq_left (show i - 8  < 8+8+8+8+8+8+8+8 by omega),
+                         ite_eq_left (show i - 16 < 8+8+8+8+8+8+8+8 by omega),
+                         ite_eq_left (show i - 24 < 8+8+8+8+8+8+8+8 by omega),
+                         ite_eq_left (show i - 32 < 8+8+8+8+8+8+8+8 by omega),
+                         ite_eq_left (show i - 40 < 8+8+8+8+8+8+8+8 by omega),
+                         ite_eq_left (show i - 48 < 8+8+8+8+8+8+8+8 by omega)]
   rcases Nat.lt_or_ge i 8 with h0 | h0
   · -- [0, 8): b0 is active
     simp [h0, show i < 16 by omega, show i < 24 by omega, show i < 32 by omega,
@@ -200,13 +201,13 @@ theorem forIn'_noop {β : Type} (range : IntRange) (init : β) (s : SailState)
     induction b, i, hs using IntRange.forIn'.loop.induct (range := range) with
     | case1 b i hs hin ih =>
       rw [IntRange.forIn'.loop.eq_def]
-      simp only [hin, dif_pos]
+      simp only [hin, dite_eq_left]
       show (EStateM.bind (f i hin b) _) s = _
       simp only [EStateM.bind, hf i hin b]
       exact ih b
     | case2 b i hs hnin =>
       rw [IntRange.forIn'.loop.eq_def]
-      simp only [hnin, dif_neg, not_false_iff]
+      simp only [hnin, dite_eq_right, not_false_iff]
       rfl
   show IntRange.forIn'.loop range f init range.start _ s = _
   exact aux init range.start _
@@ -227,13 +228,13 @@ theorem forIn'_noop_except {β : Type} {ε : Type} (range : IntRange) (init : β
     induction b, i, hs using IntRange.forIn'.loop.induct (range := range) with
     | case1 b i hs hin ih =>
       rw [IntRange.forIn'.loop.eq_def]
-      simp only [hin, dif_pos]
+      simp only [hin, dite_eq_left]
       show (ExceptT.bind (f i hin b) _) s = _
       simp only [ExceptT.bind, ExceptT.mk, ExceptT.bindCont, bind, EStateM.bind, hf i hin b]
       exact ih b
     | case2 b i hs hnin =>
       rw [IntRange.forIn'.loop.eq_def]
-      simp only [hnin, dif_neg, not_false_iff]
+      simp only [hnin, dite_eq_right, not_false_iff]
       rfl
   show IntRange.forIn'.loop range f init range.start _ s = _
   exact aux init range.start _
@@ -287,7 +288,7 @@ theorem pmaCheck_load_ok (paddr : physaddr) (width : Nat) (s : SailState)
     get, MonadState.get, getThe, MonadStateOf.get,
     ExceptT.run, ExceptT.mk, ExceptT.pure, ExceptT.bind, ExceptT.bindCont, ExceptT.lift,
     MonadLift.monadLift, monadLift, liftM, Functor.map, EStateM.map,
-    Sail.assert, PreSail.assert]
+    Sail.sail_assert, PreSail.sail_assert]
 
 /-- **`check_pma_with_pmp_priority` permits an aligned readable Load.** The PMA check
     succeeds first, so the (fault-attribution) PMP fallback is never consulted — the
@@ -317,7 +318,7 @@ theorem pmpReadAddrReg_noop (s : SailState) (n : Nat)
   unfold pmpReadAddrReg
   simp +decide only [sys_pmp_grain, PreSail.readReg, h_cfg, h_addr,
     pure, EStateM.pure, bind, EStateM.bind, EStateM.get,
-    get, MonadState.get, getThe, MonadStateOf.get, if_false]
+    get, MonadState.get, getThe, MonadStateOf.get, ite_false]
   generalize BitVec.access (_get_Pmpcfg_ent_A cfgs[n]!) 1 = b
   match b with
   | 0#1 => rfl
@@ -351,7 +352,7 @@ theorem pmpCheck_machine_off (addr : physaddr) (width : Nat) (s : SailState)
   simp +decide only [SailME.run, PreSail.PreSailME.run,
     bind, EStateM.bind,
     ExceptT.run, ExceptT.mk, ExceptT.bind]
-  simp only [if_false, if_true]
+  simp only [ite_false, ite_true]
   rw [forIn]
   simp only [instForInOfForIn', EStateM.bind]
   rw [forIn'_noop_except _ () s _ ?hf]
@@ -388,11 +389,11 @@ theorem within_mmio_readable_ram (addr : physaddr) (width : Nat) (s : SailState)
     (within_mmio_readable addr width) s = .ok false s := by
   unfold within_mmio_readable
   -- Rewrite `get_config_rvfi ()` everywhere at once (Decidable instance included) so the
-  -- RVFI guard stays well-typed and reduces via `Bool.false_eq_true`/`if_false`.
+  -- RVFI guard stays well-typed and reduces via `Bool.false_eq_true`/`ite_false`.
   rw [show get_config_rvfi () = false from rfl]
-  simp only [Bool.false_eq_true, if_false,
+  simp only [orM, toBool, Bool.false_eq_true, ite_false,
     bind, EStateM.bind, hclint, hsig, hhtif,
-    pure, EStateM.pure, Bool.false_or, Bool.false_and]
+    pure, EStateM.pure, Bool.false_and]
 
 /-- **Lemma #2b — `effectivePrivilege` is the identity in Machine mode with `MPRV = 0`.**
     A data access (not an `InstructionFetch`) only switches privilege when `MPRV = 1`; with
@@ -408,15 +409,22 @@ theorem effectivePrivilege_machine (s : SailState) (access : MemoryAccessType me
 /-- **Lemma #2c — `get_pmlen` is `0` in Machine mode with pointer masking disabled.**
     A `Load Data` access is PMM-applicable, so `get_pmlen` consults `get_pmm Machine`,
     which reads `mseccfg`; with its PMM field (`bits 33:32`) zero, the mode is
-    `PMM_Disabled` and the masking length is `0`. Reads `mstatus` (forced by the
-    short-circuited applicability test) and `mseccfg`, leaving the state untouched. -/
+    `PMM_Disabled` and the masking length is `0`. The corrected short-circuiting
+    skips `mstatus` in Machine mode and reads `mseccfg`, leaving the state untouched. -/
 theorem get_pmlen_machine_zero (s : SailState) (mst msec : BitVec 64)
     (h_mst : s.regs.get? Register.mstatus = some mst)
     (h_sec : s.regs.get? Register.mseccfg = some msec)
     (h_pmm : _get_Seccfg_PMM msec = 0#2) :
     (get_pmlen (MemoryAccessType.Load mem_payload.Data) Privilege.Machine) s = .ok 0 s := by
+  have _h_mst := h_mst
   unfold get_pmlen is_pmm_applicable get_pmm
-  simp +decide [PreSail.readReg, h_mst, h_sec, h_pmm, pmm_mode_backwards,
+  simp +decide [andM, orM, toBool,
+    show (MemoryAccessType.Load mem_payload.Data == MemoryAccessType.InstructionFetch ()) = false by decide,
+    show (MemoryAccessType.Load mem_payload.Data == MemoryAccessType.Load mem_payload.PageTableEntry) = false by decide,
+    show (MemoryAccessType.Load mem_payload.Data == MemoryAccessType.Store mem_payload.PageTableEntry) = false by decide,
+    show (Privilege.Machine == Privilege.Machine) = true by decide,
+    RiscvZkvm.Sail.Functions.xlen,
+    PreSail.readReg, h_sec, h_pmm, pmm_mode_backwards,
     pure, EStateM.pure, bind, EStateM.bind, EStateM.get,
     get, MonadState.get, getThe, MonadStateOf.get, bne]
 
@@ -424,7 +432,7 @@ theorem get_pmlen_machine_zero (s : SailState) (mst msec : BitVec 64)
 theorem translationMode_machine (s : SailState) :
     (translationMode Privilege.Machine) s = .ok SATPMode.Bare s := by
   unfold translationMode
-  simp +decide only [if_true, pure, EStateM.pure, bind]
+  simp +decide only [ite_true, pure, EStateM.pure, bind]
 
 /-- **Lemma #2d — `transform_effective_address` is the identity in bare mode.** With
     `cur_privilege = Machine`, `MPRV = 0`, and pointer masking disabled, the effective
@@ -443,7 +451,7 @@ theorem transform_effective_address_bare (s : SailState) (vaddr : virtaddr)
   unfold transform_effective_address
   sail_reduce [h_priv, h_mst, effectivePrivilege_machine s _ mst _ h_mprv,
     get_pmlen_machine_zero s mst msec h_mst h_sec h_pmm,
-    translationMode_machine s, if_true, Int.toNat_zero]
+    translationMode_machine s, ite_true, Int.toNat_zero]
 
 /-- Generic `runSail` inversion: a successful `runSail` gives the underlying `EStateM`
     `.ok`. Lets us reuse `runSail`-stated leaves (#1) in raw `EStateM` reductions. -/
@@ -549,13 +557,13 @@ theorem split_misaligned_cannotsplit (paddr : physaddr) (width : Nat) (exp : Nat
   obtain ⟨addr⟩ := paddr
   unfold split_misaligned
   simp only [show (Splittability.CannotSplit == Splittability.CannotSplit) = true from rfl,
-    Bool.true_or, if_true]
+    Bool.true_or, ite_true]
   rfl
 
 /-- `misaligned_order 1 = (0, 0, 1)` (a single forward iteration). -/
 theorem misaligned_order_one : misaligned_order 1 = (0, 0, 1) := by
   unfold misaligned_order
-  simp only [sys_misaligned_order_decreasing, Bool.false_eq_true, if_false]
+  simp only [sys_misaligned_order_decreasing, Bool.false_eq_true, ite_false]
   rfl
 
 /-- `bits_of_virtaddr` is the projection out of `Virtaddr`. Tagged `sail_step`-only (not a
@@ -634,11 +642,11 @@ theorem checked_mem_read_load_w (w : Nat) (addr : BitVec 64) (s : SailState) (v 
   simp +decide only [SailME.run, PreSail.PreSailME.run,
     hcheck, alignedAccessInfo, hsplit, misaligned_order_one,
     Int.toNat_one, Int.toNat_zero, untilFuelM_one,
-    Sail.assert, PreSail.assert, if_true,
+    Sail.sail_assert, PreSail.sail_assert, ite_true,
     BitVec.addInt, Int.natCast_zero, Int.zero_mul, Int.zero_add,
     ofInt_zero_bv, add_zero_physaddrbits,
     Int.toNat_natCast, bits_of_physaddr_mk,
-    hpmp, hmmio, if_false, read_kind_of_flags, hram, default_meta,
+    hpmp, hmmio, ite_false, read_kind_of_flags, hram, default_meta,
     EStateM.map, bind, EStateM.bind, pure, EStateM.pure,
     ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure,
     MonadLift.monadLift, monadLift, liftM, Functor.map]
@@ -912,7 +920,7 @@ theorem vmem_read_addr_load_bare (vaddr : virtaddr) (s : SailState) (mst : BitVe
   have htrv := translate_and_read_value_load_bare vaddr 8 s mst _ h_priv h_mst h_mprv hmem
   unfold vmem_read_addr
   simp +decide only [h_valign, Functions.not, Bool.not_true, Bool.not_false,
-    Bool.false_eq_true, if_false,
+    Bool.false_eq_true, ite_false,
     SailME.run, PreSail.PreSailME.run,
     hpage, PreSail.readReg, h_priv, h_mst,
     effectivePrivilege_machine s _ mst _ h_mprv, translationMode_machine,
@@ -1099,13 +1107,13 @@ theorem ld_sail_equiv (sRv : MachineState) (sSail : SailState)
       ?_, ?_, ?_, ?_⟩
   · -- SAIL execution succeeds with RETIRE_SUCCESS
     unfold execute_LOAD
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (vmem_read (regToRegidx rs1) (signExtend12 offset) 8
           (MemoryAccessType.Load mem_payload.Data) false false false) sSail
         = some (Result.Ok (reconstructDword sSail.mem
             (sRv.getReg rs1 + signExtend12 offset).toNat), sSail) from by
       simp only [runSail, hvr]]
-    simp only [extend_value, Bool.false_eq_true, if_false, sign_extend,
+    simp only [extend_value, Bool.false_eq_true, ite_false, sign_extend,
       Sail.BitVec.signExtend, BitVec.signExtend_eq, runSail_bind, runSail_wX_bits_of_reg,
       runSail_pure]
   · -- abstraction relation holds for the post-state

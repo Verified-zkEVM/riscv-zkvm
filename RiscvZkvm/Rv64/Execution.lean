@@ -374,10 +374,10 @@ theorem loadProgram_programAt {base : Word} {prog : List Instr}
 -- non-tail-recursive, so this exhausted the host stack and killed the process
 -- with no trap and no diagnostic, before any wrong answer could be reported.
 --
--- These predicates live here rather than beside the other access predicates in
--- `Word.lean` so that the memory map itself stays byte-identical to its
--- evm-asm original; `scripts/check-relocation.sh` should keep reporting 0 for
--- `Word.lean`.
+-- These predicates were placed here, not beside the other access predicates in
+-- `Word.lean`, while `Word.lean` had to stay byte-identical to its evm-asm
+-- original. That requirement ended with evm-asm compatibility in v0.5.0; they
+-- stay next to the two syscalls that use them.
 -- ============================================================================
 
 /-- Largest byte count either output syscall will transfer in one step.

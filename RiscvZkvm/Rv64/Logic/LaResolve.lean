@@ -130,7 +130,7 @@ theorem la_resolve (pc target : Word) (h : laInRange pc target) :
   rw [BitVec.toNat_add, BitVec.toNat_add, hX, hY, hhi]
   by_cases h1 : 2 ^ 31 ≤ (((target - pc).toNat + 2048) % 2 ^ 64) / 2 ^ 12 % 2 ^ 20 * 4096 <;>
     by_cases h2 : 2 ^ 11 ≤ (target - pc).toNat % 2 ^ 12 <;>
-      simp only [h1, h2, if_true, if_false] <;>
+      simp only [h1, h2, ite_true, ite_false] <;>
         omega
 
 /-- **`la` as a two-instruction triple**: the emitted

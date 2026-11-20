@@ -15,7 +15,6 @@ import RiscvZkvm.Sail.FdextRegs
 import RiscvZkvm.Sail.VextRegs
 import RiscvZkvm.Sail.Smcntrpmf
 import RiscvZkvm.Sail.SysControl
-import RiscvZkvm.Sail.Vmem
 import RiscvZkvm.Sail.InstsBegin
 import RiscvZkvm.Sail.ZkrControl
 
@@ -220,7 +219,7 @@ def encdec_csrop_backwards (arg_ : (BitVec 2)) : SailM csrop := do
   | 0b11 => (pure CSRRC)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def encdec_csrop_forwards_matches (arg_ : csrop) : Bool :=
@@ -236,7 +235,7 @@ def encdec_csrop_backwards_matches (arg_ : (BitVec 2)) : Bool :=
   | 0b11 => true
   | _ => false
 
-/-- Type quantifiers: k_ex482314_ : Bool, k_ex482313_ : Bool -/
+/-- Type quantifiers: k_ex481106_ : Bool, k_ex481105_ : Bool -/
 def csr_access_type (op : csrop) (rd_is_x0 : Bool) (rs1_imm_is_zero : Bool) : CSRAccessType :=
   match (op, rd_is_x0, rs1_imm_is_zero) with
   | (.CSRRW, true, _) => CSRWrite
@@ -246,3584 +245,1640 @@ def csr_access_type (op : csrop) (rd_is_x0 : Bool) (rs1_imm_is_zero : Bool) : CS
   | (.CSRRS, _, false) => CSRReadWrite
   | (.CSRRC, _, false) => CSRReadWrite
 
-def read_CSR (merge_var : (BitVec 12)) : SailM (BitVec 64) := do
-  match merge_var with
-  | 0x301 => readReg misa
-  | 0x300 => (pure (Sail.BitVec.extractLsb (← readReg mstatus) (xlen -i 1) 0))
-  | 0x310 =>
+def read_CSR (b__0 : (BitVec 12)) : SailM (BitVec 64) := do
+  if ((b__0 == (0x301#12 : (BitVec 12))) : Bool)
+  then readReg misa
+  else
     (do
-      if ((xlen == 32) : Bool)
-      then (pure (Sail.BitVec.extractLsb (← readReg mstatus) 63 32))
+      if ((b__0 == (0x300#12 : (BitVec 12))) : Bool)
+      then (pure (Sail.BitVec.extractLsb (← readReg mstatus) (xlen -i 1) 0))
       else
         (do
-          let v__410 := 0x310#12
-          if ((((Sail.BitVec.extractLsb v__410 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-                 (Sail.BitVec.extractLsb v__410 3 0)
-               (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-          then
-            (do
-              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-              (pmpReadCfgReg (BitVec.toNatInt idx)))
+          if (((b__0 == (0x310#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+          then (pure (Sail.BitVec.extractLsb (← readReg mstatus) 63 32))
           else
             (do
-              if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
-              then
-                (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                  (pmpReadAddrReg (BitVec.toNatInt (0b00#2 +++ idx))))
+              if ((b__0 == (0x747#12 : (BitVec 12))) : Bool)
+              then (pure (Sail.BitVec.extractLsb (← readReg mseccfg) (xlen -i 1) 0))
               else
                 (do
-                  if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
-                  then
-                    (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                      (pmpReadAddrReg (BitVec.toNatInt (0b01#2 +++ idx))))
+                  if (((b__0 == (0x757#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                  then (pure (Sail.BitVec.extractLsb (← readReg mseccfg) 63 32))
                   else
                     (do
-                      if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
-                      then
-                        (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                          (pmpReadAddrReg (BitVec.toNatInt (0b10#2 +++ idx))))
+                      if ((b__0 == (0x30A#12 : (BitVec 12))) : Bool)
+                      then (pure (Sail.BitVec.extractLsb (← readReg menvcfg) (xlen -i 1) 0))
                       else
                         (do
-                          if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
-                          then
-                            (do
-                              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                              (pmpReadAddrReg (BitVec.toNatInt (0b11#2 +++ idx))))
+                          if (((b__0 == (0x31A#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                          then (pure (Sail.BitVec.extractLsb (← readReg menvcfg) 63 32))
                           else
                             (do
-                              match v__410 with
-                              | 0x001 =>
-                                (pure (zero_extend (m := 64) (_get_Fcsr_FFLAGS (← readReg fcsr))))
-                              | 0x002 =>
-                                (pure (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))
-                              | 0x003 => (pure (zero_extend (m := 64) (← readReg fcsr)))
-                              | 0x008 => readReg vstart
-                              | 0x009 =>
-                                (pure (zero_extend (m := 64) (_get_Vcsr_vxsat (← readReg vcsr))))
-                              | 0x00A =>
-                                (pure (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))
-                              | 0x00F => (pure (zero_extend (m := 64) (← readReg vcsr)))
-                              | 0xC20 => readReg vl
-                              | 0xC21 => readReg vtype
-                              | 0xC22 => (pure VLENB)
-                              | 0x321 =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) (xlen -i 1) 0))
-                              | 0x721 =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x721#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x322 =>
-                                (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) (xlen -i 1)
-                                    0))
-                              | 0x722 =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x722#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x30C =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen0) (xlen -i 1) 0))
-                              | 0x30D =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen1) (xlen -i 1) 0))
-                              | 0x30E =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen2) (xlen -i 1) 0))
-                              | 0x30F =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen3) (xlen -i 1) 0))
-                              | 0x31C =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31C#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31D =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31D#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31E =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31E#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31F =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31F#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x60C =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen0) &&& (← (get_hstateen_mask 0)))
-                                    (xlen -i 1) 0))
-                              | 0x60D =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen1) &&& (← (get_hstateen_mask 1)))
-                                    (xlen -i 1) 0))
-                              | 0x60E =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen2) &&& (← (get_hstateen_mask 2)))
-                                    (xlen -i 1) 0))
-                              | 0x60F =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen3) &&& (← (get_hstateen_mask 3)))
-                                    (xlen -i 1) 0))
-                              | 0x61C =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen0) &&& (← (get_hstateen_mask 0))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61C#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61D =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen1) &&& (← (get_hstateen_mask 1))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61D#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61E =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen2) &&& (← (get_hstateen_mask 2))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61E#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61F =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen3) &&& (← (get_hstateen_mask 3))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61F#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x10C =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 0)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen0) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10D =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 1)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen1) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10E =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 2)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen2) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10F =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 3)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen3) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x180 => readReg satp
-                              | 0x015 => (read_seed_csr ())
-                              | v__410 =>
-                                (internal_error "postlude/csr_end.sail" 17
-                                  (HAppend.hAppend "Read from CSR that does not exist: "
-                                    (BitVec.toFormatted v__410))))))))))
-  | 0x747 => (pure (Sail.BitVec.extractLsb (← readReg mseccfg) (xlen -i 1) 0))
-  | 0x757 =>
-    (do
-      if ((xlen == 32) : Bool)
-      then (pure (Sail.BitVec.extractLsb (← readReg mseccfg) 63 32))
-      else
-        (do
-          let v__410 := 0x757#12
-          if ((((Sail.BitVec.extractLsb v__410 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-                 (Sail.BitVec.extractLsb v__410 3 0)
-               (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-          then
-            (do
-              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-              (pmpReadCfgReg (BitVec.toNatInt idx)))
-          else
-            (do
-              if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
-              then
-                (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                  (pmpReadAddrReg (BitVec.toNatInt (0b00#2 +++ idx))))
-              else
-                (do
-                  if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
-                  then
-                    (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                      (pmpReadAddrReg (BitVec.toNatInt (0b01#2 +++ idx))))
-                  else
-                    (do
-                      if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
-                      then
-                        (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                          (pmpReadAddrReg (BitVec.toNatInt (0b10#2 +++ idx))))
-                      else
-                        (do
-                          if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
-                          then
-                            (do
-                              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                              (pmpReadAddrReg (BitVec.toNatInt (0b11#2 +++ idx))))
-                          else
-                            (do
-                              match v__410 with
-                              | 0x001 =>
-                                (pure (zero_extend (m := 64) (_get_Fcsr_FFLAGS (← readReg fcsr))))
-                              | 0x002 =>
-                                (pure (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))
-                              | 0x003 => (pure (zero_extend (m := 64) (← readReg fcsr)))
-                              | 0x008 => readReg vstart
-                              | 0x009 =>
-                                (pure (zero_extend (m := 64) (_get_Vcsr_vxsat (← readReg vcsr))))
-                              | 0x00A =>
-                                (pure (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))
-                              | 0x00F => (pure (zero_extend (m := 64) (← readReg vcsr)))
-                              | 0xC20 => readReg vl
-                              | 0xC21 => readReg vtype
-                              | 0xC22 => (pure VLENB)
-                              | 0x321 =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) (xlen -i 1) 0))
-                              | 0x721 =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x721#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x322 =>
-                                (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) (xlen -i 1)
-                                    0))
-                              | 0x722 =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x722#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x30C =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen0) (xlen -i 1) 0))
-                              | 0x30D =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen1) (xlen -i 1) 0))
-                              | 0x30E =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen2) (xlen -i 1) 0))
-                              | 0x30F =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen3) (xlen -i 1) 0))
-                              | 0x31C =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31C#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31D =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31D#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31E =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31E#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31F =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31F#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x60C =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen0) &&& (← (get_hstateen_mask 0)))
-                                    (xlen -i 1) 0))
-                              | 0x60D =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen1) &&& (← (get_hstateen_mask 1)))
-                                    (xlen -i 1) 0))
-                              | 0x60E =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen2) &&& (← (get_hstateen_mask 2)))
-                                    (xlen -i 1) 0))
-                              | 0x60F =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen3) &&& (← (get_hstateen_mask 3)))
-                                    (xlen -i 1) 0))
-                              | 0x61C =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen0) &&& (← (get_hstateen_mask 0))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61C#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61D =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen1) &&& (← (get_hstateen_mask 1))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61D#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61E =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen2) &&& (← (get_hstateen_mask 2))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61E#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61F =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen3) &&& (← (get_hstateen_mask 3))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61F#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x10C =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 0)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen0) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10D =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 1)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen1) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10E =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 2)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen2) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10F =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 3)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen3) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x180 => readReg satp
-                              | 0x015 => (read_seed_csr ())
-                              | v__410 =>
-                                (internal_error "postlude/csr_end.sail" 17
-                                  (HAppend.hAppend "Read from CSR that does not exist: "
-                                    (BitVec.toFormatted v__410))))))))))
-  | 0x30A => (pure (Sail.BitVec.extractLsb (← readReg menvcfg) (xlen -i 1) 0))
-  | 0x31A =>
-    (do
-      if ((xlen == 32) : Bool)
-      then (pure (Sail.BitVec.extractLsb (← readReg menvcfg) 63 32))
-      else
-        (do
-          let v__410 := 0x31A#12
-          if ((((Sail.BitVec.extractLsb v__410 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-                 (Sail.BitVec.extractLsb v__410 3 0)
-               (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-          then
-            (do
-              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-              (pmpReadCfgReg (BitVec.toNatInt idx)))
-          else
-            (do
-              if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
-              then
-                (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                  (pmpReadAddrReg (BitVec.toNatInt (0b00#2 +++ idx))))
-              else
-                (do
-                  if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
-                  then
-                    (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                      (pmpReadAddrReg (BitVec.toNatInt (0b01#2 +++ idx))))
-                  else
-                    (do
-                      if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
-                      then
-                        (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                          (pmpReadAddrReg (BitVec.toNatInt (0b10#2 +++ idx))))
-                      else
-                        (do
-                          if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
-                          then
-                            (do
-                              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                              (pmpReadAddrReg (BitVec.toNatInt (0b11#2 +++ idx))))
-                          else
-                            (do
-                              match v__410 with
-                              | 0x001 =>
-                                (pure (zero_extend (m := 64) (_get_Fcsr_FFLAGS (← readReg fcsr))))
-                              | 0x002 =>
-                                (pure (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))
-                              | 0x003 => (pure (zero_extend (m := 64) (← readReg fcsr)))
-                              | 0x008 => readReg vstart
-                              | 0x009 =>
-                                (pure (zero_extend (m := 64) (_get_Vcsr_vxsat (← readReg vcsr))))
-                              | 0x00A =>
-                                (pure (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))
-                              | 0x00F => (pure (zero_extend (m := 64) (← readReg vcsr)))
-                              | 0xC20 => readReg vl
-                              | 0xC21 => readReg vtype
-                              | 0xC22 => (pure VLENB)
-                              | 0x321 =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) (xlen -i 1) 0))
-                              | 0x721 =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x721#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x322 =>
-                                (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) (xlen -i 1)
-                                    0))
-                              | 0x722 =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x722#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x30C =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen0) (xlen -i 1) 0))
-                              | 0x30D =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen1) (xlen -i 1) 0))
-                              | 0x30E =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen2) (xlen -i 1) 0))
-                              | 0x30F =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen3) (xlen -i 1) 0))
-                              | 0x31C =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31C#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31D =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31D#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31E =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31E#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31F =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31F#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x60C =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen0) &&& (← (get_hstateen_mask 0)))
-                                    (xlen -i 1) 0))
-                              | 0x60D =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen1) &&& (← (get_hstateen_mask 1)))
-                                    (xlen -i 1) 0))
-                              | 0x60E =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen2) &&& (← (get_hstateen_mask 2)))
-                                    (xlen -i 1) 0))
-                              | 0x60F =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen3) &&& (← (get_hstateen_mask 3)))
-                                    (xlen -i 1) 0))
-                              | 0x61C =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen0) &&& (← (get_hstateen_mask 0))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61C#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61D =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen1) &&& (← (get_hstateen_mask 1))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61D#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61E =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen2) &&& (← (get_hstateen_mask 2))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61E#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61F =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen3) &&& (← (get_hstateen_mask 3))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61F#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x10C =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 0)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen0) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10D =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 1)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen1) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10E =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 2)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen2) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10F =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 3)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen3) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x180 => readReg satp
-                              | 0x015 => (read_seed_csr ())
-                              | v__410 =>
-                                (internal_error "postlude/csr_end.sail" 17
-                                  (HAppend.hAppend "Read from CSR that does not exist: "
-                                    (BitVec.toFormatted v__410))))))))))
-  | 0x10A => (pure (Sail.BitVec.extractLsb (← (read_senvcfg ())) (xlen -i 1) 0))
-  | 0x342 => readReg mcause
-  | 0x343 => readReg mtval
-  | 0x340 => readReg mscratch
-  | 0x106 => (pure (zero_extend (m := 64) (← readReg scounteren)))
-  | 0x306 => (pure (zero_extend (m := 64) (← readReg mcounteren)))
-  | 0x320 => (pure (zero_extend (m := 64) (← readReg mcountinhibit)))
-  | 0xF11 => (pure (zero_extend (m := 64) (← readReg mvendorid)))
-  | 0xF12 => readReg marchid
-  | 0xF13 => readReg mimpid
-  | 0xF14 => readReg mhartid
-  | 0xF15 => readReg mconfigptr
-  | 0x100 => (pure (Sail.BitVec.extractLsb (lower_mstatus (← readReg mstatus)) (xlen -i 1) 0))
-  | 0x140 => readReg sscratch
-  | 0x142 => readReg scause
-  | 0x143 => readReg stval
-  | 0x7A0 => (pure (Complement.complement (← readReg tselect)))
-  | 0x304 => readReg mie
-  | 0x344 => (read_mip ExcludePlatformInterrupts)
-  | 0x302 => (pure (Sail.BitVec.extractLsb (← readReg medeleg) (xlen -i 1) 0))
-  | 0x312 =>
-    (do
-      if ((xlen == 32) : Bool)
-      then (pure (Sail.BitVec.extractLsb (← readReg medeleg) 63 32))
-      else
-        (do
-          let v__410 := 0x312#12
-          if ((((Sail.BitVec.extractLsb v__410 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-                 (Sail.BitVec.extractLsb v__410 3 0)
-               (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-          then
-            (do
-              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-              (pmpReadCfgReg (BitVec.toNatInt idx)))
-          else
-            (do
-              if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
-              then
-                (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                  (pmpReadAddrReg (BitVec.toNatInt (0b00#2 +++ idx))))
-              else
-                (do
-                  if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
-                  then
-                    (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                      (pmpReadAddrReg (BitVec.toNatInt (0b01#2 +++ idx))))
-                  else
-                    (do
-                      if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
-                      then
-                        (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                          (pmpReadAddrReg (BitVec.toNatInt (0b10#2 +++ idx))))
-                      else
-                        (do
-                          if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
-                          then
-                            (do
-                              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                              (pmpReadAddrReg (BitVec.toNatInt (0b11#2 +++ idx))))
-                          else
-                            (do
-                              match v__410 with
-                              | 0x001 =>
-                                (pure (zero_extend (m := 64) (_get_Fcsr_FFLAGS (← readReg fcsr))))
-                              | 0x002 =>
-                                (pure (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))
-                              | 0x003 => (pure (zero_extend (m := 64) (← readReg fcsr)))
-                              | 0x008 => readReg vstart
-                              | 0x009 =>
-                                (pure (zero_extend (m := 64) (_get_Vcsr_vxsat (← readReg vcsr))))
-                              | 0x00A =>
-                                (pure (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))
-                              | 0x00F => (pure (zero_extend (m := 64) (← readReg vcsr)))
-                              | 0xC20 => readReg vl
-                              | 0xC21 => readReg vtype
-                              | 0xC22 => (pure VLENB)
-                              | 0x321 =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) (xlen -i 1) 0))
-                              | 0x721 =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x721#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x322 =>
-                                (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) (xlen -i 1)
-                                    0))
-                              | 0x722 =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x722#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x30C =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen0) (xlen -i 1) 0))
-                              | 0x30D =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen1) (xlen -i 1) 0))
-                              | 0x30E =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen2) (xlen -i 1) 0))
-                              | 0x30F =>
-                                (pure (Sail.BitVec.extractLsb (← readReg mstateen3) (xlen -i 1) 0))
-                              | 0x31C =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31C#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31D =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31D#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31E =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31E#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x31F =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then (pure (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))
-                                  else
-                                    (do
-                                      let v__410 := 0x31F#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x60C =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen0) &&& (← (get_hstateen_mask 0)))
-                                    (xlen -i 1) 0))
-                              | 0x60D =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen1) &&& (← (get_hstateen_mask 1)))
-                                    (xlen -i 1) 0))
-                              | 0x60E =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen2) &&& (← (get_hstateen_mask 2)))
-                                    (xlen -i 1) 0))
-                              | 0x60F =>
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen3) &&& (← (get_hstateen_mask 3)))
-                                    (xlen -i 1) 0))
-                              | 0x61C =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen0) &&& (← (get_hstateen_mask 0))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61C#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61D =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen1) &&& (← (get_hstateen_mask 1))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61D#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61E =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen2) &&& (← (get_hstateen_mask 2))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61E#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x61F =>
-                                (do
-                                  if ((xlen == 32) : Bool)
-                                  then
-                                    (pure (Sail.BitVec.extractLsb
-                                        ((← readReg hstateen3) &&& (← (get_hstateen_mask 3))) 63
-                                        32))
-                                  else
-                                    (do
-                                      let v__410 := 0x61F#12
-                                      (internal_error "postlude/csr_end.sail" 17
-                                        (HAppend.hAppend "Read from CSR that does not exist: "
-                                          (BitVec.toFormatted v__410)))))
-                              | 0x10C =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 0)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen0) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10D =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 1)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen1) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10E =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 2)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen2) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x10F =>
-                                (do
-                                  let mask ← do (get_sstateen_mask 3)
-                                  (pure (zero_extend (m := 64)
-                                      ((← readReg sstateen3) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                              | 0x180 => readReg satp
-                              | 0x015 => (read_seed_csr ())
-                              | v__410 =>
-                                (internal_error "postlude/csr_end.sail" 17
-                                  (HAppend.hAppend "Read from CSR that does not exist: "
-                                    (BitVec.toFormatted v__410))))))))))
-  | 0x303 => readReg mideleg
-  | 0x144 => (read_sip ExcludePlatformInterrupts)
-  | 0x104 => (pure (lower_mie (← readReg mie) (← readReg mideleg)))
-  | 0x105 => (get_stvec ())
-  | 0x141 => (get_xepc Supervisor)
-  | 0x305 => (get_mtvec ())
-  | 0x341 => (get_xepc Machine)
-  | v__410 =>
-    (do
-      if ((((Sail.BitVec.extractLsb v__410 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-             (Sail.BitVec.extractLsb v__410 3 0)
-           (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-      then
-        (do
-          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-          (pmpReadCfgReg (BitVec.toNatInt idx)))
-      else
-        (do
-          if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
-          then
-            (do
-              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-              (pmpReadAddrReg (BitVec.toNatInt (0b00#2 +++ idx))))
-          else
-            (do
-              if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
-              then
-                (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                  (pmpReadAddrReg (BitVec.toNatInt (0b01#2 +++ idx))))
-              else
-                (do
-                  if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
-                  then
-                    (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                      (pmpReadAddrReg (BitVec.toNatInt (0b10#2 +++ idx))))
-                  else
-                    (do
-                      if (((Sail.BitVec.extractLsb v__410 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
-                      then
-                        (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__410 3 0)
-                          (pmpReadAddrReg (BitVec.toNatInt (0b11#2 +++ idx))))
-                      else
-                        (do
-                          match v__410 with
-                          | 0x001 =>
-                            (pure (zero_extend (m := 64) (_get_Fcsr_FFLAGS (← readReg fcsr))))
-                          | 0x002 =>
-                            (pure (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))
-                          | 0x003 => (pure (zero_extend (m := 64) (← readReg fcsr)))
-                          | 0x008 => readReg vstart
-                          | 0x009 =>
-                            (pure (zero_extend (m := 64) (_get_Vcsr_vxsat (← readReg vcsr))))
-                          | 0x00A =>
-                            (pure (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))
-                          | 0x00F => (pure (zero_extend (m := 64) (← readReg vcsr)))
-                          | 0xC20 => readReg vl
-                          | 0xC21 => readReg vtype
-                          | 0xC22 => (pure VLENB)
-                          | 0x321 =>
-                            (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) (xlen -i 1) 0))
-                          | 0x721 =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then (pure (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))
-                              else
-                                (do
-                                  let v__410 := 0x721#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x322 =>
-                            (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) (xlen -i 1) 0))
-                          | 0x722 =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then (pure (Sail.BitVec.extractLsb (← readReg minstretcfg) 63 32))
-                              else
-                                (do
-                                  let v__410 := 0x722#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x30C =>
-                            (pure (Sail.BitVec.extractLsb (← readReg mstateen0) (xlen -i 1) 0))
-                          | 0x30D =>
-                            (pure (Sail.BitVec.extractLsb (← readReg mstateen1) (xlen -i 1) 0))
-                          | 0x30E =>
-                            (pure (Sail.BitVec.extractLsb (← readReg mstateen2) (xlen -i 1) 0))
-                          | 0x30F =>
-                            (pure (Sail.BitVec.extractLsb (← readReg mstateen3) (xlen -i 1) 0))
-                          | 0x31C =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then (pure (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))
-                              else
-                                (do
-                                  let v__410 := 0x31C#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x31D =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then (pure (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))
-                              else
-                                (do
-                                  let v__410 := 0x31D#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x31E =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then (pure (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))
-                              else
-                                (do
-                                  let v__410 := 0x31E#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x31F =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then (pure (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))
-                              else
-                                (do
-                                  let v__410 := 0x31F#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x60C =>
-                            (pure (Sail.BitVec.extractLsb
-                                ((← readReg hstateen0) &&& (← (get_hstateen_mask 0)))
-                                (xlen -i 1) 0))
-                          | 0x60D =>
-                            (pure (Sail.BitVec.extractLsb
-                                ((← readReg hstateen1) &&& (← (get_hstateen_mask 1)))
-                                (xlen -i 1) 0))
-                          | 0x60E =>
-                            (pure (Sail.BitVec.extractLsb
-                                ((← readReg hstateen2) &&& (← (get_hstateen_mask 2)))
-                                (xlen -i 1) 0))
-                          | 0x60F =>
-                            (pure (Sail.BitVec.extractLsb
-                                ((← readReg hstateen3) &&& (← (get_hstateen_mask 3)))
-                                (xlen -i 1) 0))
-                          | 0x61C =>
-                            (do
-                              if ((xlen == 32) : Bool)
+                              if ((b__0 == (0x10A#12 : (BitVec 12))) : Bool)
                               then
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen0) &&& (← (get_hstateen_mask 0))) 63 32))
+                                (pure (Sail.BitVec.extractLsb (← (read_senvcfg ())) (xlen -i 1) 0))
                               else
                                 (do
-                                  let v__410 := 0x61C#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x61D =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen1) &&& (← (get_hstateen_mask 1))) 63 32))
-                              else
-                                (do
-                                  let v__410 := 0x61D#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x61E =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen2) &&& (← (get_hstateen_mask 2))) 63 32))
-                              else
-                                (do
-                                  let v__410 := 0x61E#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x61F =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (pure (Sail.BitVec.extractLsb
-                                    ((← readReg hstateen3) &&& (← (get_hstateen_mask 3))) 63 32))
-                              else
-                                (do
-                                  let v__410 := 0x61F#12
-                                  (internal_error "postlude/csr_end.sail" 17
-                                    (HAppend.hAppend "Read from CSR that does not exist: "
-                                      (BitVec.toFormatted v__410)))))
-                          | 0x10C =>
-                            (do
-                              let mask ← do (get_sstateen_mask 0)
-                              (pure (zero_extend (m := 64)
-                                  ((← readReg sstateen0) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                          | 0x10D =>
-                            (do
-                              let mask ← do (get_sstateen_mask 1)
-                              (pure (zero_extend (m := 64)
-                                  ((← readReg sstateen1) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                          | 0x10E =>
-                            (do
-                              let mask ← do (get_sstateen_mask 2)
-                              (pure (zero_extend (m := 64)
-                                  ((← readReg sstateen2) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                          | 0x10F =>
-                            (do
-                              let mask ← do (get_sstateen_mask 3)
-                              (pure (zero_extend (m := 64)
-                                  ((← readReg sstateen3) &&& (Sail.BitVec.extractLsb mask 31 0)))))
-                          | 0x180 => readReg satp
-                          | 0x015 => (read_seed_csr ())
-                          | v__410 =>
-                            (internal_error "postlude/csr_end.sail" 17
-                              (HAppend.hAppend "Read from CSR that does not exist: "
-                                (BitVec.toFormatted v__410)))))))))
+                                  if ((b__0 == (0x342#12 : (BitVec 12))) : Bool)
+                                  then readReg mcause
+                                  else
+                                    (do
+                                      if ((b__0 == (0x343#12 : (BitVec 12))) : Bool)
+                                      then readReg mtval
+                                      else
+                                        (do
+                                          if ((b__0 == (0x340#12 : (BitVec 12))) : Bool)
+                                          then readReg mscratch
+                                          else
+                                            (do
+                                              if ((b__0 == (0x106#12 : (BitVec 12))) : Bool)
+                                              then
+                                                (pure (zero_extend (m := 64)
+                                                    (← readReg scounteren)))
+                                              else
+                                                (do
+                                                  if ((b__0 == (0x306#12 : (BitVec 12))) : Bool)
+                                                  then
+                                                    (pure (zero_extend (m := 64)
+                                                        (← readReg mcounteren)))
+                                                  else
+                                                    (do
+                                                      if ((b__0 == (0x320#12 : (BitVec 12))) : Bool)
+                                                      then
+                                                        (pure (zero_extend (m := 64)
+                                                            (← readReg mcountinhibit)))
+                                                      else
+                                                        (do
+                                                          if ((b__0 == (0xF11#12 : (BitVec 12))) : Bool)
+                                                          then
+                                                            (pure (zero_extend (m := 64)
+                                                                (← readReg mvendorid)))
+                                                          else
+                                                            (do
+                                                              if ((b__0 == (0xF12#12 : (BitVec 12))) : Bool)
+                                                              then readReg marchid
+                                                              else
+                                                                (do
+                                                                  if ((b__0 == (0xF13#12 : (BitVec 12))) : Bool)
+                                                                  then readReg mimpid
+                                                                  else
+                                                                    (do
+                                                                      if ((b__0 == (0xF14#12 : (BitVec 12))) : Bool)
+                                                                      then readReg mhartid
+                                                                      else
+                                                                        (do
+                                                                          if ((b__0 == (0xF15#12 : (BitVec 12))) : Bool)
+                                                                          then readReg mconfigptr
+                                                                          else
+                                                                            (do
+                                                                              if ((b__0 == (0x100#12 : (BitVec 12))) : Bool)
+                                                                              then
+                                                                                (pure (Sail.BitVec.extractLsb
+                                                                                    (lower_mstatus
+                                                                                      (← readReg mstatus))
+                                                                                    (xlen -i 1) 0))
+                                                                              else
+                                                                                (do
+                                                                                  if ((b__0 == (0x140#12 : (BitVec 12))) : Bool)
+                                                                                  then
+                                                                                    readReg sscratch
+                                                                                  else
+                                                                                    (do
+                                                                                      if ((b__0 == (0x142#12 : (BitVec 12))) : Bool)
+                                                                                      then
+                                                                                        readReg scause
+                                                                                      else
+                                                                                        (do
+                                                                                          if ((b__0 == (0x143#12 : (BitVec 12))) : Bool)
+                                                                                          then
+                                                                                            readReg stval
+                                                                                          else
+                                                                                            (do
+                                                                                              if ((b__0 == (0x7A0#12 : (BitVec 12))) : Bool)
+                                                                                              then
+                                                                                                (pure (Complement.complement
+                                                                                                    (← readReg tselect)))
+                                                                                              else
+                                                                                                (do
+                                                                                                  if ((b__0 == (0x304#12 : (BitVec 12))) : Bool)
+                                                                                                  then
+                                                                                                    readReg mie
+                                                                                                  else
+                                                                                                    (do
+                                                                                                      if ((b__0 == (0x344#12 : (BitVec 12))) : Bool)
+                                                                                                      then
+                                                                                                        (read_mip
+                                                                                                          ExcludePlatformInterrupts)
+                                                                                                      else
+                                                                                                        (do
+                                                                                                          if ((b__0 == (0x302#12 : (BitVec 12))) : Bool)
+                                                                                                          then
+                                                                                                            (pure (Sail.BitVec.extractLsb
+                                                                                                                (← readReg medeleg)
+                                                                                                                (xlen -i 1)
+                                                                                                                0))
+                                                                                                          else
+                                                                                                            (do
+                                                                                                              if (((b__0 == (0x312#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                              then
+                                                                                                                (pure (Sail.BitVec.extractLsb
+                                                                                                                    (← readReg medeleg)
+                                                                                                                    63
+                                                                                                                    32))
+                                                                                                              else
+                                                                                                                (do
+                                                                                                                  if ((b__0 == (0x303#12 : (BitVec 12))) : Bool)
+                                                                                                                  then
+                                                                                                                    readReg mideleg
+                                                                                                                  else
+                                                                                                                    (do
+                                                                                                                      if ((b__0 == (0x144#12 : (BitVec 12))) : Bool)
+                                                                                                                      then
+                                                                                                                        (read_sip
+                                                                                                                          ExcludePlatformInterrupts)
+                                                                                                                      else
+                                                                                                                        (do
+                                                                                                                          if ((b__0 == (0x104#12 : (BitVec 12))) : Bool)
+                                                                                                                          then
+                                                                                                                            (pure (lower_mie
+                                                                                                                                (← readReg mie)
+                                                                                                                                (← readReg mideleg)))
+                                                                                                                          else
+                                                                                                                            (do
+                                                                                                                              if ((b__0 == (0x105#12 : (BitVec 12))) : Bool)
+                                                                                                                              then
+                                                                                                                                (get_stvec
+                                                                                                                                  ())
+                                                                                                                              else
+                                                                                                                                (do
+                                                                                                                                  if ((b__0 == (0x141#12 : (BitVec 12))) : Bool)
+                                                                                                                                  then
+                                                                                                                                    (get_xepc
+                                                                                                                                      Supervisor)
+                                                                                                                                  else
+                                                                                                                                    (do
+                                                                                                                                      if ((b__0 == (0x305#12 : (BitVec 12))) : Bool)
+                                                                                                                                      then
+                                                                                                                                        (get_mtvec
+                                                                                                                                          ())
+                                                                                                                                      else
+                                                                                                                                        (do
+                                                                                                                                          if ((b__0 == (0x341#12 : (BitVec 12))) : Bool)
+                                                                                                                                          then
+                                                                                                                                            (get_xepc
+                                                                                                                                              Machine)
+                                                                                                                                          else
+                                                                                                                                            (do
+                                                                                                                                              if ((((Sail.BitVec.extractLsb
+                                                                                                                                                       b__0
+                                                                                                                                                       11
+                                                                                                                                                       4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
+                                                                                                                                                     (Sail.BitVec.extractLsb
+                                                                                                                                                       b__0
+                                                                                                                                                       3
+                                                                                                                                                       0)
+                                                                                                                                                   (((BitVec.access
+                                                                                                                                                         idx
+                                                                                                                                                         0) == 0#1) || (xlen == 32)))) : Bool)
+                                                                                                                                              then
+                                                                                                                                                (do
+                                                                                                                                                  let idx : (BitVec 4) :=
+                                                                                                                                                    (Sail.BitVec.extractLsb
+                                                                                                                                                      b__0
+                                                                                                                                                      3
+                                                                                                                                                      0)
+                                                                                                                                                  (pmpReadCfgReg
+                                                                                                                                                    (BitVec.toNatInt
+                                                                                                                                                      idx)))
+                                                                                                                                              else
+                                                                                                                                                (do
+                                                                                                                                                  if (((Sail.BitVec.extractLsb
+                                                                                                                                                         b__0
+                                                                                                                                                         11
+                                                                                                                                                         4) == (0x3B#8 : (BitVec 8))) : Bool)
+                                                                                                                                                  then
+                                                                                                                                                    (do
+                                                                                                                                                      let idx : (BitVec 4) :=
+                                                                                                                                                        (Sail.BitVec.extractLsb
+                                                                                                                                                          b__0
+                                                                                                                                                          3
+                                                                                                                                                          0)
+                                                                                                                                                      (pmpReadAddrReg
+                                                                                                                                                        (BitVec.toNatInt
+                                                                                                                                                          (0b00#2 +++ idx))))
+                                                                                                                                                  else
+                                                                                                                                                    (do
+                                                                                                                                                      if (((Sail.BitVec.extractLsb
+                                                                                                                                                             b__0
+                                                                                                                                                             11
+                                                                                                                                                             4) == (0x3C#8 : (BitVec 8))) : Bool)
+                                                                                                                                                      then
+                                                                                                                                                        (do
+                                                                                                                                                          let idx : (BitVec 4) :=
+                                                                                                                                                            (Sail.BitVec.extractLsb
+                                                                                                                                                              b__0
+                                                                                                                                                              3
+                                                                                                                                                              0)
+                                                                                                                                                          (pmpReadAddrReg
+                                                                                                                                                            (BitVec.toNatInt
+                                                                                                                                                              (0b01#2 +++ idx))))
+                                                                                                                                                      else
+                                                                                                                                                        (do
+                                                                                                                                                          if (((Sail.BitVec.extractLsb
+                                                                                                                                                                 b__0
+                                                                                                                                                                 11
+                                                                                                                                                                 4) == (0x3D#8 : (BitVec 8))) : Bool)
+                                                                                                                                                          then
+                                                                                                                                                            (do
+                                                                                                                                                              let idx : (BitVec 4) :=
+                                                                                                                                                                (Sail.BitVec.extractLsb
+                                                                                                                                                                  b__0
+                                                                                                                                                                  3
+                                                                                                                                                                  0)
+                                                                                                                                                              (pmpReadAddrReg
+                                                                                                                                                                (BitVec.toNatInt
+                                                                                                                                                                  (0b10#2 +++ idx))))
+                                                                                                                                                          else
+                                                                                                                                                            (do
+                                                                                                                                                              if (((Sail.BitVec.extractLsb
+                                                                                                                                                                     b__0
+                                                                                                                                                                     11
+                                                                                                                                                                     4) == (0x3E#8 : (BitVec 8))) : Bool)
+                                                                                                                                                              then
+                                                                                                                                                                (do
+                                                                                                                                                                  let idx : (BitVec 4) :=
+                                                                                                                                                                    (Sail.BitVec.extractLsb
+                                                                                                                                                                      b__0
+                                                                                                                                                                      3
+                                                                                                                                                                      0)
+                                                                                                                                                                  (pmpReadAddrReg
+                                                                                                                                                                    (BitVec.toNatInt
+                                                                                                                                                                      (0b11#2 +++ idx))))
+                                                                                                                                                              else
+                                                                                                                                                                (do
+                                                                                                                                                                  if ((b__0 == (0x001#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                  then
+                                                                                                                                                                    (pure (zero_extend
+                                                                                                                                                                        (m := 64)
+                                                                                                                                                                        (_get_Fcsr_FFLAGS
+                                                                                                                                                                          (← readReg fcsr))))
+                                                                                                                                                                  else
+                                                                                                                                                                    (do
+                                                                                                                                                                      if ((b__0 == (0x002#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                      then
+                                                                                                                                                                        (pure (zero_extend
+                                                                                                                                                                            (m := 64)
+                                                                                                                                                                            (_get_Fcsr_FRM
+                                                                                                                                                                              (← readReg fcsr))))
+                                                                                                                                                                      else
+                                                                                                                                                                        (do
+                                                                                                                                                                          if ((b__0 == (0x003#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                          then
+                                                                                                                                                                            (pure (zero_extend
+                                                                                                                                                                                (m := 64)
+                                                                                                                                                                                (← readReg fcsr)))
+                                                                                                                                                                          else
+                                                                                                                                                                            (do
+                                                                                                                                                                              if ((b__0 == (0x008#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                              then
+                                                                                                                                                                                readReg vstart
+                                                                                                                                                                              else
+                                                                                                                                                                                (do
+                                                                                                                                                                                  if ((b__0 == (0x009#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                  then
+                                                                                                                                                                                    (pure (zero_extend
+                                                                                                                                                                                        (m := 64)
+                                                                                                                                                                                        (_get_Vcsr_vxsat
+                                                                                                                                                                                          (← readReg vcsr))))
+                                                                                                                                                                                  else
+                                                                                                                                                                                    (do
+                                                                                                                                                                                      if ((b__0 == (0x00A#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                      then
+                                                                                                                                                                                        (pure (zero_extend
+                                                                                                                                                                                            (m := 64)
+                                                                                                                                                                                            (_get_Vcsr_vxrm
+                                                                                                                                                                                              (← readReg vcsr))))
+                                                                                                                                                                                      else
+                                                                                                                                                                                        (do
+                                                                                                                                                                                          if ((b__0 == (0x00F#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                          then
+                                                                                                                                                                                            (pure (zero_extend
+                                                                                                                                                                                                (m := 64)
+                                                                                                                                                                                                (← readReg vcsr)))
+                                                                                                                                                                                          else
+                                                                                                                                                                                            (do
+                                                                                                                                                                                              if ((b__0 == (0xC20#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                              then
+                                                                                                                                                                                                readReg vl
+                                                                                                                                                                                              else
+                                                                                                                                                                                                (do
+                                                                                                                                                                                                  if ((b__0 == (0xC21#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                  then
+                                                                                                                                                                                                    readReg vtype
+                                                                                                                                                                                                  else
+                                                                                                                                                                                                    (do
+                                                                                                                                                                                                      if ((b__0 == (0xC22#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                      then
+                                                                                                                                                                                                        (pure VLENB)
+                                                                                                                                                                                                      else
+                                                                                                                                                                                                        (do
+                                                                                                                                                                                                          if ((b__0 == (0x321#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                          then
+                                                                                                                                                                                                            (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                (← readReg mcyclecfg)
+                                                                                                                                                                                                                (xlen -i 1)
+                                                                                                                                                                                                                0))
+                                                                                                                                                                                                          else
+                                                                                                                                                                                                            (do
+                                                                                                                                                                                                              if (((b__0 == (0x721#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                              then
+                                                                                                                                                                                                                (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                    (← readReg mcyclecfg)
+                                                                                                                                                                                                                    63
+                                                                                                                                                                                                                    32))
+                                                                                                                                                                                                              else
+                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                  if ((b__0 == (0x322#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                    (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                        (← readReg minstretcfg)
+                                                                                                                                                                                                                        (xlen -i 1)
+                                                                                                                                                                                                                        0))
+                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                      if (((b__0 == (0x722#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                        (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                            (← readReg minstretcfg)
+                                                                                                                                                                                                                            63
+                                                                                                                                                                                                                            32))
+                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                          if ((b__0 == (0x30C#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                            (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                (← readReg mstateen0)
+                                                                                                                                                                                                                                (xlen -i 1)
+                                                                                                                                                                                                                                0))
+                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                              if ((b__0 == (0x30D#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                    (← readReg mstateen1)
+                                                                                                                                                                                                                                    (xlen -i 1)
+                                                                                                                                                                                                                                    0))
+                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                  if ((b__0 == (0x30E#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                    (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                        (← readReg mstateen2)
+                                                                                                                                                                                                                                        (xlen -i 1)
+                                                                                                                                                                                                                                        0))
+                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                      if ((b__0 == (0x30F#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                        (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                            (← readReg mstateen3)
+                                                                                                                                                                                                                                            (xlen -i 1)
+                                                                                                                                                                                                                                            0))
+                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                          if (((b__0 == (0x31C#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                            (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                (← readReg mstateen0)
+                                                                                                                                                                                                                                                63
+                                                                                                                                                                                                                                                32))
+                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                              if (((b__0 == (0x31D#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                    (← readReg mstateen1)
+                                                                                                                                                                                                                                                    63
+                                                                                                                                                                                                                                                    32))
+                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                  if (((b__0 == (0x31E#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                    (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                        (← readReg mstateen2)
+                                                                                                                                                                                                                                                        63
+                                                                                                                                                                                                                                                        32))
+                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                      if (((b__0 == (0x31F#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                        (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                            (← readReg mstateen3)
+                                                                                                                                                                                                                                                            63
+                                                                                                                                                                                                                                                            32))
+                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                          if ((b__0 == (0x60C#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                                            (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                ((← readReg hstateen0) &&& (← (get_hstateen_mask
+                                                                                                                                                                                                                                                                      0)))
+                                                                                                                                                                                                                                                                (xlen -i 1)
+                                                                                                                                                                                                                                                                0))
+                                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                              if ((b__0 == (0x60D#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                                (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                    ((← readReg hstateen1) &&& (← (get_hstateen_mask
+                                                                                                                                                                                                                                                                          1)))
+                                                                                                                                                                                                                                                                    (xlen -i 1)
+                                                                                                                                                                                                                                                                    0))
+                                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                  if ((b__0 == (0x60E#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                                    (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                        ((← readReg hstateen2) &&& (← (get_hstateen_mask
+                                                                                                                                                                                                                                                                              2)))
+                                                                                                                                                                                                                                                                        (xlen -i 1)
+                                                                                                                                                                                                                                                                        0))
+                                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                      if ((b__0 == (0x60F#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                                        (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                            ((← readReg hstateen3) &&& (← (get_hstateen_mask
+                                                                                                                                                                                                                                                                                  3)))
+                                                                                                                                                                                                                                                                            (xlen -i 1)
+                                                                                                                                                                                                                                                                            0))
+                                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                          if (((b__0 == (0x61C#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                                                            (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                ((← readReg hstateen0) &&& (← (get_hstateen_mask
+                                                                                                                                                                                                                                                                                      0)))
+                                                                                                                                                                                                                                                                                63
+                                                                                                                                                                                                                                                                                32))
+                                                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                              if (((b__0 == (0x61D#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                                                (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                    ((← readReg hstateen1) &&& (← (get_hstateen_mask
+                                                                                                                                                                                                                                                                                          1)))
+                                                                                                                                                                                                                                                                                    63
+                                                                                                                                                                                                                                                                                    32))
+                                                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                  if (((b__0 == (0x61E#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                                                    (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                        ((← readReg hstateen2) &&& (← (get_hstateen_mask
+                                                                                                                                                                                                                                                                                              2)))
+                                                                                                                                                                                                                                                                                        63
+                                                                                                                                                                                                                                                                                        32))
+                                                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                      if (((b__0 == (0x61F#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                                                        (pure (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                            ((← readReg hstateen3) &&& (← (get_hstateen_mask
+                                                                                                                                                                                                                                                                                                  3)))
+                                                                                                                                                                                                                                                                                            63
+                                                                                                                                                                                                                                                                                            32))
+                                                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                                          if ((b__0 == (0x10C#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                                              let mask ← do
+                                                                                                                                                                                                                                                                                                (get_sstateen_mask
+                                                                                                                                                                                                                                                                                                  0)
+                                                                                                                                                                                                                                                                                              (pure (zero_extend
+                                                                                                                                                                                                                                                                                                  (m := 64)
+                                                                                                                                                                                                                                                                                                  ((← readReg sstateen0) &&& (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                      mask
+                                                                                                                                                                                                                                                                                                      31
+                                                                                                                                                                                                                                                                                                      0)))))
+                                                                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                                              if ((b__0 == (0x10D#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                                  let mask ← do
+                                                                                                                                                                                                                                                                                                    (get_sstateen_mask
+                                                                                                                                                                                                                                                                                                      1)
+                                                                                                                                                                                                                                                                                                  (pure (zero_extend
+                                                                                                                                                                                                                                                                                                      (m := 64)
+                                                                                                                                                                                                                                                                                                      ((← readReg sstateen1) &&& (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                          mask
+                                                                                                                                                                                                                                                                                                          31
+                                                                                                                                                                                                                                                                                                          0)))))
+                                                                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                                  if ((b__0 == (0x10E#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                                      let mask ← do
+                                                                                                                                                                                                                                                                                                        (get_sstateen_mask
+                                                                                                                                                                                                                                                                                                          2)
+                                                                                                                                                                                                                                                                                                      (pure (zero_extend
+                                                                                                                                                                                                                                                                                                          (m := 64)
+                                                                                                                                                                                                                                                                                                          ((← readReg sstateen2) &&& (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                              mask
+                                                                                                                                                                                                                                                                                                              31
+                                                                                                                                                                                                                                                                                                              0)))))
+                                                                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                                      if ((b__0 == (0x10F#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                                                          let mask ← do
+                                                                                                                                                                                                                                                                                                            (get_sstateen_mask
+                                                                                                                                                                                                                                                                                                              3)
+                                                                                                                                                                                                                                                                                                          (pure (zero_extend
+                                                                                                                                                                                                                                                                                                              (m := 64)
+                                                                                                                                                                                                                                                                                                              ((← readReg sstateen3) &&& (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                  mask
+                                                                                                                                                                                                                                                                                                                  31
+                                                                                                                                                                                                                                                                                                                  0)))))
+                                                                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                                                          if ((b__0 == (0x180#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                                                                                            readReg satp
+                                                                                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                                                              if ((b__0 == (0x015#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                                                                                (read_seed_csr
+                                                                                                                                                                                                                                                                                                                  ())
+                                                                                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                                                                                (internal_error
+                                                                                                                                                                                                                                                                                                                  "postlude/csr_end.sail"
+                                                                                                                                                                                                                                                                                                                  17
+                                                                                                                                                                                                                                                                                                                  (HAppend.hAppend
+                                                                                                                                                                                                                                                                                                                    "Read from CSR that does not exist: "
+                                                                                                                                                                                                                                                                                                                    (BitVec.toFormatted
+                                                                                                                                                                                                                                                                                                                      b__0))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
-def write_CSR (arg0 : (BitVec 12)) (arg1 : (BitVec 64)) : SailM (Result (BitVec 64) Unit) := do
-  let merge_var := (arg0, arg1)
-  match merge_var with
-  | (0x301, value) =>
+def write_CSR (b__0 : (BitVec 12)) (value : (BitVec 64)) : SailM (Result (BitVec 64) Unit) := do
+  if ((b__0 == (0x301#12 : (BitVec 12))) : Bool)
+  then
     (do
       writeReg misa (← (legalize_misa (← readReg misa) value))
       (pure (Ok (← readReg misa))))
-  | (0x300, value) =>
+  else
     (do
-      if ((xlen == 64) : Bool)
+      if (((b__0 == (0x300#12 : (BitVec 12))) && (xlen == 64)) : Bool)
       then
         (do
           writeReg mstatus (← (legalize_mstatus (← readReg mstatus) value))
           (pure (Ok (← readReg mstatus))))
       else
         (do
-          writeReg mstatus (← (legalize_mstatus (← readReg mstatus)
-              ((Sail.BitVec.extractLsb (← readReg mstatus) 63 32) +++ value)))
-          (pure (Ok (Sail.BitVec.extractLsb (← readReg mstatus) 31 0)))))
-  | (0x310, value) =>
-    (do
-      if ((xlen == 32) : Bool)
-      then
-        (do
-          writeReg mstatus (← (legalize_mstatus (← readReg mstatus)
-              (value +++ (Sail.BitVec.extractLsb (← readReg mstatus) 31 0))))
-          (pure (Ok (Sail.BitVec.extractLsb (← readReg mstatus) 63 32))))
-      else
-        (do
-          match (0x310#12, value) with
-          | (v__420, value) =>
-            (do
-              if ((((Sail.BitVec.extractLsb v__420 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-                     (Sail.BitVec.extractLsb v__420 3 0)
-                   (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-              then
-                (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                  let idx := (BitVec.toNatInt idx)
-                  (pmpWriteCfgReg idx value)
-                  (pure (Ok (← (pmpReadCfgReg idx)))))
-              else
-                (do
-                  if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
-                  then
-                    (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                      let idx := (BitVec.toNatInt (0b00#2 +++ idx))
-                      (pmpWriteAddrReg idx value)
-                      (pure (Ok (← (pmpReadAddrReg idx)))))
-                  else
-                    (do
-                      if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
-                      then
-                        (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                          let idx := (BitVec.toNatInt (0b01#2 +++ idx))
-                          (pmpWriteAddrReg idx value)
-                          (pure (Ok (← (pmpReadAddrReg idx)))))
-                      else
-                        (do
-                          if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
-                          then
-                            (do
-                              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                              let idx := (BitVec.toNatInt (0b10#2 +++ idx))
-                              (pmpWriteAddrReg idx value)
-                              (pure (Ok (← (pmpReadAddrReg idx)))))
-                          else
-                            (do
-                              if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
-                              then
-                                (do
-                                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                                  let idx := (BitVec.toNatInt (0b11#2 +++ idx))
-                                  (pmpWriteAddrReg idx value)
-                                  (pure (Ok (← (pmpReadAddrReg idx)))))
-                              else
-                                (do
-                                  match (v__420, value) with
-                                  | (0x001, value) =>
-                                    (do
-                                      (write_fcsr (_get_Fcsr_FRM (← readReg fcsr))
-                                        (Sail.BitVec.extractLsb value 4 0))
-                                      (pure (Ok
-                                          (zero_extend (m := 64)
-                                            (_get_Fcsr_FFLAGS (← readReg fcsr))))))
-                                  | (0x002, value) =>
-                                    (do
-                                      (write_fcsr (Sail.BitVec.extractLsb value 2 0)
-                                        (_get_Fcsr_FFLAGS (← readReg fcsr)))
-                                      (pure (Ok
-                                          (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))))
-                                  | (0x003, value) =>
-                                    (do
-                                      (write_fcsr (Sail.BitVec.extractLsb value 7 5)
-                                        (Sail.BitVec.extractLsb value 4 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg fcsr)))))
-                                  | (0x008, value) =>
-                                    (do
-                                      (set_vstart (Sail.BitVec.extractLsb value 15 0))
-                                      (pure (Ok (← readReg vstart))))
-                                  | (0x009, value) =>
-                                    (do
-                                      (write_vcsr (_get_Vcsr_vxrm (← readReg vcsr))
-                                        (Sail.BitVec.extractLsb value 0 0))
-                                      (pure (Ok
-                                          (zero_extend (m := 64)
-                                            (_get_Vcsr_vxsat (← readReg vcsr))))))
-                                  | (0x00A, value) =>
-                                    (do
-                                      (write_vcsr (Sail.BitVec.extractLsb value 1 0)
-                                        (_get_Vcsr_vxsat (← readReg vcsr)))
-                                      (pure (Ok
-                                          (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))))
-                                  | (0x00F, value) =>
-                                    (do
-                                      (write_vcsr (Sail.BitVec.extractLsb value 2 1)
-                                        (Sail.BitVec.extractLsb value 0 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg vcsr)))))
-                                  | (0x321, value) =>
-                                    (do
-                                      if ((xlen == 64) : Bool)
-                                      then
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg) value))
-                                          (pure (Ok (← readReg mcyclecfg))))
-                                      else
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg)
-                                              ((Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mcyclecfg)
-                                                (xlen -i 1) 0)))))
-                                  | (0x721, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg mcyclecfg) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))))
-                                      else
-                                        (do
-                                          match (0x721#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x322, value) =>
-                                    (do
-                                      if ((xlen == 64) : Bool)
-                                      then
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg) value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg)
-                                                (xlen -i 1) 0))))
-                                      else
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg)
-                                              ((Sail.BitVec.extractLsb (← readReg minstretcfg) 63
-                                                  32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg)
-                                                (xlen -i 1) 0)))))
-                                  | (0x722, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg minstretcfg) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg) 63
-                                                32))))
-                                      else
-                                        (do
-                                          match (0x722#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x30C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0)
-                                              ((Sail.BitVec.extractLsb (← readReg mstateen0) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen0) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0) value))
-                                          (pure (Ok (← readReg mstateen0)))))
-                                  | (0x30D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen1) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen1) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1) value)
-                                          (pure (Ok (← readReg mstateen1)))))
-                                  | (0x30E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen2) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen2) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2) value)
-                                          (pure (Ok (← readReg mstateen2)))))
-                                  | (0x30F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen3) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen3) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3) value)
-                                          (pure (Ok (← readReg mstateen3)))))
-                                  | (0x31C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg mstateen0) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31C#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen1) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31D#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen2) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31E#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen3) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31F#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x60C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen0) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen0) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0) value))
-                                          (pure (Ok (← readReg hstateen0)))))
-                                  | (0x60D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen1) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen1) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1) value))
-                                          (pure (Ok (← readReg hstateen1)))))
-                                  | (0x60E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen2) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen2) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2) value))
-                                          (pure (Ok (← readReg hstateen2)))))
-                                  | (0x60F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen3) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen3) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3) value))
-                                          (pure (Ok (← readReg hstateen3)))))
-                                  | (0x61C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen0) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen0) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61C#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen1) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen1) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61D#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen2) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen2) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61E#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen3) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen3) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61F#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x10C, value) =>
-                                    (do
-                                      writeReg sstateen0 (← (legalize_sstateen0
-                                          (← readReg sstateen0)
-                                          (Sail.BitVec.extractLsb value 31 0)))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen0)))))
-                                  | (0x10D, value) =>
-                                    (do
-                                      writeReg sstateen1 (legalize_sstateen1 (← readReg sstateen1)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen1)))))
-                                  | (0x10E, value) =>
-                                    (do
-                                      writeReg sstateen2 (legalize_sstateen2 (← readReg sstateen2)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen2)))))
-                                  | (0x10F, value) =>
-                                    (do
-                                      writeReg sstateen3 (legalize_sstateen3 (← readReg sstateen3)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen3)))))
-                                  | (0x180, value) =>
-                                    (do
-                                      writeReg satp (← (legalize_satp
-                                          (← (architecture Supervisor)) (← readReg satp) value))
-                                      (pure (Ok (← readReg satp))))
-                                  | (0x015, value) => (pure (Ok (write_seed_csr ())))
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))))))))
-  | (0x747, value) =>
-    (do
-      if ((xlen == 32) : Bool)
-      then
-        (do
-          writeReg mseccfg (← (legalize_mseccfg (← readReg mseccfg)
-              ((Sail.BitVec.extractLsb (← readReg mseccfg) 63 32) +++ value)))
-          (pure (Ok (Sail.BitVec.extractLsb (← readReg mseccfg) 31 0))))
-      else
-        (do
-          writeReg mseccfg (← (legalize_mseccfg (← readReg mseccfg) value))
-          (pure (Ok (← readReg mseccfg)))))
-  | (0x757, value) =>
-    (do
-      if ((xlen == 32) : Bool)
-      then
-        (do
-          writeReg mseccfg (← (legalize_mseccfg (← readReg mseccfg)
-              (value +++ (Sail.BitVec.extractLsb (← readReg mseccfg) 31 0))))
-          (pure (Ok (Sail.BitVec.extractLsb (← readReg mseccfg) 63 32))))
-      else
-        (do
-          match (0x757#12, value) with
-          | (v__420, value) =>
-            (do
-              if ((((Sail.BitVec.extractLsb v__420 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-                     (Sail.BitVec.extractLsb v__420 3 0)
-                   (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-              then
-                (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                  let idx := (BitVec.toNatInt idx)
-                  (pmpWriteCfgReg idx value)
-                  (pure (Ok (← (pmpReadCfgReg idx)))))
-              else
-                (do
-                  if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
-                  then
-                    (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                      let idx := (BitVec.toNatInt (0b00#2 +++ idx))
-                      (pmpWriteAddrReg idx value)
-                      (pure (Ok (← (pmpReadAddrReg idx)))))
-                  else
-                    (do
-                      if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
-                      then
-                        (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                          let idx := (BitVec.toNatInt (0b01#2 +++ idx))
-                          (pmpWriteAddrReg idx value)
-                          (pure (Ok (← (pmpReadAddrReg idx)))))
-                      else
-                        (do
-                          if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
-                          then
-                            (do
-                              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                              let idx := (BitVec.toNatInt (0b10#2 +++ idx))
-                              (pmpWriteAddrReg idx value)
-                              (pure (Ok (← (pmpReadAddrReg idx)))))
-                          else
-                            (do
-                              if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
-                              then
-                                (do
-                                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                                  let idx := (BitVec.toNatInt (0b11#2 +++ idx))
-                                  (pmpWriteAddrReg idx value)
-                                  (pure (Ok (← (pmpReadAddrReg idx)))))
-                              else
-                                (do
-                                  match (v__420, value) with
-                                  | (0x001, value) =>
-                                    (do
-                                      (write_fcsr (_get_Fcsr_FRM (← readReg fcsr))
-                                        (Sail.BitVec.extractLsb value 4 0))
-                                      (pure (Ok
-                                          (zero_extend (m := 64)
-                                            (_get_Fcsr_FFLAGS (← readReg fcsr))))))
-                                  | (0x002, value) =>
-                                    (do
-                                      (write_fcsr (Sail.BitVec.extractLsb value 2 0)
-                                        (_get_Fcsr_FFLAGS (← readReg fcsr)))
-                                      (pure (Ok
-                                          (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))))
-                                  | (0x003, value) =>
-                                    (do
-                                      (write_fcsr (Sail.BitVec.extractLsb value 7 5)
-                                        (Sail.BitVec.extractLsb value 4 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg fcsr)))))
-                                  | (0x008, value) =>
-                                    (do
-                                      (set_vstart (Sail.BitVec.extractLsb value 15 0))
-                                      (pure (Ok (← readReg vstart))))
-                                  | (0x009, value) =>
-                                    (do
-                                      (write_vcsr (_get_Vcsr_vxrm (← readReg vcsr))
-                                        (Sail.BitVec.extractLsb value 0 0))
-                                      (pure (Ok
-                                          (zero_extend (m := 64)
-                                            (_get_Vcsr_vxsat (← readReg vcsr))))))
-                                  | (0x00A, value) =>
-                                    (do
-                                      (write_vcsr (Sail.BitVec.extractLsb value 1 0)
-                                        (_get_Vcsr_vxsat (← readReg vcsr)))
-                                      (pure (Ok
-                                          (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))))
-                                  | (0x00F, value) =>
-                                    (do
-                                      (write_vcsr (Sail.BitVec.extractLsb value 2 1)
-                                        (Sail.BitVec.extractLsb value 0 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg vcsr)))))
-                                  | (0x321, value) =>
-                                    (do
-                                      if ((xlen == 64) : Bool)
-                                      then
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg) value))
-                                          (pure (Ok (← readReg mcyclecfg))))
-                                      else
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg)
-                                              ((Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mcyclecfg)
-                                                (xlen -i 1) 0)))))
-                                  | (0x721, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg mcyclecfg) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))))
-                                      else
-                                        (do
-                                          match (0x721#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x322, value) =>
-                                    (do
-                                      if ((xlen == 64) : Bool)
-                                      then
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg) value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg)
-                                                (xlen -i 1) 0))))
-                                      else
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg)
-                                              ((Sail.BitVec.extractLsb (← readReg minstretcfg) 63
-                                                  32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg)
-                                                (xlen -i 1) 0)))))
-                                  | (0x722, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg minstretcfg) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg) 63
-                                                32))))
-                                      else
-                                        (do
-                                          match (0x722#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x30C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0)
-                                              ((Sail.BitVec.extractLsb (← readReg mstateen0) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen0) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0) value))
-                                          (pure (Ok (← readReg mstateen0)))))
-                                  | (0x30D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen1) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen1) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1) value)
-                                          (pure (Ok (← readReg mstateen1)))))
-                                  | (0x30E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen2) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen2) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2) value)
-                                          (pure (Ok (← readReg mstateen2)))))
-                                  | (0x30F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen3) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen3) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3) value)
-                                          (pure (Ok (← readReg mstateen3)))))
-                                  | (0x31C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg mstateen0) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31C#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen1) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31D#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen2) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31E#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen3) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31F#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x60C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen0) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen0) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0) value))
-                                          (pure (Ok (← readReg hstateen0)))))
-                                  | (0x60D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen1) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen1) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1) value))
-                                          (pure (Ok (← readReg hstateen1)))))
-                                  | (0x60E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen2) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen2) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2) value))
-                                          (pure (Ok (← readReg hstateen2)))))
-                                  | (0x60F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen3) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen3) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3) value))
-                                          (pure (Ok (← readReg hstateen3)))))
-                                  | (0x61C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen0) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen0) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61C#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen1) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen1) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61D#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen2) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen2) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61E#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen3) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen3) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61F#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x10C, value) =>
-                                    (do
-                                      writeReg sstateen0 (← (legalize_sstateen0
-                                          (← readReg sstateen0)
-                                          (Sail.BitVec.extractLsb value 31 0)))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen0)))))
-                                  | (0x10D, value) =>
-                                    (do
-                                      writeReg sstateen1 (legalize_sstateen1 (← readReg sstateen1)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen1)))))
-                                  | (0x10E, value) =>
-                                    (do
-                                      writeReg sstateen2 (legalize_sstateen2 (← readReg sstateen2)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen2)))))
-                                  | (0x10F, value) =>
-                                    (do
-                                      writeReg sstateen3 (legalize_sstateen3 (← readReg sstateen3)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen3)))))
-                                  | (0x180, value) =>
-                                    (do
-                                      writeReg satp (← (legalize_satp
-                                          (← (architecture Supervisor)) (← readReg satp) value))
-                                      (pure (Ok (← readReg satp))))
-                                  | (0x015, value) => (pure (Ok (write_seed_csr ())))
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))))))))
-  | (0x30A, value) =>
-    (do
-      if ((xlen == 32) : Bool)
-      then
-        (do
-          writeReg menvcfg (← (legalize_menvcfg (← readReg menvcfg)
-              ((Sail.BitVec.extractLsb (← readReg menvcfg) 63 32) +++ value)))
-          (pure (Ok (Sail.BitVec.extractLsb (← readReg menvcfg) 31 0))))
-      else
-        (do
-          writeReg menvcfg (← (legalize_menvcfg (← readReg menvcfg) value))
-          (pure (Ok (← readReg menvcfg)))))
-  | (0x31A, value) =>
-    (do
-      if ((xlen == 32) : Bool)
-      then
-        (do
-          writeReg menvcfg (← (legalize_menvcfg (← readReg menvcfg)
-              (value +++ (Sail.BitVec.extractLsb (← readReg menvcfg) 31 0))))
-          (pure (Ok (Sail.BitVec.extractLsb (← readReg menvcfg) 63 32))))
-      else
-        (do
-          match (0x31A#12, value) with
-          | (v__420, value) =>
-            (do
-              if ((((Sail.BitVec.extractLsb v__420 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-                     (Sail.BitVec.extractLsb v__420 3 0)
-                   (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-              then
-                (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                  let idx := (BitVec.toNatInt idx)
-                  (pmpWriteCfgReg idx value)
-                  (pure (Ok (← (pmpReadCfgReg idx)))))
-              else
-                (do
-                  if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
-                  then
-                    (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                      let idx := (BitVec.toNatInt (0b00#2 +++ idx))
-                      (pmpWriteAddrReg idx value)
-                      (pure (Ok (← (pmpReadAddrReg idx)))))
-                  else
-                    (do
-                      if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
-                      then
-                        (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                          let idx := (BitVec.toNatInt (0b01#2 +++ idx))
-                          (pmpWriteAddrReg idx value)
-                          (pure (Ok (← (pmpReadAddrReg idx)))))
-                      else
-                        (do
-                          if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
-                          then
-                            (do
-                              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                              let idx := (BitVec.toNatInt (0b10#2 +++ idx))
-                              (pmpWriteAddrReg idx value)
-                              (pure (Ok (← (pmpReadAddrReg idx)))))
-                          else
-                            (do
-                              if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
-                              then
-                                (do
-                                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                                  let idx := (BitVec.toNatInt (0b11#2 +++ idx))
-                                  (pmpWriteAddrReg idx value)
-                                  (pure (Ok (← (pmpReadAddrReg idx)))))
-                              else
-                                (do
-                                  match (v__420, value) with
-                                  | (0x001, value) =>
-                                    (do
-                                      (write_fcsr (_get_Fcsr_FRM (← readReg fcsr))
-                                        (Sail.BitVec.extractLsb value 4 0))
-                                      (pure (Ok
-                                          (zero_extend (m := 64)
-                                            (_get_Fcsr_FFLAGS (← readReg fcsr))))))
-                                  | (0x002, value) =>
-                                    (do
-                                      (write_fcsr (Sail.BitVec.extractLsb value 2 0)
-                                        (_get_Fcsr_FFLAGS (← readReg fcsr)))
-                                      (pure (Ok
-                                          (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))))
-                                  | (0x003, value) =>
-                                    (do
-                                      (write_fcsr (Sail.BitVec.extractLsb value 7 5)
-                                        (Sail.BitVec.extractLsb value 4 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg fcsr)))))
-                                  | (0x008, value) =>
-                                    (do
-                                      (set_vstart (Sail.BitVec.extractLsb value 15 0))
-                                      (pure (Ok (← readReg vstart))))
-                                  | (0x009, value) =>
-                                    (do
-                                      (write_vcsr (_get_Vcsr_vxrm (← readReg vcsr))
-                                        (Sail.BitVec.extractLsb value 0 0))
-                                      (pure (Ok
-                                          (zero_extend (m := 64)
-                                            (_get_Vcsr_vxsat (← readReg vcsr))))))
-                                  | (0x00A, value) =>
-                                    (do
-                                      (write_vcsr (Sail.BitVec.extractLsb value 1 0)
-                                        (_get_Vcsr_vxsat (← readReg vcsr)))
-                                      (pure (Ok
-                                          (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))))
-                                  | (0x00F, value) =>
-                                    (do
-                                      (write_vcsr (Sail.BitVec.extractLsb value 2 1)
-                                        (Sail.BitVec.extractLsb value 0 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg vcsr)))))
-                                  | (0x321, value) =>
-                                    (do
-                                      if ((xlen == 64) : Bool)
-                                      then
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg) value))
-                                          (pure (Ok (← readReg mcyclecfg))))
-                                      else
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg)
-                                              ((Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mcyclecfg)
-                                                (xlen -i 1) 0)))))
-                                  | (0x721, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg mcyclecfg) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))))
-                                      else
-                                        (do
-                                          match (0x721#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x322, value) =>
-                                    (do
-                                      if ((xlen == 64) : Bool)
-                                      then
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg) value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg)
-                                                (xlen -i 1) 0))))
-                                      else
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg)
-                                              ((Sail.BitVec.extractLsb (← readReg minstretcfg) 63
-                                                  32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg)
-                                                (xlen -i 1) 0)))))
-                                  | (0x722, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg minstretcfg) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg) 63
-                                                32))))
-                                      else
-                                        (do
-                                          match (0x722#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x30C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0)
-                                              ((Sail.BitVec.extractLsb (← readReg mstateen0) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen0) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0) value))
-                                          (pure (Ok (← readReg mstateen0)))))
-                                  | (0x30D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen1) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen1) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1) value)
-                                          (pure (Ok (← readReg mstateen1)))))
-                                  | (0x30E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen2) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen2) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2) value)
-                                          (pure (Ok (← readReg mstateen2)))))
-                                  | (0x30F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen3) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen3) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3) value)
-                                          (pure (Ok (← readReg mstateen3)))))
-                                  | (0x31C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg mstateen0) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31C#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen1) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31D#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen2) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31E#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen3) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31F#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x60C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen0) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen0) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0) value))
-                                          (pure (Ok (← readReg hstateen0)))))
-                                  | (0x60D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen1) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen1) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1) value))
-                                          (pure (Ok (← readReg hstateen1)))))
-                                  | (0x60E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen2) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen2) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2) value))
-                                          (pure (Ok (← readReg hstateen2)))))
-                                  | (0x60F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen3) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen3) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3) value))
-                                          (pure (Ok (← readReg hstateen3)))))
-                                  | (0x61C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen0) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen0) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61C#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen1) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen1) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61D#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen2) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen2) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61E#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen3) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen3) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61F#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x10C, value) =>
-                                    (do
-                                      writeReg sstateen0 (← (legalize_sstateen0
-                                          (← readReg sstateen0)
-                                          (Sail.BitVec.extractLsb value 31 0)))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen0)))))
-                                  | (0x10D, value) =>
-                                    (do
-                                      writeReg sstateen1 (legalize_sstateen1 (← readReg sstateen1)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen1)))))
-                                  | (0x10E, value) =>
-                                    (do
-                                      writeReg sstateen2 (legalize_sstateen2 (← readReg sstateen2)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen2)))))
-                                  | (0x10F, value) =>
-                                    (do
-                                      writeReg sstateen3 (legalize_sstateen3 (← readReg sstateen3)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen3)))))
-                                  | (0x180, value) =>
-                                    (do
-                                      writeReg satp (← (legalize_satp
-                                          (← (architecture Supervisor)) (← readReg satp) value))
-                                      (pure (Ok (← readReg satp))))
-                                  | (0x015, value) => (pure (Ok (write_seed_csr ())))
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))))))))
-  | (0x10A, value) =>
-    (do
-      writeReg senvcfg (← (legalize_senvcfg (← readReg senvcfg) (zero_extend (m := 64) value)))
-      (pure (Ok (Sail.BitVec.extractLsb (← (read_senvcfg ())) (xlen -i 1) 0))))
-  | (0x342, value) =>
-    (do
-      writeReg mcause value
-      (pure (Ok (← readReg mcause))))
-  | (0x343, value) =>
-    (do
-      writeReg mtval value
-      (pure (Ok (← readReg mtval))))
-  | (0x340, value) =>
-    (do
-      writeReg mscratch value
-      (pure (Ok (← readReg mscratch))))
-  | (0x106, value) =>
-    (do
-      writeReg scounteren (legalize_scounteren (← readReg scounteren) value)
-      (pure (Ok (zero_extend (m := 64) (← readReg scounteren)))))
-  | (0x306, value) =>
-    (do
-      writeReg mcounteren (legalize_mcounteren (← readReg mcounteren) value)
-      (pure (Ok (zero_extend (m := 64) (← readReg mcounteren)))))
-  | (0x320, value) =>
-    (do
-      writeReg mcountinhibit (legalize_mcountinhibit (← readReg mcountinhibit) value)
-      (pure (Ok (zero_extend (m := 64) (← readReg mcountinhibit)))))
-  | (0x100, value) =>
-    (do
-      writeReg mstatus (← (legalize_sstatus (← readReg mstatus) value))
-      (pure (Ok (Sail.BitVec.extractLsb (lower_mstatus (← readReg mstatus)) (xlen -i 1) 0))))
-  | (0x140, value) =>
-    (do
-      writeReg sscratch value
-      (pure (Ok (← readReg sscratch))))
-  | (0x142, value) =>
-    (do
-      writeReg scause value
-      (pure (Ok (← readReg scause))))
-  | (0x143, value) =>
-    (do
-      writeReg stval value
-      (pure (Ok (← readReg stval))))
-  | (0x7A0, value) =>
-    (do
-      writeReg tselect value
-      (pure (Ok (← readReg tselect))))
-  | (0x304, value) =>
-    (do
-      writeReg mie (← (legalize_mie (← readReg mie) value))
-      (pure (Ok (← readReg mie))))
-  | (0x344, value) =>
-    (do
-      (write_mip value)
-      (pure (Ok (← (read_mip IncludePlatformInterrupts)))))
-  | (0x302, value) =>
-    (do
-      if ((xlen == 64) : Bool)
-      then
-        (do
-          writeReg medeleg (legalize_medeleg (← readReg medeleg) value)
-          (pure (Ok (← readReg medeleg))))
-      else
-        (do
-          writeReg medeleg (legalize_medeleg (← readReg medeleg)
-            ((Sail.BitVec.extractLsb (← readReg medeleg) 63 32) +++ value))
-          (pure (Ok (Sail.BitVec.extractLsb (← readReg medeleg) 31 0)))))
-  | (0x312, value) =>
-    (do
-      if ((xlen == 32) : Bool)
-      then
-        (do
-          writeReg medeleg (legalize_medeleg (← readReg medeleg)
-            (value +++ (Sail.BitVec.extractLsb (← readReg medeleg) 31 0)))
-          (pure (Ok (Sail.BitVec.extractLsb (← readReg medeleg) 63 32))))
-      else
-        (do
-          match (0x312#12, value) with
-          | (v__420, value) =>
-            (do
-              if ((((Sail.BitVec.extractLsb v__420 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-                     (Sail.BitVec.extractLsb v__420 3 0)
-                   (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-              then
-                (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                  let idx := (BitVec.toNatInt idx)
-                  (pmpWriteCfgReg idx value)
-                  (pure (Ok (← (pmpReadCfgReg idx)))))
-              else
-                (do
-                  if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
-                  then
-                    (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                      let idx := (BitVec.toNatInt (0b00#2 +++ idx))
-                      (pmpWriteAddrReg idx value)
-                      (pure (Ok (← (pmpReadAddrReg idx)))))
-                  else
-                    (do
-                      if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
-                      then
-                        (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                          let idx := (BitVec.toNatInt (0b01#2 +++ idx))
-                          (pmpWriteAddrReg idx value)
-                          (pure (Ok (← (pmpReadAddrReg idx)))))
-                      else
-                        (do
-                          if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
-                          then
-                            (do
-                              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                              let idx := (BitVec.toNatInt (0b10#2 +++ idx))
-                              (pmpWriteAddrReg idx value)
-                              (pure (Ok (← (pmpReadAddrReg idx)))))
-                          else
-                            (do
-                              if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
-                              then
-                                (do
-                                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                                  let idx := (BitVec.toNatInt (0b11#2 +++ idx))
-                                  (pmpWriteAddrReg idx value)
-                                  (pure (Ok (← (pmpReadAddrReg idx)))))
-                              else
-                                (do
-                                  match (v__420, value) with
-                                  | (0x001, value) =>
-                                    (do
-                                      (write_fcsr (_get_Fcsr_FRM (← readReg fcsr))
-                                        (Sail.BitVec.extractLsb value 4 0))
-                                      (pure (Ok
-                                          (zero_extend (m := 64)
-                                            (_get_Fcsr_FFLAGS (← readReg fcsr))))))
-                                  | (0x002, value) =>
-                                    (do
-                                      (write_fcsr (Sail.BitVec.extractLsb value 2 0)
-                                        (_get_Fcsr_FFLAGS (← readReg fcsr)))
-                                      (pure (Ok
-                                          (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))))
-                                  | (0x003, value) =>
-                                    (do
-                                      (write_fcsr (Sail.BitVec.extractLsb value 7 5)
-                                        (Sail.BitVec.extractLsb value 4 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg fcsr)))))
-                                  | (0x008, value) =>
-                                    (do
-                                      (set_vstart (Sail.BitVec.extractLsb value 15 0))
-                                      (pure (Ok (← readReg vstart))))
-                                  | (0x009, value) =>
-                                    (do
-                                      (write_vcsr (_get_Vcsr_vxrm (← readReg vcsr))
-                                        (Sail.BitVec.extractLsb value 0 0))
-                                      (pure (Ok
-                                          (zero_extend (m := 64)
-                                            (_get_Vcsr_vxsat (← readReg vcsr))))))
-                                  | (0x00A, value) =>
-                                    (do
-                                      (write_vcsr (Sail.BitVec.extractLsb value 1 0)
-                                        (_get_Vcsr_vxsat (← readReg vcsr)))
-                                      (pure (Ok
-                                          (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))))
-                                  | (0x00F, value) =>
-                                    (do
-                                      (write_vcsr (Sail.BitVec.extractLsb value 2 1)
-                                        (Sail.BitVec.extractLsb value 0 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg vcsr)))))
-                                  | (0x321, value) =>
-                                    (do
-                                      if ((xlen == 64) : Bool)
-                                      then
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg) value))
-                                          (pure (Ok (← readReg mcyclecfg))))
-                                      else
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg)
-                                              ((Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mcyclecfg)
-                                                (xlen -i 1) 0)))))
-                                  | (0x721, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mcyclecfg (← (legalize_smcntrpmf
-                                              (← readReg mcyclecfg)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg mcyclecfg) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))))
-                                      else
-                                        (do
-                                          match (0x721#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x322, value) =>
-                                    (do
-                                      if ((xlen == 64) : Bool)
-                                      then
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg) value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg)
-                                                (xlen -i 1) 0))))
-                                      else
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg)
-                                              ((Sail.BitVec.extractLsb (← readReg minstretcfg) 63
-                                                  32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg)
-                                                (xlen -i 1) 0)))))
-                                  | (0x722, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg minstretcfg (← (legalize_smcntrpmf
-                                              (← readReg minstretcfg)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg minstretcfg) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg minstretcfg) 63
-                                                32))))
-                                      else
-                                        (do
-                                          match (0x722#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x30C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0)
-                                              ((Sail.BitVec.extractLsb (← readReg mstateen0) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen0) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0) value))
-                                          (pure (Ok (← readReg mstateen0)))))
-                                  | (0x30D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen1) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen1) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1) value)
-                                          (pure (Ok (← readReg mstateen1)))))
-                                  | (0x30E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen2) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen2) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2) value)
-                                          (pure (Ok (← readReg mstateen2)))))
-                                  | (0x30F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3)
-                                            ((Sail.BitVec.extractLsb (← readReg mstateen3) 63 32) +++ value))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen3) 31 0))))
-                                      else
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3) value)
-                                          (pure (Ok (← readReg mstateen3)))))
-                                  | (0x31C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen0 (← (legalize_mstateen0
-                                              (← readReg mstateen0)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg mstateen0) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31C#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen1 (legalize_mstateen1
-                                            (← readReg mstateen1)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen1) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31D#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen2 (legalize_mstateen2
-                                            (← readReg mstateen2)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen2) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31E#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x31F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg mstateen3 (legalize_mstateen3
-                                            (← readReg mstateen3)
-                                            (value +++ (Sail.BitVec.extractLsb
-                                                (← readReg mstateen3) 31 0)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))))
-                                      else
-                                        (do
-                                          match (0x31F#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x60C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen0) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen0) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0) value))
-                                          (pure (Ok (← readReg hstateen0)))))
-                                  | (0x60D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen1) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen1) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1) value))
-                                          (pure (Ok (← readReg hstateen1)))))
-                                  | (0x60E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen2) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen2) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2) value))
-                                          (pure (Ok (← readReg hstateen2)))))
-                                  | (0x60F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3)
-                                              ((Sail.BitVec.extractLsb (← readReg hstateen3) 63 32) +++ value)))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen3) 31 0))))
-                                      else
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3) value))
-                                          (pure (Ok (← readReg hstateen3)))))
-                                  | (0x61C, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen0 (← (legalize_hstateen0
-                                              (← readReg hstateen0)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen0) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen0) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61C#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61D, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen1 (← (legalize_hstateen1
-                                              (← readReg hstateen1)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen1) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen1) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61D#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61E, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen2 (← (legalize_hstateen2
-                                              (← readReg hstateen2)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen2) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen2) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61E#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x61F, value) =>
-                                    (do
-                                      if ((xlen == 32) : Bool)
-                                      then
-                                        (do
-                                          writeReg hstateen3 (← (legalize_hstateen3
-                                              (← readReg hstateen3)
-                                              (value +++ (Sail.BitVec.extractLsb
-                                                  (← readReg hstateen3) 31 0))))
-                                          (pure (Ok
-                                              (Sail.BitVec.extractLsb (← readReg hstateen3) 63 32))))
-                                      else
-                                        (do
-                                          match (0x61F#12, value) with
-                                          | (v__420, _) =>
-                                            (internal_error "postlude/csr_end.sail" 23
-                                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                                (BitVec.toFormatted v__420)))))
-                                  | (0x10C, value) =>
-                                    (do
-                                      writeReg sstateen0 (← (legalize_sstateen0
-                                          (← readReg sstateen0)
-                                          (Sail.BitVec.extractLsb value 31 0)))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen0)))))
-                                  | (0x10D, value) =>
-                                    (do
-                                      writeReg sstateen1 (legalize_sstateen1 (← readReg sstateen1)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen1)))))
-                                  | (0x10E, value) =>
-                                    (do
-                                      writeReg sstateen2 (legalize_sstateen2 (← readReg sstateen2)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen2)))))
-                                  | (0x10F, value) =>
-                                    (do
-                                      writeReg sstateen3 (legalize_sstateen3 (← readReg sstateen3)
-                                        (Sail.BitVec.extractLsb value 31 0))
-                                      (pure (Ok (zero_extend (m := 64) (← readReg sstateen3)))))
-                                  | (0x180, value) =>
-                                    (do
-                                      writeReg satp (← (legalize_satp
-                                          (← (architecture Supervisor)) (← readReg satp) value))
-                                      (pure (Ok (← readReg satp))))
-                                  | (0x015, value) => (pure (Ok (write_seed_csr ())))
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))))))))
-  | (0x303, value) =>
-    (do
-      writeReg mideleg (← (legalize_mideleg (← readReg mideleg) value))
-      (pure (Ok (← readReg mideleg))))
-  | (0x144, value) =>
-    (do
-      (write_sip value)
-      (pure (Ok (← (read_sip IncludePlatformInterrupts)))))
-  | (0x104, value) =>
-    (do
-      writeReg mie (legalize_sie (← readReg mie) (← readReg mideleg) value)
-      (pure (Ok (lower_mie (← readReg mie) (← readReg mideleg)))))
-  | (0x105, value) => (pure (Ok (← (set_stvec value))))
-  | (0x141, value) => (pure (Ok (← (set_xepc Supervisor value))))
-  | (0x305, value) => (pure (Ok (← (set_mtvec value))))
-  | (0x341, value) => (pure (Ok (← (set_xepc Machine value))))
-  | (v__420, value) =>
-    (do
-      if ((((Sail.BitVec.extractLsb v__420 11 4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
-             (Sail.BitVec.extractLsb v__420 3 0)
-           (((BitVec.access idx 0) == 0#1) || (xlen == 32)))) : Bool)
-      then
-        (do
-          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-          let idx := (BitVec.toNatInt idx)
-          (pmpWriteCfgReg idx value)
-          (pure (Ok (← (pmpReadCfgReg idx)))))
-      else
-        (do
-          if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3B#8 : (BitVec 8))) : Bool)
+          if (((b__0 == (0x300#12 : (BitVec 12))) && (xlen == 32)) : Bool)
           then
             (do
-              let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-              let idx := (BitVec.toNatInt (0b00#2 +++ idx))
-              (pmpWriteAddrReg idx value)
-              (pure (Ok (← (pmpReadAddrReg idx)))))
+              writeReg mstatus (← (legalize_mstatus (← readReg mstatus)
+                  ((Sail.BitVec.extractLsb (← readReg mstatus) 63 32) +++ value)))
+              (pure (Ok (Sail.BitVec.extractLsb (← readReg mstatus) 31 0))))
           else
             (do
-              if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3C#8 : (BitVec 8))) : Bool)
+              if (((b__0 == (0x310#12 : (BitVec 12))) && (xlen == 32)) : Bool)
               then
                 (do
-                  let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                  let idx := (BitVec.toNatInt (0b01#2 +++ idx))
-                  (pmpWriteAddrReg idx value)
-                  (pure (Ok (← (pmpReadAddrReg idx)))))
+                  writeReg mstatus (← (legalize_mstatus (← readReg mstatus)
+                      (value +++ (Sail.BitVec.extractLsb (← readReg mstatus) 31 0))))
+                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mstatus) 63 32))))
               else
                 (do
-                  if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3D#8 : (BitVec 8))) : Bool)
+                  if (((b__0 == (0x747#12 : (BitVec 12))) && (xlen == 32)) : Bool)
                   then
                     (do
-                      let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                      let idx := (BitVec.toNatInt (0b10#2 +++ idx))
-                      (pmpWriteAddrReg idx value)
-                      (pure (Ok (← (pmpReadAddrReg idx)))))
+                      writeReg mseccfg (← (legalize_mseccfg (← readReg mseccfg)
+                          ((Sail.BitVec.extractLsb (← readReg mseccfg) 63 32) +++ value)))
+                      (pure (Ok (Sail.BitVec.extractLsb (← readReg mseccfg) 31 0))))
                   else
                     (do
-                      if (((Sail.BitVec.extractLsb v__420 11 4) == (0x3E#8 : (BitVec 8))) : Bool)
+                      if (((b__0 == (0x747#12 : (BitVec 12))) && (xlen == 64)) : Bool)
                       then
                         (do
-                          let idx : (BitVec 4) := (Sail.BitVec.extractLsb v__420 3 0)
-                          let idx := (BitVec.toNatInt (0b11#2 +++ idx))
-                          (pmpWriteAddrReg idx value)
-                          (pure (Ok (← (pmpReadAddrReg idx)))))
+                          writeReg mseccfg (← (legalize_mseccfg (← readReg mseccfg) value))
+                          (pure (Ok (← readReg mseccfg))))
                       else
                         (do
-                          match (v__420, value) with
-                          | (0x001, value) =>
+                          if (((b__0 == (0x757#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                          then
                             (do
-                              (write_fcsr (_get_Fcsr_FRM (← readReg fcsr))
-                                (Sail.BitVec.extractLsb value 4 0))
-                              (pure (Ok
-                                  (zero_extend (m := 64) (_get_Fcsr_FFLAGS (← readReg fcsr))))))
-                          | (0x002, value) =>
+                              writeReg mseccfg (← (legalize_mseccfg (← readReg mseccfg)
+                                  (value +++ (Sail.BitVec.extractLsb (← readReg mseccfg) 31 0))))
+                              (pure (Ok (Sail.BitVec.extractLsb (← readReg mseccfg) 63 32))))
+                          else
                             (do
-                              (write_fcsr (Sail.BitVec.extractLsb value 2 0)
-                                (_get_Fcsr_FFLAGS (← readReg fcsr)))
-                              (pure (Ok (zero_extend (m := 64) (_get_Fcsr_FRM (← readReg fcsr))))))
-                          | (0x003, value) =>
-                            (do
-                              (write_fcsr (Sail.BitVec.extractLsb value 7 5)
-                                (Sail.BitVec.extractLsb value 4 0))
-                              (pure (Ok (zero_extend (m := 64) (← readReg fcsr)))))
-                          | (0x008, value) =>
-                            (do
-                              (set_vstart (Sail.BitVec.extractLsb value 15 0))
-                              (pure (Ok (← readReg vstart))))
-                          | (0x009, value) =>
-                            (do
-                              (write_vcsr (_get_Vcsr_vxrm (← readReg vcsr))
-                                (Sail.BitVec.extractLsb value 0 0))
-                              (pure (Ok (zero_extend (m := 64) (_get_Vcsr_vxsat (← readReg vcsr))))))
-                          | (0x00A, value) =>
-                            (do
-                              (write_vcsr (Sail.BitVec.extractLsb value 1 0)
-                                (_get_Vcsr_vxsat (← readReg vcsr)))
-                              (pure (Ok (zero_extend (m := 64) (_get_Vcsr_vxrm (← readReg vcsr))))))
-                          | (0x00F, value) =>
-                            (do
-                              (write_vcsr (Sail.BitVec.extractLsb value 2 1)
-                                (Sail.BitVec.extractLsb value 0 0))
-                              (pure (Ok (zero_extend (m := 64) (← readReg vcsr)))))
-                          | (0x321, value) =>
-                            (do
-                              if ((xlen == 64) : Bool)
+                              if (((b__0 == (0x30A#12 : (BitVec 12))) && (xlen == 32)) : Bool)
                               then
                                 (do
-                                  writeReg mcyclecfg (← (legalize_smcntrpmf
-                                      (← readReg mcyclecfg) value))
-                                  (pure (Ok (← readReg mcyclecfg))))
+                                  writeReg menvcfg (← (legalize_menvcfg (← readReg menvcfg)
+                                      ((Sail.BitVec.extractLsb (← readReg menvcfg) 63 32) +++ value)))
+                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg menvcfg) 31 0))))
                               else
                                 (do
-                                  writeReg mcyclecfg (← (legalize_smcntrpmf
-                                      (← readReg mcyclecfg)
-                                      ((Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32) +++ value)))
-                                  (pure (Ok
-                                      (Sail.BitVec.extractLsb (← readReg mcyclecfg) (xlen -i 1) 0)))))
-                          | (0x721, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg mcyclecfg (← (legalize_smcntrpmf
-                                      (← readReg mcyclecfg)
-                                      (value +++ (Sail.BitVec.extractLsb (← readReg mcyclecfg) 31
-                                          0))))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mcyclecfg) 63 32))))
-                              else
-                                (do
-                                  match (0x721#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x322, value) =>
-                            (do
-                              if ((xlen == 64) : Bool)
-                              then
-                                (do
-                                  writeReg minstretcfg (← (legalize_smcntrpmf
-                                      (← readReg minstretcfg) value))
-                                  (pure (Ok
-                                      (Sail.BitVec.extractLsb (← readReg minstretcfg) (xlen -i 1)
-                                        0))))
-                              else
-                                (do
-                                  writeReg minstretcfg (← (legalize_smcntrpmf
-                                      (← readReg minstretcfg)
-                                      ((Sail.BitVec.extractLsb (← readReg minstretcfg) 63 32) +++ value)))
-                                  (pure (Ok
-                                      (Sail.BitVec.extractLsb (← readReg minstretcfg) (xlen -i 1)
-                                        0)))))
-                          | (0x722, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg minstretcfg (← (legalize_smcntrpmf
-                                      (← readReg minstretcfg)
-                                      (value +++ (Sail.BitVec.extractLsb (← readReg minstretcfg)
-                                          31 0))))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg minstretcfg) 63 32))))
-                              else
-                                (do
-                                  match (0x722#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x30C, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg mstateen0 (← (legalize_mstateen0
-                                      (← readReg mstateen0)
-                                      ((Sail.BitVec.extractLsb (← readReg mstateen0) 63 32) +++ value)))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mstateen0) 31 0))))
-                              else
-                                (do
-                                  writeReg mstateen0 (← (legalize_mstateen0
-                                      (← readReg mstateen0) value))
-                                  (pure (Ok (← readReg mstateen0)))))
-                          | (0x30D, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg mstateen1 (legalize_mstateen1 (← readReg mstateen1)
-                                    ((Sail.BitVec.extractLsb (← readReg mstateen1) 63 32) +++ value))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mstateen1) 31 0))))
-                              else
-                                (do
-                                  writeReg mstateen1 (legalize_mstateen1 (← readReg mstateen1)
-                                    value)
-                                  (pure (Ok (← readReg mstateen1)))))
-                          | (0x30E, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg mstateen2 (legalize_mstateen2 (← readReg mstateen2)
-                                    ((Sail.BitVec.extractLsb (← readReg mstateen2) 63 32) +++ value))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mstateen2) 31 0))))
-                              else
-                                (do
-                                  writeReg mstateen2 (legalize_mstateen2 (← readReg mstateen2)
-                                    value)
-                                  (pure (Ok (← readReg mstateen2)))))
-                          | (0x30F, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg mstateen3 (legalize_mstateen3 (← readReg mstateen3)
-                                    ((Sail.BitVec.extractLsb (← readReg mstateen3) 63 32) +++ value))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mstateen3) 31 0))))
-                              else
-                                (do
-                                  writeReg mstateen3 (legalize_mstateen3 (← readReg mstateen3)
-                                    value)
-                                  (pure (Ok (← readReg mstateen3)))))
-                          | (0x31C, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg mstateen0 (← (legalize_mstateen0
-                                      (← readReg mstateen0)
-                                      (value +++ (Sail.BitVec.extractLsb (← readReg mstateen0) 31
-                                          0))))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mstateen0) 63 32))))
-                              else
-                                (do
-                                  match (0x31C#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x31D, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg mstateen1 (legalize_mstateen1 (← readReg mstateen1)
-                                    (value +++ (Sail.BitVec.extractLsb (← readReg mstateen1) 31 0)))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mstateen1) 63 32))))
-                              else
-                                (do
-                                  match (0x31D#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x31E, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg mstateen2 (legalize_mstateen2 (← readReg mstateen2)
-                                    (value +++ (Sail.BitVec.extractLsb (← readReg mstateen2) 31 0)))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mstateen2) 63 32))))
-                              else
-                                (do
-                                  match (0x31E#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x31F, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg mstateen3 (legalize_mstateen3 (← readReg mstateen3)
-                                    (value +++ (Sail.BitVec.extractLsb (← readReg mstateen3) 31 0)))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg mstateen3) 63 32))))
-                              else
-                                (do
-                                  match (0x31F#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x60C, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg hstateen0 (← (legalize_hstateen0
-                                      (← readReg hstateen0)
-                                      ((Sail.BitVec.extractLsb (← readReg hstateen0) 63 32) +++ value)))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg hstateen0) 31 0))))
-                              else
-                                (do
-                                  writeReg hstateen0 (← (legalize_hstateen0
-                                      (← readReg hstateen0) value))
-                                  (pure (Ok (← readReg hstateen0)))))
-                          | (0x60D, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg hstateen1 (← (legalize_hstateen1
-                                      (← readReg hstateen1)
-                                      ((Sail.BitVec.extractLsb (← readReg hstateen1) 63 32) +++ value)))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg hstateen1) 31 0))))
-                              else
-                                (do
-                                  writeReg hstateen1 (← (legalize_hstateen1
-                                      (← readReg hstateen1) value))
-                                  (pure (Ok (← readReg hstateen1)))))
-                          | (0x60E, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg hstateen2 (← (legalize_hstateen2
-                                      (← readReg hstateen2)
-                                      ((Sail.BitVec.extractLsb (← readReg hstateen2) 63 32) +++ value)))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg hstateen2) 31 0))))
-                              else
-                                (do
-                                  writeReg hstateen2 (← (legalize_hstateen2
-                                      (← readReg hstateen2) value))
-                                  (pure (Ok (← readReg hstateen2)))))
-                          | (0x60F, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg hstateen3 (← (legalize_hstateen3
-                                      (← readReg hstateen3)
-                                      ((Sail.BitVec.extractLsb (← readReg hstateen3) 63 32) +++ value)))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg hstateen3) 31 0))))
-                              else
-                                (do
-                                  writeReg hstateen3 (← (legalize_hstateen3
-                                      (← readReg hstateen3) value))
-                                  (pure (Ok (← readReg hstateen3)))))
-                          | (0x61C, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg hstateen0 (← (legalize_hstateen0
-                                      (← readReg hstateen0)
-                                      (value +++ (Sail.BitVec.extractLsb (← readReg hstateen0) 31
-                                          0))))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg hstateen0) 63 32))))
-                              else
-                                (do
-                                  match (0x61C#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x61D, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg hstateen1 (← (legalize_hstateen1
-                                      (← readReg hstateen1)
-                                      (value +++ (Sail.BitVec.extractLsb (← readReg hstateen1) 31
-                                          0))))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg hstateen1) 63 32))))
-                              else
-                                (do
-                                  match (0x61D#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x61E, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg hstateen2 (← (legalize_hstateen2
-                                      (← readReg hstateen2)
-                                      (value +++ (Sail.BitVec.extractLsb (← readReg hstateen2) 31
-                                          0))))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg hstateen2) 63 32))))
-                              else
-                                (do
-                                  match (0x61E#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x61F, value) =>
-                            (do
-                              if ((xlen == 32) : Bool)
-                              then
-                                (do
-                                  writeReg hstateen3 (← (legalize_hstateen3
-                                      (← readReg hstateen3)
-                                      (value +++ (Sail.BitVec.extractLsb (← readReg hstateen3) 31
-                                          0))))
-                                  (pure (Ok (Sail.BitVec.extractLsb (← readReg hstateen3) 63 32))))
-                              else
-                                (do
-                                  match (0x61F#12, value) with
-                                  | (v__420, _) =>
-                                    (internal_error "postlude/csr_end.sail" 23
-                                      (HAppend.hAppend "Write to CSR that does not exist: "
-                                        (BitVec.toFormatted v__420)))))
-                          | (0x10C, value) =>
-                            (do
-                              writeReg sstateen0 (← (legalize_sstateen0 (← readReg sstateen0)
-                                  (Sail.BitVec.extractLsb value 31 0)))
-                              (pure (Ok (zero_extend (m := 64) (← readReg sstateen0)))))
-                          | (0x10D, value) =>
-                            (do
-                              writeReg sstateen1 (legalize_sstateen1 (← readReg sstateen1)
-                                (Sail.BitVec.extractLsb value 31 0))
-                              (pure (Ok (zero_extend (m := 64) (← readReg sstateen1)))))
-                          | (0x10E, value) =>
-                            (do
-                              writeReg sstateen2 (legalize_sstateen2 (← readReg sstateen2)
-                                (Sail.BitVec.extractLsb value 31 0))
-                              (pure (Ok (zero_extend (m := 64) (← readReg sstateen2)))))
-                          | (0x10F, value) =>
-                            (do
-                              writeReg sstateen3 (legalize_sstateen3 (← readReg sstateen3)
-                                (Sail.BitVec.extractLsb value 31 0))
-                              (pure (Ok (zero_extend (m := 64) (← readReg sstateen3)))))
-                          | (0x180, value) =>
-                            (do
-                              writeReg satp (← (legalize_satp (← (architecture Supervisor))
-                                  (← readReg satp) value))
-                              (pure (Ok (← readReg satp))))
-                          | (0x015, value) => (pure (Ok (write_seed_csr ())))
-                          | (v__420, _) =>
-                            (internal_error "postlude/csr_end.sail" 23
-                              (HAppend.hAppend "Write to CSR that does not exist: "
-                                (BitVec.toFormatted v__420)))))))))
+                                  if (((b__0 == (0x30A#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                  then
+                                    (do
+                                      writeReg menvcfg (← (legalize_menvcfg (← readReg menvcfg)
+                                          value))
+                                      (pure (Ok (← readReg menvcfg))))
+                                  else
+                                    (do
+                                      if (((b__0 == (0x31A#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                      then
+                                        (do
+                                          writeReg menvcfg (← (legalize_menvcfg
+                                              (← readReg menvcfg)
+                                              (value +++ (Sail.BitVec.extractLsb
+                                                  (← readReg menvcfg) 31 0))))
+                                          (pure (Ok
+                                              (Sail.BitVec.extractLsb (← readReg menvcfg) 63 32))))
+                                      else
+                                        (do
+                                          if ((b__0 == (0x10A#12 : (BitVec 12))) : Bool)
+                                          then
+                                            (do
+                                              writeReg senvcfg (← (legalize_senvcfg
+                                                  (← readReg senvcfg)
+                                                  (zero_extend (m := 64) value)))
+                                              (pure (Ok
+                                                  (Sail.BitVec.extractLsb (← (read_senvcfg ()))
+                                                    (xlen -i 1) 0))))
+                                          else
+                                            (do
+                                              if ((b__0 == (0x342#12 : (BitVec 12))) : Bool)
+                                              then
+                                                (do
+                                                  writeReg mcause value
+                                                  (pure (Ok (← readReg mcause))))
+                                              else
+                                                (do
+                                                  if ((b__0 == (0x343#12 : (BitVec 12))) : Bool)
+                                                  then
+                                                    (do
+                                                      writeReg mtval value
+                                                      (pure (Ok (← readReg mtval))))
+                                                  else
+                                                    (do
+                                                      if ((b__0 == (0x340#12 : (BitVec 12))) : Bool)
+                                                      then
+                                                        (do
+                                                          writeReg mscratch value
+                                                          (pure (Ok (← readReg mscratch))))
+                                                      else
+                                                        (do
+                                                          if ((b__0 == (0x106#12 : (BitVec 12))) : Bool)
+                                                          then
+                                                            (do
+                                                              writeReg scounteren (legalize_scounteren
+                                                                (← readReg scounteren) value)
+                                                              (pure (Ok
+                                                                  (zero_extend (m := 64)
+                                                                    (← readReg scounteren)))))
+                                                          else
+                                                            (do
+                                                              if ((b__0 == (0x306#12 : (BitVec 12))) : Bool)
+                                                              then
+                                                                (do
+                                                                  writeReg mcounteren (legalize_mcounteren
+                                                                    (← readReg mcounteren) value)
+                                                                  (pure (Ok
+                                                                      (zero_extend (m := 64)
+                                                                        (← readReg mcounteren)))))
+                                                              else
+                                                                (do
+                                                                  if ((b__0 == (0x320#12 : (BitVec 12))) : Bool)
+                                                                  then
+                                                                    (do
+                                                                      writeReg mcountinhibit (legalize_mcountinhibit
+                                                                        (← readReg mcountinhibit)
+                                                                        value)
+                                                                      (pure (Ok
+                                                                          (zero_extend (m := 64)
+                                                                            (← readReg mcountinhibit)))))
+                                                                  else
+                                                                    (do
+                                                                      if ((b__0 == (0x100#12 : (BitVec 12))) : Bool)
+                                                                      then
+                                                                        (do
+                                                                          writeReg mstatus (← (legalize_sstatus
+                                                                              (← readReg mstatus)
+                                                                              value))
+                                                                          (pure (Ok
+                                                                              (Sail.BitVec.extractLsb
+                                                                                (lower_mstatus
+                                                                                  (← readReg mstatus))
+                                                                                (xlen -i 1) 0))))
+                                                                      else
+                                                                        (do
+                                                                          if ((b__0 == (0x140#12 : (BitVec 12))) : Bool)
+                                                                          then
+                                                                            (do
+                                                                              writeReg sscratch value
+                                                                              (pure (Ok
+                                                                                  (← readReg sscratch))))
+                                                                          else
+                                                                            (do
+                                                                              if ((b__0 == (0x142#12 : (BitVec 12))) : Bool)
+                                                                              then
+                                                                                (do
+                                                                                  writeReg scause value
+                                                                                  (pure (Ok
+                                                                                      (← readReg scause))))
+                                                                              else
+                                                                                (do
+                                                                                  if ((b__0 == (0x143#12 : (BitVec 12))) : Bool)
+                                                                                  then
+                                                                                    (do
+                                                                                      writeReg stval value
+                                                                                      (pure (Ok
+                                                                                          (← readReg stval))))
+                                                                                  else
+                                                                                    (do
+                                                                                      if ((b__0 == (0x7A0#12 : (BitVec 12))) : Bool)
+                                                                                      then
+                                                                                        (do
+                                                                                          writeReg tselect value
+                                                                                          (pure (Ok
+                                                                                              (← readReg tselect))))
+                                                                                      else
+                                                                                        (do
+                                                                                          if ((b__0 == (0x304#12 : (BitVec 12))) : Bool)
+                                                                                          then
+                                                                                            (do
+                                                                                              writeReg mie (← (legalize_mie
+                                                                                                  (← readReg mie)
+                                                                                                  value))
+                                                                                              (pure (Ok
+                                                                                                  (← readReg mie))))
+                                                                                          else
+                                                                                            (do
+                                                                                              if ((b__0 == (0x344#12 : (BitVec 12))) : Bool)
+                                                                                              then
+                                                                                                (do
+                                                                                                  (write_mip
+                                                                                                    value)
+                                                                                                  (pure (Ok
+                                                                                                      (← (read_mip
+                                                                                                          IncludePlatformInterrupts)))))
+                                                                                              else
+                                                                                                (do
+                                                                                                  if (((b__0 == (0x302#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                  then
+                                                                                                    (do
+                                                                                                      writeReg medeleg (legalize_medeleg
+                                                                                                        (← readReg medeleg)
+                                                                                                        value)
+                                                                                                      (pure (Ok
+                                                                                                          (← readReg medeleg))))
+                                                                                                  else
+                                                                                                    (do
+                                                                                                      if (((b__0 == (0x302#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                      then
+                                                                                                        (do
+                                                                                                          writeReg medeleg (legalize_medeleg
+                                                                                                            (← readReg medeleg)
+                                                                                                            ((Sail.BitVec.extractLsb
+                                                                                                                (← readReg medeleg)
+                                                                                                                63
+                                                                                                                32) +++ value))
+                                                                                                          (pure (Ok
+                                                                                                              (Sail.BitVec.extractLsb
+                                                                                                                (← readReg medeleg)
+                                                                                                                31
+                                                                                                                0))))
+                                                                                                      else
+                                                                                                        (do
+                                                                                                          if (((b__0 == (0x312#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                          then
+                                                                                                            (do
+                                                                                                              writeReg medeleg (legalize_medeleg
+                                                                                                                (← readReg medeleg)
+                                                                                                                (value +++ (Sail.BitVec.extractLsb
+                                                                                                                    (← readReg medeleg)
+                                                                                                                    31
+                                                                                                                    0)))
+                                                                                                              (pure (Ok
+                                                                                                                  (Sail.BitVec.extractLsb
+                                                                                                                    (← readReg medeleg)
+                                                                                                                    63
+                                                                                                                    32))))
+                                                                                                          else
+                                                                                                            (do
+                                                                                                              if ((b__0 == (0x303#12 : (BitVec 12))) : Bool)
+                                                                                                              then
+                                                                                                                (do
+                                                                                                                  writeReg mideleg (← (legalize_mideleg
+                                                                                                                      (← readReg mideleg)
+                                                                                                                      value))
+                                                                                                                  (pure (Ok
+                                                                                                                      (← readReg mideleg))))
+                                                                                                              else
+                                                                                                                (do
+                                                                                                                  if ((b__0 == (0x144#12 : (BitVec 12))) : Bool)
+                                                                                                                  then
+                                                                                                                    (do
+                                                                                                                      (write_sip
+                                                                                                                        value)
+                                                                                                                      (pure (Ok
+                                                                                                                          (← (read_sip
+                                                                                                                              IncludePlatformInterrupts)))))
+                                                                                                                  else
+                                                                                                                    (do
+                                                                                                                      if ((b__0 == (0x104#12 : (BitVec 12))) : Bool)
+                                                                                                                      then
+                                                                                                                        (do
+                                                                                                                          writeReg mie (legalize_sie
+                                                                                                                            (← readReg mie)
+                                                                                                                            (← readReg mideleg)
+                                                                                                                            value)
+                                                                                                                          (pure (Ok
+                                                                                                                              (lower_mie
+                                                                                                                                (← readReg mie)
+                                                                                                                                (← readReg mideleg)))))
+                                                                                                                      else
+                                                                                                                        (do
+                                                                                                                          if ((b__0 == (0x105#12 : (BitVec 12))) : Bool)
+                                                                                                                          then
+                                                                                                                            (pure (Ok
+                                                                                                                                (← (set_stvec
+                                                                                                                                    value))))
+                                                                                                                          else
+                                                                                                                            (do
+                                                                                                                              if ((b__0 == (0x141#12 : (BitVec 12))) : Bool)
+                                                                                                                              then
+                                                                                                                                (pure (Ok
+                                                                                                                                    (← (set_xepc
+                                                                                                                                        Supervisor
+                                                                                                                                        value))))
+                                                                                                                              else
+                                                                                                                                (do
+                                                                                                                                  if ((b__0 == (0x305#12 : (BitVec 12))) : Bool)
+                                                                                                                                  then
+                                                                                                                                    (pure (Ok
+                                                                                                                                        (← (set_mtvec
+                                                                                                                                            value))))
+                                                                                                                                  else
+                                                                                                                                    (do
+                                                                                                                                      if ((b__0 == (0x341#12 : (BitVec 12))) : Bool)
+                                                                                                                                      then
+                                                                                                                                        (pure (Ok
+                                                                                                                                            (← (set_xepc
+                                                                                                                                                Machine
+                                                                                                                                                value))))
+                                                                                                                                      else
+                                                                                                                                        (do
+                                                                                                                                          if ((((Sail.BitVec.extractLsb
+                                                                                                                                                   b__0
+                                                                                                                                                   11
+                                                                                                                                                   4) == (0x3A#8 : (BitVec 8))) && (let idx : (BitVec 4) :=
+                                                                                                                                                 (Sail.BitVec.extractLsb
+                                                                                                                                                   b__0
+                                                                                                                                                   3
+                                                                                                                                                   0)
+                                                                                                                                               (((BitVec.access
+                                                                                                                                                     idx
+                                                                                                                                                     0) == 0#1) || (xlen == 32)))) : Bool)
+                                                                                                                                          then
+                                                                                                                                            (do
+                                                                                                                                              let idx : (BitVec 4) :=
+                                                                                                                                                (Sail.BitVec.extractLsb
+                                                                                                                                                  b__0
+                                                                                                                                                  3
+                                                                                                                                                  0)
+                                                                                                                                              let idx :=
+                                                                                                                                                (BitVec.toNatInt
+                                                                                                                                                  idx)
+                                                                                                                                              (pmpWriteCfgReg
+                                                                                                                                                idx
+                                                                                                                                                value)
+                                                                                                                                              (pure (Ok
+                                                                                                                                                  (← (pmpReadCfgReg
+                                                                                                                                                      idx)))))
+                                                                                                                                          else
+                                                                                                                                            (do
+                                                                                                                                              if (((Sail.BitVec.extractLsb
+                                                                                                                                                     b__0
+                                                                                                                                                     11
+                                                                                                                                                     4) == (0x3B#8 : (BitVec 8))) : Bool)
+                                                                                                                                              then
+                                                                                                                                                (do
+                                                                                                                                                  let idx : (BitVec 4) :=
+                                                                                                                                                    (Sail.BitVec.extractLsb
+                                                                                                                                                      b__0
+                                                                                                                                                      3
+                                                                                                                                                      0)
+                                                                                                                                                  let idx :=
+                                                                                                                                                    (BitVec.toNatInt
+                                                                                                                                                      (0b00#2 +++ idx))
+                                                                                                                                                  (pmpWriteAddrReg
+                                                                                                                                                    idx
+                                                                                                                                                    value)
+                                                                                                                                                  (pure (Ok
+                                                                                                                                                      (← (pmpReadAddrReg
+                                                                                                                                                          idx)))))
+                                                                                                                                              else
+                                                                                                                                                (do
+                                                                                                                                                  if (((Sail.BitVec.extractLsb
+                                                                                                                                                         b__0
+                                                                                                                                                         11
+                                                                                                                                                         4) == (0x3C#8 : (BitVec 8))) : Bool)
+                                                                                                                                                  then
+                                                                                                                                                    (do
+                                                                                                                                                      let idx : (BitVec 4) :=
+                                                                                                                                                        (Sail.BitVec.extractLsb
+                                                                                                                                                          b__0
+                                                                                                                                                          3
+                                                                                                                                                          0)
+                                                                                                                                                      let idx :=
+                                                                                                                                                        (BitVec.toNatInt
+                                                                                                                                                          (0b01#2 +++ idx))
+                                                                                                                                                      (pmpWriteAddrReg
+                                                                                                                                                        idx
+                                                                                                                                                        value)
+                                                                                                                                                      (pure (Ok
+                                                                                                                                                          (← (pmpReadAddrReg
+                                                                                                                                                              idx)))))
+                                                                                                                                                  else
+                                                                                                                                                    (do
+                                                                                                                                                      if (((Sail.BitVec.extractLsb
+                                                                                                                                                             b__0
+                                                                                                                                                             11
+                                                                                                                                                             4) == (0x3D#8 : (BitVec 8))) : Bool)
+                                                                                                                                                      then
+                                                                                                                                                        (do
+                                                                                                                                                          let idx : (BitVec 4) :=
+                                                                                                                                                            (Sail.BitVec.extractLsb
+                                                                                                                                                              b__0
+                                                                                                                                                              3
+                                                                                                                                                              0)
+                                                                                                                                                          let idx :=
+                                                                                                                                                            (BitVec.toNatInt
+                                                                                                                                                              (0b10#2 +++ idx))
+                                                                                                                                                          (pmpWriteAddrReg
+                                                                                                                                                            idx
+                                                                                                                                                            value)
+                                                                                                                                                          (pure (Ok
+                                                                                                                                                              (← (pmpReadAddrReg
+                                                                                                                                                                  idx)))))
+                                                                                                                                                      else
+                                                                                                                                                        (do
+                                                                                                                                                          if (((Sail.BitVec.extractLsb
+                                                                                                                                                                 b__0
+                                                                                                                                                                 11
+                                                                                                                                                                 4) == (0x3E#8 : (BitVec 8))) : Bool)
+                                                                                                                                                          then
+                                                                                                                                                            (do
+                                                                                                                                                              let idx : (BitVec 4) :=
+                                                                                                                                                                (Sail.BitVec.extractLsb
+                                                                                                                                                                  b__0
+                                                                                                                                                                  3
+                                                                                                                                                                  0)
+                                                                                                                                                              let idx :=
+                                                                                                                                                                (BitVec.toNatInt
+                                                                                                                                                                  (0b11#2 +++ idx))
+                                                                                                                                                              (pmpWriteAddrReg
+                                                                                                                                                                idx
+                                                                                                                                                                value)
+                                                                                                                                                              (pure (Ok
+                                                                                                                                                                  (← (pmpReadAddrReg
+                                                                                                                                                                      idx)))))
+                                                                                                                                                          else
+                                                                                                                                                            (do
+                                                                                                                                                              if ((b__0 == (0x001#12 : (BitVec 12))) : Bool)
+                                                                                                                                                              then
+                                                                                                                                                                (do
+                                                                                                                                                                  (write_fcsr
+                                                                                                                                                                    (_get_Fcsr_FRM
+                                                                                                                                                                      (← readReg fcsr))
+                                                                                                                                                                    (Sail.BitVec.extractLsb
+                                                                                                                                                                      value
+                                                                                                                                                                      4
+                                                                                                                                                                      0))
+                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                      (zero_extend
+                                                                                                                                                                        (m := 64)
+                                                                                                                                                                        (_get_Fcsr_FFLAGS
+                                                                                                                                                                          (← readReg fcsr))))))
+                                                                                                                                                              else
+                                                                                                                                                                (do
+                                                                                                                                                                  if ((b__0 == (0x002#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                  then
+                                                                                                                                                                    (do
+                                                                                                                                                                      (write_fcsr
+                                                                                                                                                                        (Sail.BitVec.extractLsb
+                                                                                                                                                                          value
+                                                                                                                                                                          2
+                                                                                                                                                                          0)
+                                                                                                                                                                        (_get_Fcsr_FFLAGS
+                                                                                                                                                                          (← readReg fcsr)))
+                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                          (zero_extend
+                                                                                                                                                                            (m := 64)
+                                                                                                                                                                            (_get_Fcsr_FRM
+                                                                                                                                                                              (← readReg fcsr))))))
+                                                                                                                                                                  else
+                                                                                                                                                                    (do
+                                                                                                                                                                      if ((b__0 == (0x003#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                      then
+                                                                                                                                                                        (do
+                                                                                                                                                                          (write_fcsr
+                                                                                                                                                                            (Sail.BitVec.extractLsb
+                                                                                                                                                                              value
+                                                                                                                                                                              7
+                                                                                                                                                                              5)
+                                                                                                                                                                            (Sail.BitVec.extractLsb
+                                                                                                                                                                              value
+                                                                                                                                                                              4
+                                                                                                                                                                              0))
+                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                              (zero_extend
+                                                                                                                                                                                (m := 64)
+                                                                                                                                                                                (← readReg fcsr)))))
+                                                                                                                                                                      else
+                                                                                                                                                                        (do
+                                                                                                                                                                          if ((b__0 == (0x008#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                          then
+                                                                                                                                                                            (do
+                                                                                                                                                                              (set_vstart
+                                                                                                                                                                                (Sail.BitVec.extractLsb
+                                                                                                                                                                                  value
+                                                                                                                                                                                  15
+                                                                                                                                                                                  0))
+                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                  (← readReg vstart))))
+                                                                                                                                                                          else
+                                                                                                                                                                            (do
+                                                                                                                                                                              if ((b__0 == (0x009#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                              then
+                                                                                                                                                                                (do
+                                                                                                                                                                                  (write_vcsr
+                                                                                                                                                                                    (_get_Vcsr_vxrm
+                                                                                                                                                                                      (← readReg vcsr))
+                                                                                                                                                                                    (Sail.BitVec.extractLsb
+                                                                                                                                                                                      value
+                                                                                                                                                                                      0
+                                                                                                                                                                                      0))
+                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                      (zero_extend
+                                                                                                                                                                                        (m := 64)
+                                                                                                                                                                                        (_get_Vcsr_vxsat
+                                                                                                                                                                                          (← readReg vcsr))))))
+                                                                                                                                                                              else
+                                                                                                                                                                                (do
+                                                                                                                                                                                  if ((b__0 == (0x00A#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                  then
+                                                                                                                                                                                    (do
+                                                                                                                                                                                      (write_vcsr
+                                                                                                                                                                                        (Sail.BitVec.extractLsb
+                                                                                                                                                                                          value
+                                                                                                                                                                                          1
+                                                                                                                                                                                          0)
+                                                                                                                                                                                        (_get_Vcsr_vxsat
+                                                                                                                                                                                          (← readReg vcsr)))
+                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                          (zero_extend
+                                                                                                                                                                                            (m := 64)
+                                                                                                                                                                                            (_get_Vcsr_vxrm
+                                                                                                                                                                                              (← readReg vcsr))))))
+                                                                                                                                                                                  else
+                                                                                                                                                                                    (do
+                                                                                                                                                                                      if ((b__0 == (0x00F#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                      then
+                                                                                                                                                                                        (do
+                                                                                                                                                                                          (write_vcsr
+                                                                                                                                                                                            (Sail.BitVec.extractLsb
+                                                                                                                                                                                              value
+                                                                                                                                                                                              2
+                                                                                                                                                                                              1)
+                                                                                                                                                                                            (Sail.BitVec.extractLsb
+                                                                                                                                                                                              value
+                                                                                                                                                                                              0
+                                                                                                                                                                                              0))
+                                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                                              (zero_extend
+                                                                                                                                                                                                (m := 64)
+                                                                                                                                                                                                (← readReg vcsr)))))
+                                                                                                                                                                                      else
+                                                                                                                                                                                        (do
+                                                                                                                                                                                          if (((b__0 == (0x321#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                          then
+                                                                                                                                                                                            (do
+                                                                                                                                                                                              writeReg mcyclecfg (← (legalize_smcntrpmf
+                                                                                                                                                                                                  (← readReg mcyclecfg)
+                                                                                                                                                                                                  value))
+                                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                                  (← readReg mcyclecfg))))
+                                                                                                                                                                                          else
+                                                                                                                                                                                            (do
+                                                                                                                                                                                              if (((b__0 == (0x321#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                              then
+                                                                                                                                                                                                (do
+                                                                                                                                                                                                  writeReg mcyclecfg (← (legalize_smcntrpmf
+                                                                                                                                                                                                      (← readReg mcyclecfg)
+                                                                                                                                                                                                      ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                          (← readReg mcyclecfg)
+                                                                                                                                                                                                          63
+                                                                                                                                                                                                          32) +++ value)))
+                                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                                      (Sail.BitVec.extractLsb
+                                                                                                                                                                                                        (← readReg mcyclecfg)
+                                                                                                                                                                                                        (xlen -i 1)
+                                                                                                                                                                                                        0))))
+                                                                                                                                                                                              else
+                                                                                                                                                                                                (do
+                                                                                                                                                                                                  if (((b__0 == (0x721#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                  then
+                                                                                                                                                                                                    (do
+                                                                                                                                                                                                      writeReg mcyclecfg (← (legalize_smcntrpmf
+                                                                                                                                                                                                          (← readReg mcyclecfg)
+                                                                                                                                                                                                          (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                              (← readReg mcyclecfg)
+                                                                                                                                                                                                              31
+                                                                                                                                                                                                              0))))
+                                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                                          (Sail.BitVec.extractLsb
+                                                                                                                                                                                                            (← readReg mcyclecfg)
+                                                                                                                                                                                                            63
+                                                                                                                                                                                                            32))))
+                                                                                                                                                                                                  else
+                                                                                                                                                                                                    (do
+                                                                                                                                                                                                      if (((b__0 == (0x322#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                                      then
+                                                                                                                                                                                                        (do
+                                                                                                                                                                                                          writeReg minstretcfg (← (legalize_smcntrpmf
+                                                                                                                                                                                                              (← readReg minstretcfg)
+                                                                                                                                                                                                              value))
+                                                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                                                              (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                (← readReg minstretcfg)
+                                                                                                                                                                                                                (xlen -i 1)
+                                                                                                                                                                                                                0))))
+                                                                                                                                                                                                      else
+                                                                                                                                                                                                        (do
+                                                                                                                                                                                                          if (((b__0 == (0x322#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                          then
+                                                                                                                                                                                                            (do
+                                                                                                                                                                                                              writeReg minstretcfg (← (legalize_smcntrpmf
+                                                                                                                                                                                                                  (← readReg minstretcfg)
+                                                                                                                                                                                                                  ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                                      (← readReg minstretcfg)
+                                                                                                                                                                                                                      63
+                                                                                                                                                                                                                      32) +++ value)))
+                                                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                                                  (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                    (← readReg minstretcfg)
+                                                                                                                                                                                                                    (xlen -i 1)
+                                                                                                                                                                                                                    0))))
+                                                                                                                                                                                                          else
+                                                                                                                                                                                                            (do
+                                                                                                                                                                                                              if (((b__0 == (0x722#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                              then
+                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                  writeReg minstretcfg (← (legalize_smcntrpmf
+                                                                                                                                                                                                                      (← readReg minstretcfg)
+                                                                                                                                                                                                                      (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                          (← readReg minstretcfg)
+                                                                                                                                                                                                                          31
+                                                                                                                                                                                                                          0))))
+                                                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                                                      (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                        (← readReg minstretcfg)
+                                                                                                                                                                                                                        63
+                                                                                                                                                                                                                        32))))
+                                                                                                                                                                                                              else
+                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                  if (((b__0 == (0x30C#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                      writeReg mstateen0 (← (legalize_mstateen0
+                                                                                                                                                                                                                          (← readReg mstateen0)
+                                                                                                                                                                                                                          ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                                              (← readReg mstateen0)
+                                                                                                                                                                                                                              63
+                                                                                                                                                                                                                              32) +++ value)))
+                                                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                                                          (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                            (← readReg mstateen0)
+                                                                                                                                                                                                                            31
+                                                                                                                                                                                                                            0))))
+                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                      if (((b__0 == (0x30D#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                          writeReg mstateen1 (legalize_mstateen1
+                                                                                                                                                                                                                            (← readReg mstateen1)
+                                                                                                                                                                                                                            ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                (← readReg mstateen1)
+                                                                                                                                                                                                                                63
+                                                                                                                                                                                                                                32) +++ value))
+                                                                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                                                                              (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                (← readReg mstateen1)
+                                                                                                                                                                                                                                31
+                                                                                                                                                                                                                                0))))
+                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                          if (((b__0 == (0x30E#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                              writeReg mstateen2 (legalize_mstateen2
+                                                                                                                                                                                                                                (← readReg mstateen2)
+                                                                                                                                                                                                                                ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                    (← readReg mstateen2)
+                                                                                                                                                                                                                                    63
+                                                                                                                                                                                                                                    32) +++ value))
+                                                                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                                                                  (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                    (← readReg mstateen2)
+                                                                                                                                                                                                                                    31
+                                                                                                                                                                                                                                    0))))
+                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                              if (((b__0 == (0x30F#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                  writeReg mstateen3 (legalize_mstateen3
+                                                                                                                                                                                                                                    (← readReg mstateen3)
+                                                                                                                                                                                                                                    ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                        (← readReg mstateen3)
+                                                                                                                                                                                                                                        63
+                                                                                                                                                                                                                                        32) +++ value))
+                                                                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                                                                      (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                        (← readReg mstateen3)
+                                                                                                                                                                                                                                        31
+                                                                                                                                                                                                                                        0))))
+                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                  if (((b__0 == (0x30C#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                      writeReg mstateen0 (← (legalize_mstateen0
+                                                                                                                                                                                                                                          (← readReg mstateen0)
+                                                                                                                                                                                                                                          value))
+                                                                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                                                                          (← readReg mstateen0))))
+                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                      if (((b__0 == (0x30D#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                          writeReg mstateen1 (legalize_mstateen1
+                                                                                                                                                                                                                                            (← readReg mstateen1)
+                                                                                                                                                                                                                                            value)
+                                                                                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                                                                                              (← readReg mstateen1))))
+                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                          if (((b__0 == (0x30E#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                              writeReg mstateen2 (legalize_mstateen2
+                                                                                                                                                                                                                                                (← readReg mstateen2)
+                                                                                                                                                                                                                                                value)
+                                                                                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                                                                                  (← readReg mstateen2))))
+                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                              if (((b__0 == (0x30F#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                  writeReg mstateen3 (legalize_mstateen3
+                                                                                                                                                                                                                                                    (← readReg mstateen3)
+                                                                                                                                                                                                                                                    value)
+                                                                                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                                                                                      (← readReg mstateen3))))
+                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                  if (((b__0 == (0x31C#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                      writeReg mstateen0 (← (legalize_mstateen0
+                                                                                                                                                                                                                                                          (← readReg mstateen0)
+                                                                                                                                                                                                                                                          (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                              (← readReg mstateen0)
+                                                                                                                                                                                                                                                              31
+                                                                                                                                                                                                                                                              0))))
+                                                                                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                                                                                          (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                            (← readReg mstateen0)
+                                                                                                                                                                                                                                                            63
+                                                                                                                                                                                                                                                            32))))
+                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                      if (((b__0 == (0x31D#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                          writeReg mstateen1 (legalize_mstateen1
+                                                                                                                                                                                                                                                            (← readReg mstateen1)
+                                                                                                                                                                                                                                                            (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                (← readReg mstateen1)
+                                                                                                                                                                                                                                                                31
+                                                                                                                                                                                                                                                                0)))
+                                                                                                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                                                                                                              (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                (← readReg mstateen1)
+                                                                                                                                                                                                                                                                63
+                                                                                                                                                                                                                                                                32))))
+                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                          if (((b__0 == (0x31E#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                              writeReg mstateen2 (legalize_mstateen2
+                                                                                                                                                                                                                                                                (← readReg mstateen2)
+                                                                                                                                                                                                                                                                (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                    (← readReg mstateen2)
+                                                                                                                                                                                                                                                                    31
+                                                                                                                                                                                                                                                                    0)))
+                                                                                                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                                                                                                  (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                    (← readReg mstateen2)
+                                                                                                                                                                                                                                                                    63
+                                                                                                                                                                                                                                                                    32))))
+                                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                              if (((b__0 == (0x31F#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                  writeReg mstateen3 (legalize_mstateen3
+                                                                                                                                                                                                                                                                    (← readReg mstateen3)
+                                                                                                                                                                                                                                                                    (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                        (← readReg mstateen3)
+                                                                                                                                                                                                                                                                        31
+                                                                                                                                                                                                                                                                        0)))
+                                                                                                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                                                                                                      (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                        (← readReg mstateen3)
+                                                                                                                                                                                                                                                                        63
+                                                                                                                                                                                                                                                                        32))))
+                                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                  if (((b__0 == (0x60C#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                      writeReg hstateen0 (← (legalize_hstateen0
+                                                                                                                                                                                                                                                                          (← readReg hstateen0)
+                                                                                                                                                                                                                                                                          ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                              (← readReg hstateen0)
+                                                                                                                                                                                                                                                                              63
+                                                                                                                                                                                                                                                                              32) +++ value)))
+                                                                                                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                                                                                                          (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                            (← readReg hstateen0)
+                                                                                                                                                                                                                                                                            31
+                                                                                                                                                                                                                                                                            0))))
+                                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                      if (((b__0 == (0x60D#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                          writeReg hstateen1 (← (legalize_hstateen1
+                                                                                                                                                                                                                                                                              (← readReg hstateen1)
+                                                                                                                                                                                                                                                                              ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                  (← readReg hstateen1)
+                                                                                                                                                                                                                                                                                  63
+                                                                                                                                                                                                                                                                                  32) +++ value)))
+                                                                                                                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                                                                                                                              (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                (← readReg hstateen1)
+                                                                                                                                                                                                                                                                                31
+                                                                                                                                                                                                                                                                                0))))
+                                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                          if (((b__0 == (0x60E#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                              writeReg hstateen2 (← (legalize_hstateen2
+                                                                                                                                                                                                                                                                                  (← readReg hstateen2)
+                                                                                                                                                                                                                                                                                  ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                      (← readReg hstateen2)
+                                                                                                                                                                                                                                                                                      63
+                                                                                                                                                                                                                                                                                      32) +++ value)))
+                                                                                                                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                                                                                                                  (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                    (← readReg hstateen2)
+                                                                                                                                                                                                                                                                                    31
+                                                                                                                                                                                                                                                                                    0))))
+                                                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                              if (((b__0 == (0x60F#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                  writeReg hstateen3 (← (legalize_hstateen3
+                                                                                                                                                                                                                                                                                      (← readReg hstateen3)
+                                                                                                                                                                                                                                                                                      ((Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                          (← readReg hstateen3)
+                                                                                                                                                                                                                                                                                          63
+                                                                                                                                                                                                                                                                                          32) +++ value)))
+                                                                                                                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                                                                                                                      (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                        (← readReg hstateen3)
+                                                                                                                                                                                                                                                                                        31
+                                                                                                                                                                                                                                                                                        0))))
+                                                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                  if (((b__0 == (0x60C#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                      writeReg hstateen0 (← (legalize_hstateen0
+                                                                                                                                                                                                                                                                                          (← readReg hstateen0)
+                                                                                                                                                                                                                                                                                          value))
+                                                                                                                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                                                                                                                          (← readReg hstateen0))))
+                                                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                      if (((b__0 == (0x60D#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                                          writeReg hstateen1 (← (legalize_hstateen1
+                                                                                                                                                                                                                                                                                              (← readReg hstateen1)
+                                                                                                                                                                                                                                                                                              value))
+                                                                                                                                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                                                                                                                                              (← readReg hstateen1))))
+                                                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                                          if (((b__0 == (0x60E#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                                              writeReg hstateen2 (← (legalize_hstateen2
+                                                                                                                                                                                                                                                                                                  (← readReg hstateen2)
+                                                                                                                                                                                                                                                                                                  value))
+                                                                                                                                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                                                                                                                                  (← readReg hstateen2))))
+                                                                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                                              if (((b__0 == (0x60F#12 : (BitVec 12))) && (xlen == 64)) : Bool)
+                                                                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                                  writeReg hstateen3 (← (legalize_hstateen3
+                                                                                                                                                                                                                                                                                                      (← readReg hstateen3)
+                                                                                                                                                                                                                                                                                                      value))
+                                                                                                                                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                                                                                                                                      (← readReg hstateen3))))
+                                                                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                                  if (((b__0 == (0x61C#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                                      writeReg hstateen0 (← (legalize_hstateen0
+                                                                                                                                                                                                                                                                                                          (← readReg hstateen0)
+                                                                                                                                                                                                                                                                                                          (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                              (← readReg hstateen0)
+                                                                                                                                                                                                                                                                                                              31
+                                                                                                                                                                                                                                                                                                              0))))
+                                                                                                                                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                                                                                                                                          (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                            (← readReg hstateen0)
+                                                                                                                                                                                                                                                                                                            63
+                                                                                                                                                                                                                                                                                                            32))))
+                                                                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                                      if (((b__0 == (0x61D#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                                                          writeReg hstateen1 (← (legalize_hstateen1
+                                                                                                                                                                                                                                                                                                              (← readReg hstateen1)
+                                                                                                                                                                                                                                                                                                              (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                  (← readReg hstateen1)
+                                                                                                                                                                                                                                                                                                                  31
+                                                                                                                                                                                                                                                                                                                  0))))
+                                                                                                                                                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                                                                                                                                                              (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                (← readReg hstateen1)
+                                                                                                                                                                                                                                                                                                                63
+                                                                                                                                                                                                                                                                                                                32))))
+                                                                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                                                          if (((b__0 == (0x61E#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                                                              writeReg hstateen2 (← (legalize_hstateen2
+                                                                                                                                                                                                                                                                                                                  (← readReg hstateen2)
+                                                                                                                                                                                                                                                                                                                  (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                      (← readReg hstateen2)
+                                                                                                                                                                                                                                                                                                                      31
+                                                                                                                                                                                                                                                                                                                      0))))
+                                                                                                                                                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                                                                                                                                                  (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                    (← readReg hstateen2)
+                                                                                                                                                                                                                                                                                                                    63
+                                                                                                                                                                                                                                                                                                                    32))))
+                                                                                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                                                              if (((b__0 == (0x61F#12 : (BitVec 12))) && (xlen == 32)) : Bool)
+                                                                                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                                                  writeReg hstateen3 (← (legalize_hstateen3
+                                                                                                                                                                                                                                                                                                                      (← readReg hstateen3)
+                                                                                                                                                                                                                                                                                                                      (value +++ (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                          (← readReg hstateen3)
+                                                                                                                                                                                                                                                                                                                          31
+                                                                                                                                                                                                                                                                                                                          0))))
+                                                                                                                                                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                                                                                                                                                      (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                        (← readReg hstateen3)
+                                                                                                                                                                                                                                                                                                                        63
+                                                                                                                                                                                                                                                                                                                        32))))
+                                                                                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                                                  if ((b__0 == (0x10C#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                                                      writeReg sstateen0 (← (legalize_sstateen0
+                                                                                                                                                                                                                                                                                                                          (← readReg sstateen0)
+                                                                                                                                                                                                                                                                                                                          (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                            value
+                                                                                                                                                                                                                                                                                                                            31
+                                                                                                                                                                                                                                                                                                                            0)))
+                                                                                                                                                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                                                                                                                                                          (zero_extend
+                                                                                                                                                                                                                                                                                                                            (m := 64)
+                                                                                                                                                                                                                                                                                                                            (← readReg sstateen0)))))
+                                                                                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                                                      if ((b__0 == (0x10D#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                                                                          writeReg sstateen1 (legalize_sstateen1
+                                                                                                                                                                                                                                                                                                                            (← readReg sstateen1)
+                                                                                                                                                                                                                                                                                                                            (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                              value
+                                                                                                                                                                                                                                                                                                                              31
+                                                                                                                                                                                                                                                                                                                              0))
+                                                                                                                                                                                                                                                                                                                          (pure (Ok
+                                                                                                                                                                                                                                                                                                                              (zero_extend
+                                                                                                                                                                                                                                                                                                                                (m := 64)
+                                                                                                                                                                                                                                                                                                                                (← readReg sstateen1)))))
+                                                                                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                                                                                        (do
+                                                                                                                                                                                                                                                                                                                          if ((b__0 == (0x10E#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                                          then
+                                                                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                                                                              writeReg sstateen2 (legalize_sstateen2
+                                                                                                                                                                                                                                                                                                                                (← readReg sstateen2)
+                                                                                                                                                                                                                                                                                                                                (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                                  value
+                                                                                                                                                                                                                                                                                                                                  31
+                                                                                                                                                                                                                                                                                                                                  0))
+                                                                                                                                                                                                                                                                                                                              (pure (Ok
+                                                                                                                                                                                                                                                                                                                                  (zero_extend
+                                                                                                                                                                                                                                                                                                                                    (m := 64)
+                                                                                                                                                                                                                                                                                                                                    (← readReg sstateen2)))))
+                                                                                                                                                                                                                                                                                                                          else
+                                                                                                                                                                                                                                                                                                                            (do
+                                                                                                                                                                                                                                                                                                                              if ((b__0 == (0x10F#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                                              then
+                                                                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                                                                  writeReg sstateen3 (legalize_sstateen3
+                                                                                                                                                                                                                                                                                                                                    (← readReg sstateen3)
+                                                                                                                                                                                                                                                                                                                                    (Sail.BitVec.extractLsb
+                                                                                                                                                                                                                                                                                                                                      value
+                                                                                                                                                                                                                                                                                                                                      31
+                                                                                                                                                                                                                                                                                                                                      0))
+                                                                                                                                                                                                                                                                                                                                  (pure (Ok
+                                                                                                                                                                                                                                                                                                                                      (zero_extend
+                                                                                                                                                                                                                                                                                                                                        (m := 64)
+                                                                                                                                                                                                                                                                                                                                        (← readReg sstateen3)))))
+                                                                                                                                                                                                                                                                                                                              else
+                                                                                                                                                                                                                                                                                                                                (do
+                                                                                                                                                                                                                                                                                                                                  if ((b__0 == (0x180#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                                                  then
+                                                                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                                                                      writeReg satp (← (legalize_satp
+                                                                                                                                                                                                                                                                                                                                          (← (architecture
+                                                                                                                                                                                                                                                                                                                                              Supervisor))
+                                                                                                                                                                                                                                                                                                                                          (← readReg satp)
+                                                                                                                                                                                                                                                                                                                                          value))
+                                                                                                                                                                                                                                                                                                                                      (pure (Ok
+                                                                                                                                                                                                                                                                                                                                          (← readReg satp))))
+                                                                                                                                                                                                                                                                                                                                  else
+                                                                                                                                                                                                                                                                                                                                    (do
+                                                                                                                                                                                                                                                                                                                                      if ((b__0 == (0x015#12 : (BitVec 12))) : Bool)
+                                                                                                                                                                                                                                                                                                                                      then
+                                                                                                                                                                                                                                                                                                                                        (pure (Ok
+                                                                                                                                                                                                                                                                                                                                            (write_seed_csr
+                                                                                                                                                                                                                                                                                                                                              ())))
+                                                                                                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                                                                                                        (internal_error
+                                                                                                                                                                                                                                                                                                                                          "postlude/csr_end.sail"
+                                                                                                                                                                                                                                                                                                                                          23
+                                                                                                                                                                                                                                                                                                                                          (HAppend.hAppend
+                                                                                                                                                                                                                                                                                                                                            "Write to CSR that does not exist: "
+                                                                                                                                                                                                                                                                                                                                            (BitVec.toFormatted
+                                                                                                                                                                                                                                                                                                                                              b__0))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 def doCSR (csr : (BitVec 12)) (rs1_val : (BitVec 64)) (rd : regidx) (op : csrop) (access_type : CSRAccessType) : SailM ExecutionResult := do
   match (← (check_CSR_result csr (← readReg cur_privilege) access_type)) with
@@ -3872,7 +1927,7 @@ def csr_mnemonic_backwards (arg_ : String) : SailM csrop := do
   | "csrrc" => (pure CSRRC)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def csr_mnemonic_forwards_matches (arg_ : csrop) : Bool :=

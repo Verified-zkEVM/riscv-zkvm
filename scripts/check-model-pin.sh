@@ -17,6 +17,7 @@ toml_string() {
 }
 
 CONFIG_FILE="$(toml_string config_file)"
+COMPILER_PATCH="$(toml_string sail_compiler_patch)"
 LEAN_SAIL_REV="$(toml_string lean_sail_rev)"
 MODEL_ROOT="$(toml_string root_module)"
 MODEL_PATH="$(printf '%s' "$MODEL_ROOT" | tr '.' '/')"
@@ -39,7 +40,7 @@ case "$mode" in
   *) echo "usage: $0 [--check | --write]" >&2; exit 2 ;;
 esac
 
-for path in "$PROVENANCE" "$CONFIG_FILE" "$MODEL_FILE" "$MODEL_DIR" lakefile.toml lean-toolchain; do
+for path in "$PROVENANCE" "$CONFIG_FILE" "$COMPILER_PATCH" "$MODEL_FILE" "$MODEL_DIR" lakefile.toml lean-toolchain; do
   [[ -e "$path" ]] || { echo "check-model-pin: missing $path" >&2; exit 1; }
 done
 if grep -R -n -w --include='*.lean' Out "$MODEL_FILE" "$MODEL_DIR"; then
@@ -85,6 +86,15 @@ toml_number() {
 actual_model="$(compute_model_hash)"
 actual_config="$(compute_config_hash)"
 actual_count="$(find "./$MODEL_FILE" "./$MODEL_DIR" -name '*.lean' | wc -l | tr -d ' ')"
+# The compiler patch is an extraction input, not a generated output. Never
+# rewrite its recorded digest implicitly when accepting a generated tree.
+# shellcheck disable=SC2086
+actual_patch="$($SHA_BIN "$COMPILER_PATCH" | awk '{print $1}')"
+pinned_patch="$(toml_string sail_compiler_patch_sha256)"
+if [[ "$actual_patch" != "$pinned_patch" ]]; then
+  echo 'check-model-pin: compiler patch digest mismatch' >&2
+  exit 1
+fi
 pinned_model="$(toml_string model_sha256)"
 pinned_config="$(toml_string config_sha256)"
 pinned_count="$(toml_number expected_lean_files)"

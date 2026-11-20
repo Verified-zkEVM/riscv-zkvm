@@ -871,6 +871,22 @@ meta partial def buildMonoProof (oldCr newCr : Expr) : MetaM Expr :=
   -- Fallback: tactic-based proof
   buildMonoProofTactic oldCr newCr
 
+/-- Prefer a structural comparison and a range proof before unfolding code
+    maps for definitional equality. The full comparison remains available for
+    shared requirements hidden behind definitions. Failed range search restores
+    its metavariables and diagnostics before that fallback. -/
+private meta def sameCodeOrDisjoint (cr1 cr2 : Expr) : MetaM (Option Expr) := do
+  if ← withoutModifyingState (withReducible (isDefEq cr1 cr2)) then
+    return none
+  let saved ← Meta.saveState
+  try
+    return some (← buildDisjointProof cr1 cr2)
+  catch ex =>
+    saved.restore
+    if ← withoutModifyingState (isDefEq cr1 cr2) then
+      return none
+    throw ex
+
 /-- Core MetaM implementation of seqFrame for bounded proofs. This mirrors the
     straight-line composition path used by `runBlock`; bounds add through
     sequential composition. -/
@@ -893,11 +909,10 @@ meta def seqFrameWithinCore (h1Expr h2Expr : Expr) : MetaM Expr :=
 
   if frameAtoms.isEmpty then
     let hperm ← mkPermLambda postQ1 preP2
-    if ← withoutModifyingState (isDefEq cr1 cr2) then
-      return mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_seq_perm_same_cr)
-        #[nSteps1, nSteps2, entry, mid1, exit_, cr1, preP, postQ1, preP2, postQ2,
-          hperm, h1Expr, h2Expr]
-    let hdProof ← buildDisjointProof cr1 cr2
+    let some hdProof ← sameCodeOrDisjoint cr1 cr2
+      | return mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_seq_perm_same_cr)
+          #[nSteps1, nSteps2, entry, mid1, exit_, cr1, preP, postQ1, preP2, postQ2,
+            hperm, h1Expr, h2Expr]
     let h1Perm := mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_weaken)
       #[nSteps1, entry, mid1, cr1, preP, preP, postQ1, preP2,
         (← mkIdLambda preP), hperm, h1Expr]
@@ -938,11 +953,10 @@ meta def seqFrameWithinCore (h1Expr h2Expr : Expr) : MetaM Expr :=
       #[nSteps2, mid2, exit_, cr2, empStarFrame, frameExpr, q2StarFrame, actualPost,
         hpre, hpost, h2Framed]
     let hperm ← mkPermLambda postQ1 frameExpr
-    if ← withoutModifyingState (isDefEq cr1 cr2) then
-      return mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_seq_perm_same_cr)
-        #[nSteps1, nSteps2, entry, mid1, exit_, cr1, preP, postQ1, frameExpr, actualPost,
-          hperm, h1Expr, h2Simplified]
-    let hdProof ← buildDisjointProof cr1 cr2
+    let some hdProof ← sameCodeOrDisjoint cr1 cr2
+      | return mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_seq_perm_same_cr)
+          #[nSteps1, nSteps2, entry, mid1, exit_, cr1, preP, postQ1, frameExpr, actualPost,
+            hperm, h1Expr, h2Simplified]
     let h1Perm := mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_weaken)
       #[nSteps1, entry, mid1, cr1, preP, preP, postQ1, frameExpr,
         (← mkIdLambda preP), hperm, h1Expr]
@@ -954,12 +968,10 @@ meta def seqFrameWithinCore (h1Expr h2Expr : Expr) : MetaM Expr :=
   let hperm ← mkPermLambda postQ1 p2StarFrame
   let q2StarFrame := mkApp2 (mkConst ``RiscvZkvm.Rv64.sepConj) postQ2 frameExpr
 
-  if ← withoutModifyingState (isDefEq cr1 cr2) then
-    return mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_seq_perm_same_cr)
-      #[nSteps1, nSteps2, entry, mid1, exit_, cr1, preP, postQ1, p2StarFrame, q2StarFrame,
-        hperm, h1Expr, h2Framed]
-
-  let hdProof ← buildDisjointProof cr1 cr2
+  let some hdProof ← sameCodeOrDisjoint cr1 cr2
+    | return mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_seq_perm_same_cr)
+        #[nSteps1, nSteps2, entry, mid1, exit_, cr1, preP, postQ1, p2StarFrame, q2StarFrame,
+          hperm, h1Expr, h2Framed]
   let h1Perm := mkAppN (mkConst ``RiscvZkvm.Rv64.cpsTripleWithin_weaken)
     #[nSteps1, entry, mid1, cr1, preP, preP, postQ1, p2StarFrame,
       (← mkIdLambda preP), hperm, h1Expr]

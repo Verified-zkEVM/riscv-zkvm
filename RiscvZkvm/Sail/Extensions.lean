@@ -457,7 +457,7 @@ def extensionName_backwards (arg_ : String) : SailM extension := do
   | "supm" => (pure Ext_Supm)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def extensionName_forwards_matches (arg_ : extension) : Bool :=

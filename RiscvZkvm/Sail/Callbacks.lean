@@ -226,11 +226,11 @@ def csr_full_read_callback (x_0 : String) (x_1 : (BitVec 12)) (x_2 : (BitVec 64)
 def redirect_callback (x_0 : (BitVec 64)) : Unit :=
   ()
 
-/-- Type quantifiers: k_ex481963_ : Bool -/
+/-- Type quantifiers: k_ex480755_ : Bool -/
 def trap_callback (x_0 : Bool) (x_1 : (BitVec 6)) : Unit :=
   ()
 
-/-- Type quantifiers: k_ex481964_ : Bool -/
+/-- Type quantifiers: k_ex480756_ : Bool -/
 def xret_callback (x_0 : Bool) : Unit :=
   ()
 
@@ -403,7 +403,7 @@ def csr_name_map_backwards (arg_ : String) : SailM (BitVec 12) := do
   | .some result => (pure result)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 def csr_name_write_callback (name : String) (value : (BitVec 64)) : SailM Unit := do

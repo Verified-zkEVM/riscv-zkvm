@@ -1,4 +1,8 @@
-import RiscvZkvm.Sail.Common
+import Sail
+import RiscvZkvm.Sail.Defs
+import RiscvZkvm.Sail.Specialization
+import RiscvZkvm.Sail.FakeReal
+import RiscvZkvm.Sail.RiscvExtras
 
 set_option maxHeartbeats 1_000_000_000
 set_option maxRecDepth 1_000_000

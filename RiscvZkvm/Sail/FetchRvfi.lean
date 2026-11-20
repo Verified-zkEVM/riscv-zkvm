@@ -3,7 +3,6 @@ import RiscvZkvm.Sail.Prelude
 import RiscvZkvm.Sail.RvfiDii
 import RiscvZkvm.Sail.PlatformConfig
 import RiscvZkvm.Sail.Types
-import RiscvZkvm.Sail.Regs
 import RiscvZkvm.Sail.PcAccess
 import RiscvZkvm.Sail.SysRegs
 import RiscvZkvm.Sail.AddrChecks
@@ -215,15 +214,14 @@ def rvfi_fetch (_ : Unit) : SailM FetchResult := SailME.run do
   match (ext_fetch_check_pc (← readReg PC) (← readReg PC)) with
   | .some e => SailME.throw ((F_Ext_Error e) : FetchResult)
   | none => (pure ())
-  if ((((BitVec.access (← readReg PC) 0) != 0#1) || (((BitVec.access (← readReg PC) 1) != 0#1) && (not
-           (← (currentlyEnabled Ext_Zca))))) : Bool)
+  if ((←((pure ((BitVec.access (← readReg PC) 0) != 0#1)) <||> (do
+       (pure ((BitVec.access (← readReg PC) 1) != 0#1)) <&&> (do
+         (pure (not (← (currentlyEnabled Ext_Zca)))))))) : Bool)
   then (pure (F_Error ((E_Fetch_Addr_Align ()), (← readReg PC))))
   else
     (do
       match (← (translateAddr (Virtaddr (← readReg PC)) (InstructionFetch ()))) with
-      | .Err (e, _) =>
-        SailME.throw (← do
-            (pure (F_Error (e, (← readReg PC)))))
+      | .Err (e, _) => SailME.throw (← do (pure (F_Error (e, (← readReg PC)))))
       | .Ok (_, _, _) => (pure ())
       let i ← do
         (pure (_get_RVFI_DII_Instruction_Packet_rvfi_insn (← readReg rvfi_instruction)))

@@ -19,6 +19,15 @@ open Sail
 
 namespace RiscvZkvm.Interpreter
 
+-- The pinned configuration enables D in the Sail register metadata, even
+-- though floating-point instructions are outside our selected module scope.
+-- A backend precedence bug once printed `(if true then 8 else 4 * 8)` here,
+-- silently giving FP registers eight bits instead of sixty-four.
+example : _root_.xlen = 64 := rfl
+example : _root_.flen_bytes = 8 := rfl
+example : _root_.flen = 64 := rfl
+example : _root_.flenbits = BitVec 64 := rfl
+
 abbrev SailState := PreSail.SequentialState RegisterType trivialChoiceSource
 
 noncomputable def runSail (m : SailM α) (s : SailState) : Option (α × SailState) :=
@@ -50,11 +59,18 @@ example (s : SailState) :
 
 example (s : SailState) :
     (runSail (sail_model_init ()) s).isSome := by
-  simp (config := { decide := true }) [runSail, sail_model_init, bind, EStateM.bind, pure, EStateM.pure,
+  have h_s : (_get_Misa_S (_update_Misa_MXL (Mk_Misa zeros)
+      (architecture_bits_forwards Architecture.RV64)) == 1#1) = false := by decide
+  have h_u : (_get_Misa_U (_update_Misa_MXL (Mk_Misa zeros)
+      (architecture_bits_forwards Architecture.RV64)) == 1#1) = false := by decide
+  simp (config := { decide := true }) [andM, orM, toBool,
+    RiscvZkvm.Sail.Functions.xlen, RiscvZkvm.Sail.Functions.not,
+    h_s, h_u,
+    runSail, sail_model_init, bind, EStateM.bind, pure, EStateM.pure,
     modify, modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
     sail_estate_modifyGet, PreSail.writeReg, PreSail.readReg, EStateM.get, get, MonadState.get,
     getThe, MonadStateOf.get, currentlyEnabled, hartSupports,
     legalize_xenvcfg_cbie, legalize_senvcfg, legalize_mseccfg, legalize_menvcfg, to_bits_checked,
-    get_slice_int, assert, PreSail.assert, Std.ExtDHashMap.get?_insert]
+    get_slice_int, sail_assert, PreSail.sail_assert, Std.ExtDHashMap.get?_insert]
 
 end RiscvZkvm.Interpreter

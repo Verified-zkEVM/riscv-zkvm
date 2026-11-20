@@ -1,8 +1,42 @@
 # Changelog
 
-## Unreleased — the remaining RV64 word ops, tied to Sail
+## v0.5.0 — Lean 4.36.0, official lean-sail v8 and the SP1 backend
 
-**Breaking**, in the same release as the `sp1-backend` merge below:
+**Breaking** against v0.4.0. This release merges branch `sp1-backend` into `main`
+(#96), adds the remaining RV64 word ops (#99) and moves to Lean 4.36.0 (#19).
+
+### Lean 4.36.0 and official lean-sail v8
+
+- Update to Lean 4.36.0 and official lean-sail v8. The upstream runtime now
+  includes the finite-choice and namespace-warning fixes needed for source
+  compilation and portable release-cache reuse.
+- Regenerate Sail RISC-V 0.13.1 with pinned upstream Sail development commit
+  `2ae2199f`, including the assertion-name, effectful short-circuit and basic dependent-type fixes.
+  Record and apply upstream PR #1774 during the compiler build to fix type-level
+  arithmetic precedence and restore the configured 64-bit FP register metadata.
+  Add kernel-checked width regressions. No generated Lean is edited by hand.
+- Migrate proof plumbing to `sail_assert`, lazy monadic Boolean operators, and
+  current core lemma names while preserving instruction/machine semantics and
+  public theorem statements. Migrate the direct-call compatibility import to
+  Lean's module system, preserving its public exports for downstream modules.
+- Keep large `seqFrame` compositions within the default proof budget by checking
+  code-range disjointness before unfolding code maps. Preserve the full
+  definitional-equality fallback and add composition regressions.
+- Build the exact compiler and checked patch in extraction-validation CI. Fix
+  compiler-versus-solver PATH precedence and cover it with a regression check.
+- Recheck model 0.16 with Sail #1804 and official runtime v8. Generation,
+  dependent-width definitions and kernel width checks pass; complete generated
+  compilation reaches a missing `BEq ExecutionResult` instance in AMO handling.
+  Retain 0.13.1 pending complete extraction and concurrency-v2 proof migration.
+- Refresh the zkEVM standards review, canonical repository URL, current main
+  snapshot and open proposals; document the remaining model, ELF, alignment,
+  guard-region, IO/accelerator, and verifier obligations.
+- Keep newly created releases as prereleases until the tagged-consumer archive
+  check passes. Propagate dependency-update and consumer-compilation failures
+  through logging pipelines; add controls for failures, unexpected rebuilds
+  and missing libraries.
+
+### The remaining RV64 word ops, tied to Sail
 
 - **Nine new `Instr` constructors:** `ADDW SLLW SRAW SRAIW MULW DIVW DIVUW REMW REMUW`.
   With the four from `sp1-backend`, the RV64IM word-op family is complete.
@@ -12,7 +46,7 @@
 - Decoder arms for all of OP-32 and OP-IMM-32; `sraiw` now executes.
 - Ported from #13 onto the `sp1-backend` merge.
 
-## Unreleased — the SP1 backend on `main`; evm-asm compatibility retired
+### The SP1 backend on `main`; evm-asm compatibility retired
 
 This merges branch `sp1-backend` into `main`. The sections below, down to
 v0.4.0, are that branch's history. **Breaking** against v0.4.0:
@@ -27,7 +61,10 @@ v0.4.0, are that branch's history. **Breaking** against v0.4.0:
 
 **evm-asm compatibility is no longer required.** The repository is now a generic
 RV64 stack with zkVM backends; README.md's "Public API" replaces "Downstream
-compatibility", and `v0.4.0` is the last release evm-asm builds against.
+compatibility", and `v0.4.0` is the last release evm-asm builds against. The
+relocation gate (`scripts/check-relocation.sh` and `check-relocation-logic.sh`)
+is gone too, so the sections below that cite it describe the branch's history,
+not current practice.
 
 ## Unreleased (branch `sp1-backend`) — a memory cell per backend
 

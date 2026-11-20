@@ -74,8 +74,8 @@ theorem packBytes_set (chunk : List (BitVec 8)) (k : Nat) (b : BitVec 8)
   intro j hj
   rw [extractByte_packBytes_total _ j hj, getByteAt_set chunk k b j hklen]
   by_cases hjk : j = k
-  · rw [if_pos hjk, hjk]
+  · rw [ite_eq_left hjk, hjk]
     exact extractByte_replaceByte_same (packBytes chunk) ⟨k, hk8⟩ b
-  · rw [if_neg hjk, extractByte_replaceByte_diff _ _ hj hk8 hjk, extractByte_packBytes_total _ j hj]
+  · rw [ite_eq_right hjk, extractByte_replaceByte_diff _ _ hj hk8 hjk, extractByte_packBytes_total _ j hj]
 
 end RiscvZkvm.Rv64

@@ -21,9 +21,11 @@ and [the WP framework notes](docs/agents/wp-framework.md) for the specification
 style.
 
 Everything is scoped to the RV64IM surface needed by the
-[`eth-act/zkvm-standards`](https://github.com/eth-act/zkvm-standards) RISC-V
+[`eth-act/zkevm-standards`](https://github.com/eth-act/zkevm-standards) RISC-V
 target, with the Zicsr, K, Zkr, Zicboz, and Zicbom definitions required by
 Sail's extension gating and model initialization.
+The [current standards review](docs/release-refresh.md#zkevm-standards-review)
+records remaining conformance gaps and pending proposals.
 
 The `RiscvZkvm.Sail` library's source, compiler, runtime, configuration, module
 scope, and content digest are pinned in
@@ -33,11 +35,11 @@ need only Lean and Lake; Sail, OCaml, CMake, and Z3 are regeneration tools.
 
 ## Use as a dependency
 
-`v0.4.0` (Lean 4.33.1) is the last release compatible with
-[evm-asm](https://github.com/Verified-zkEVM/evm-asm); see [evm-asm](#evm-asm) below.
-Its prebuilt olean archive is not reused by consumers (an upstream runtime warning
-records an absolute path; see the [release review](docs/release-refresh.md)), so a
-consumer builds it from source.
+`v0.5.0` uses Lean 4.36.0 and official lean-sail v8. `v0.4.0` (Lean 4.33.1) is the
+last release compatible with [evm-asm](https://github.com/Verified-zkEVM/evm-asm);
+see [evm-asm](#evm-asm) below. Its prebuilt olean archive is not reused by consumers
+(an upstream runtime warning records an absolute path; see the
+[release review](docs/release-refresh.md)), so a consumer of `v0.4.0` builds it from source.
 
 Pin a published release tag so Lake can download the prebuilt oleans:
 
@@ -45,7 +47,7 @@ Pin a published release tag so Lake can download the prebuilt oleans:
 [[require]]
 name = "riscv-zkvm"
 git = "https://github.com/Verified-zkEVM/riscv-zkvm"
-rev = "v0.3.1"
+rev = "v0.5.0"
 ```
 
 Then import what you need:
@@ -148,7 +150,7 @@ lake build RiscvZkvm.Sail RiscvZkvm.Rv64 RiscvZkvm.Rv64.SailEquiv \
 lake build riscv-zkvm-run && scripts/run-interpreter-tests.sh
 ```
 
-The [upstream Sail RISC-V Lean emulator](https://github.com/riscv/sail-riscv/tree/main/lean_emulator)
+The [upstream Sail RISC-V Lean emulator](https://github.com/riscv/sail-riscv/tree/master/lean_emulator)
 is exposed as a validation path:
 
 ```bash

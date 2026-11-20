@@ -226,8 +226,10 @@ def update_and_write_pte (pteAddr : physaddr) (pteWidth : Nat) (pte : (BitVec (p
   | none => (pure (Ok none))
   | .some pte =>
     (do
-      if ((((← (currentlyEnabled Ext_Svadu)) && ((_get_MEnvcfg_ADUE (← readReg menvcfg)) == 1#1)) || ((not
-               (← (currentlyEnabled Ext_Svadu))) && (not (← (currentlyEnabled Ext_Svade))))) : Bool)
+      if ((←((currentlyEnabled Ext_Svadu) <&&> (do
+           (pure ((_get_MEnvcfg_ADUE (← readReg menvcfg)) == 1#1))) <||> (do
+           (pure (not (← (currentlyEnabled Ext_Svadu)))) <&&> (do
+             (pure (not (← (currentlyEnabled Ext_Svade)))))))) : Bool)
       then
         (do
           match (← (write_pte pteAddr pteWidth pte)) with
@@ -235,7 +237,7 @@ def update_and_write_pte (pteAddr : physaddr) (pteWidth : Nat) (pte : (BitVec (p
           | .Err _ => (pure (Err (PTW_No_Access ()))))
       else (pure (Err (PTW_PTE_Needs_Update ()))))
 
-/-- Type quantifiers: k_ex482237_ : Bool, level : Nat, k_ex482235_ : Bool, k_ex482234_ : Bool, sv_width
+/-- Type quantifiers: k_ex481029_ : Bool, level : Nat, k_ex481027_ : Bool, k_ex481026_ : Bool, sv_width
   : Nat, (is_sv_mode sv_width), 0 ≤ level ∧
   level ≤
   (if ( sv_width = 32  : Bool) then 1 else (if ( sv_width = 39  : Bool) then 2 else (if ( sv_width =
@@ -254,7 +256,7 @@ def pt_walk (sv_width : Nat) (vpn : (BitVec (sv_width - 12))) (access : (MemoryA
     then 2
     else 3
   let pte_addr := (pt_base +++ (vpn_i +++ (zeros (n := log_pte_size_bytes))))
-  assert ((sv_width == 32) || (xlen == 64)) "sys/vmem.sail:128.36-128.37"
+  sail_assert ((sv_width == 32) || (xlen == 64)) "sys/vmem.sail:128.36-128.37"
   let pte_addr := (Physaddr (zero_extend (m := 64) pte_addr))
   match (← (read_pte pte_addr (2 ^i log_pte_size_bytes))) with
   | .Err _ =>
@@ -373,7 +375,7 @@ def translationMode (priv : Privilege) : SailM SATPMode := do
         match arch with
         | .RV64 =>
           (do
-            assert (xlen ≥b 64) "sys/vmem.sail:255.25-255.26"
+            sail_assert (xlen ≥b 64) "sys/vmem.sail:255.25-255.26"
             (pure (_get_Satp64_Mode (Mk_Satp64 (← readReg satp)))))
         | .RV32 =>
           (pure (0b000#3 +++ (_get_Satp32_Mode
@@ -383,7 +385,7 @@ def translationMode (priv : Privilege) : SailM SATPMode := do
       | .some m => (pure m)
       | none => (internal_error "sys/vmem.sail" 264 "invalid translation mode in satp"))
 
-/-- Type quantifiers: tlb_index : Nat, k_ex482245_ : Bool, k_ex482244_ : Bool, sv_width : Nat, (is_sv_mode
+/-- Type quantifiers: tlb_index : Nat, k_ex481037_ : Bool, k_ex481036_ : Bool, sv_width : Nat, (is_sv_mode
   sv_width), 0 ≤ tlb_index ∧ tlb_index ≤ (2 ^ 6 - 1) -/
 def translate_TLB_hit (sv_width : Nat) (_asid : (BitVec (if ( 64 = 32  : Bool) then 9 else 16))) (vpn : (BitVec (sv_width - 12))) (access : (MemoryAccessType mem_payload)) (priv : Privilege) (mxr : Bool) (do_sum : Bool) (ext_ptw : Unit) (tlb_index : Nat) (ent : TLB_Entry) : SailM (Result ((BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44)) × page_based_mem_type × Unit) (PTW_Error × Unit)) := do
@@ -409,7 +411,7 @@ def translate_TLB_hit (sv_width : Nat) (_asid : (BitVec (if ( 64 = 32  : Bool) t
       | .Err (.PTW_PTE_Needs_Update ()) => (pure (Err ((PTW_PTE_Needs_Update ()), ext_ptw)))
       | .Err e => (pure (Err (e, ext_ptw))))
 
-/-- Type quantifiers: k_ex482253_ : Bool, k_ex482252_ : Bool, sv_width : Nat, (is_sv_mode sv_width) -/
+/-- Type quantifiers: k_ex481045_ : Bool, k_ex481044_ : Bool, sv_width : Nat, (is_sv_mode sv_width) -/
 def translate_TLB_miss (sv_width : Nat) (asid : (BitVec (if ( 64 = 32  : Bool) then 9 else 16))) (base_ppn : (BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44))) (vpn : (BitVec (sv_width - 12))) (access : (MemoryAccessType mem_payload)) (priv : Privilege) (mxr : Bool) (do_sum : Bool) (ext_ptw : Unit) : SailM (Result ((BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44)) × page_based_mem_type × Unit) (PTW_Error × Unit)) := do
@@ -453,7 +455,7 @@ def satp_mode_width_forwards (arg_ : SATPMode) : SailM Int := do
   | .Sv57 => (pure 57)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 /-- Type quantifiers: arg_ : Nat, List.elem arg_ [32, 39, 48, 57] -/
@@ -481,7 +483,7 @@ def satp_mode_width_backwards_matches (arg_ : Nat) : Bool :=
   | 57 => true
   | _ => false
 
-/-- Type quantifiers: k_ex482262_ : Bool, k_ex482261_ : Bool, sv_width : Nat, (is_sv_mode sv_width) -/
+/-- Type quantifiers: k_ex481054_ : Bool, k_ex481053_ : Bool, sv_width : Nat, (is_sv_mode sv_width) -/
 def translate (sv_width : Nat) (asid : (BitVec (if ( 64 = 32  : Bool) then 9 else 16))) (base_ppn : (BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44))) (vpn : (BitVec (sv_width - 12))) (access : (MemoryAccessType mem_payload)) (priv : Privilege) (mxr : Bool) (do_sum : Bool) (ext_ptw : Unit) : SailM (Result ((BitVec (if ( sv_width
   = 32  : Bool) then 22 else 44)) × page_based_mem_type × Unit) (PTW_Error × Unit)) := do
@@ -492,7 +494,7 @@ def translate (sv_width : Nat) (asid : (BitVec (if ( 64 = 32  : Bool) then 9 els
 
 /-- Type quantifiers: sv_width : Nat, (is_sv_mode sv_width) -/
 def get_satp (sv_width : Nat) : SailM (BitVec (if ( sv_width = 32  : Bool) then 32 else 64)) := do
-  assert ((sv_width == 32) || (xlen == 64)) "sys/vmem.sail:396.30-396.31"
+  sail_assert ((sv_width == 32) || (xlen == 64)) "sys/vmem.sail:396.30-396.31"
   if ((sv_width == 32) : Bool)
   then (pure (Sail.BitVec.extractLsb (← readReg satp) 31 0))
   else readReg satp
@@ -515,7 +517,7 @@ def translateAddr (vAddr : virtaddr) (access : (MemoryAccessType mem_payload)) :
     (do
       let sv_width ← do (satp_mode_width_forwards mode)
       let satp_sxlen ← do (get_satp sv_width)
-      assert ((sv_width == 32) || (xlen == 64)) "sys/vmem.sail:432.36-432.37"
+      sail_assert ((sv_width == 32) || (xlen == 64)) "sys/vmem.sail:432.36-432.37"
       let svAddr := (Sail.BitVec.extractLsb (bits_of_virtaddr vAddr) (sv_width -i 1) 0)
       if (((bits_of_virtaddr vAddr) != (sign_extend (m := 64) svAddr)) : Bool)
       then (pure (Err ((← (translationException access (PTW_Invalid_Addr ()))), init_ext_ptw)))

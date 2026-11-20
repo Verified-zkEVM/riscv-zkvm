@@ -1667,9 +1667,10 @@ noncomputable def encdec_backwards (arg_ : (BitVec 32)) : SailM instruction := d
                                                                                                                                         mapping84_))) with
                                                                                                                                     | (rs2, rs1, mul_op, rd) =>
                                                                                                                                       (do
-                                                                                                                                        if (((← (currentlyEnabled
-                                                                                                                                                 Ext_M)) || (← (currentlyEnabled
-                                                                                                                                                 Ext_Zmmul))) : Bool)
+                                                                                                                                        if ((←((currentlyEnabled
+                                                                                                                                             Ext_M) <||> (do
+                                                                                                                                             (currentlyEnabled
+                                                                                                                                               Ext_Zmmul)))) : Bool)
                                                                                                                                         then
                                                                                                                                           (pure (some
                                                                                                                                               (MUL
@@ -1896,9 +1897,11 @@ noncomputable def encdec_backwards (arg_ : (BitVec 32)) : SailM instruction := d
                                                                                                                                                     mapping95_))) with
                                                                                                                                                 | (rs2, rs1, rd) =>
                                                                                                                                                   (do
-                                                                                                                                                    if (((xlen == 64) && ((← (currentlyEnabled
-                                                                                                                                                               Ext_M)) || (← (currentlyEnabled
-                                                                                                                                                               Ext_Zmmul)))) : Bool)
+                                                                                                                                                    if ((←((pure (xlen == 64)) <&&> (do
+                                                                                                                                                         (currentlyEnabled
+                                                                                                                                                           Ext_M) <||> (do
+                                                                                                                                                           (currentlyEnabled
+                                                                                                                                                             Ext_Zmmul))))) : Bool)
                                                                                                                                                     then
                                                                                                                                                       (pure (some
                                                                                                                                                           (MULW
@@ -1977,8 +1980,9 @@ noncomputable def encdec_backwards (arg_ : (BitVec 32)) : SailM instruction := d
                                                                                                                                                         mapping99_))) with
                                                                                                                                                     | (rs2, rs1, is_unsigned, rd) =>
                                                                                                                                                       (do
-                                                                                                                                                        if (((xlen == 64) && (← (currentlyEnabled
-                                                                                                                                                                 Ext_M))) : Bool)
+                                                                                                                                                        if ((←((pure (xlen == 64)) <&&> (do
+                                                                                                                                                             (currentlyEnabled
+                                                                                                                                                               Ext_M)))) : Bool)
                                                                                                                                                         then
                                                                                                                                                           (pure (some
                                                                                                                                                               (DIVW
@@ -2057,8 +2061,9 @@ noncomputable def encdec_backwards (arg_ : (BitVec 32)) : SailM instruction := d
                                                                                                                                                             mapping103_))) with
                                                                                                                                                         | (rs2, rs1, is_unsigned, rd) =>
                                                                                                                                                           (do
-                                                                                                                                                            if (((xlen == 64) && (← (currentlyEnabled
-                                                                                                                                                                     Ext_M))) : Bool)
+                                                                                                                                                            if ((←((pure (xlen == 64)) <&&> (do
+                                                                                                                                                                 (currentlyEnabled
+                                                                                                                                                                   Ext_M)))) : Bool)
                                                                                                                                                             then
                                                                                                                                                               (pure (some
                                                                                                                                                                   (REMW
@@ -2377,7 +2382,8 @@ noncomputable def encdec_forwards_matches (arg_ : instruction) : SailM Bool := d
       else (pure false))
   | .MUL (rs2, rs1, rd, mul_op) =>
     (do
-      if (((← (currentlyEnabled Ext_M)) || (← (currentlyEnabled Ext_Zmmul))) : Bool)
+      if ((←((currentlyEnabled Ext_M) <||> (do
+           (currentlyEnabled Ext_Zmmul)))) : Bool)
       then (pure true)
       else (pure false))
   | .DIV (rs2, rs1, rd, is_unsigned) =>
@@ -2392,17 +2398,21 @@ noncomputable def encdec_forwards_matches (arg_ : instruction) : SailM Bool := d
       else (pure false))
   | .MULW (rs2, rs1, rd) =>
     (do
-      if (((xlen == 64) && ((← (currentlyEnabled Ext_M)) || (← (currentlyEnabled Ext_Zmmul)))) : Bool)
+      if ((←((pure (xlen == 64)) <&&> (do
+           (currentlyEnabled Ext_M) <||> (do
+             (currentlyEnabled Ext_Zmmul))))) : Bool)
       then (pure true)
       else (pure false))
   | .DIVW (rs2, rs1, rd, is_unsigned) =>
     (do
-      if (((xlen == 64) && (← (currentlyEnabled Ext_M))) : Bool)
+      if ((←((pure (xlen == 64)) <&&> (do
+           (currentlyEnabled Ext_M)))) : Bool)
       then (pure true)
       else (pure false))
   | .REMW (rs2, rs1, rd, is_unsigned) =>
     (do
-      if (((xlen == 64) && (← (currentlyEnabled Ext_M))) : Bool)
+      if ((←((pure (xlen == 64)) <&&> (do
+           (currentlyEnabled Ext_M)))) : Bool)
       then (pure true)
       else (pure false))
   | .CSRReg (csr, rs1, rd, op) =>
@@ -3785,9 +3795,10 @@ noncomputable def encdec_backwards_matches (arg_ : (BitVec 32)) : SailM Bool := 
                                                                                                                                         mapping84_))) with
                                                                                                                                     | (rs2, rs1, mul_op, rd) =>
                                                                                                                                       (do
-                                                                                                                                        if (((← (currentlyEnabled
-                                                                                                                                                 Ext_M)) || (← (currentlyEnabled
-                                                                                                                                                 Ext_Zmmul))) : Bool)
+                                                                                                                                        if ((←((currentlyEnabled
+                                                                                                                                             Ext_M) <||> (do
+                                                                                                                                             (currentlyEnabled
+                                                                                                                                               Ext_Zmmul)))) : Bool)
                                                                                                                                         then
                                                                                                                                           (pure (some
                                                                                                                                               true))
@@ -4011,9 +4022,11 @@ noncomputable def encdec_backwards_matches (arg_ : (BitVec 32)) : SailM Bool := 
                                                                                                                                                     mapping95_))) with
                                                                                                                                                 | (rs2, rs1, rd) =>
                                                                                                                                                   (do
-                                                                                                                                                    if (((xlen == 64) && ((← (currentlyEnabled
-                                                                                                                                                               Ext_M)) || (← (currentlyEnabled
-                                                                                                                                                               Ext_Zmmul)))) : Bool)
+                                                                                                                                                    if ((←((pure (xlen == 64)) <&&> (do
+                                                                                                                                                         (currentlyEnabled
+                                                                                                                                                           Ext_M) <||> (do
+                                                                                                                                                           (currentlyEnabled
+                                                                                                                                                             Ext_Zmmul))))) : Bool)
                                                                                                                                                     then
                                                                                                                                                       (pure (some
                                                                                                                                                           true))
@@ -4091,8 +4104,9 @@ noncomputable def encdec_backwards_matches (arg_ : (BitVec 32)) : SailM Bool := 
                                                                                                                                                         mapping99_))) with
                                                                                                                                                     | (rs2, rs1, is_unsigned, rd) =>
                                                                                                                                                       (do
-                                                                                                                                                        if (((xlen == 64) && (← (currentlyEnabled
-                                                                                                                                                                 Ext_M))) : Bool)
+                                                                                                                                                        if ((←((pure (xlen == 64)) <&&> (do
+                                                                                                                                                             (currentlyEnabled
+                                                                                                                                                               Ext_M)))) : Bool)
                                                                                                                                                         then
                                                                                                                                                           (pure (some
                                                                                                                                                               true))
@@ -4170,8 +4184,9 @@ noncomputable def encdec_backwards_matches (arg_ : (BitVec 32)) : SailM Bool := 
                                                                                                                                                             mapping103_))) with
                                                                                                                                                         | (rs2, rs1, is_unsigned, rd) =>
                                                                                                                                                           (do
-                                                                                                                                                            if (((xlen == 64) && (← (currentlyEnabled
-                                                                                                                                                                     Ext_M))) : Bool)
+                                                                                                                                                            if ((←((pure (xlen == 64)) <&&> (do
+                                                                                                                                                                 (currentlyEnabled
+                                                                                                                                                                   Ext_M)))) : Bool)
                                                                                                                                                             then
                                                                                                                                                               (pure (some
                                                                                                                                                                   true))
@@ -4405,7 +4420,7 @@ noncomputable def encdec_compressed_forwards (arg_ : instruction) : SailM (BitVe
   | .C_ILLEGAL s => (pure s)
   | _ =>
     (do
-      assert false "Pattern match failure at unknown location"
+      sail_assert false "Pattern match failure at unknown location"
       throw Error.Exit)
 
 noncomputable def encdec_compressed_backwards (arg_ : (BitVec 16)) : instruction :=
@@ -4444,7 +4459,7 @@ def execute_ZICBOZ (rs1 : regidx) : SailM ExecutionResult := SailME.run do
           match (← (mem_write_ea paddr cache_block_size access pbmt false false false)) with
           | .Err (exc_addr, e) =>
             (do
-              assert (exc_addr == paddr) "extensions/Zicboz/zicboz_insts.sail:57.38-57.39"
+              sail_assert (exc_addr == paddr) "extensions/Zicboz/zicboz_insts.sail:57.38-57.39"
               (memory_exception (sub_virtaddr_xlenbits vaddr negative_offset) e))
           | .Ok _ =>
             (do
@@ -4457,7 +4472,7 @@ def execute_ZICBOZ (rs1 : regidx) : SailM ExecutionResult := SailME.run do
                   "store got false from mem_write_value")
               | .Err (exc_addr, e) =>
                 (do
-                  assert (exc_addr == paddr) "extensions/Zicboz/zicboz_insts.sail:66.42-66.43"
+                  sail_assert (exc_addr == paddr) "extensions/Zicboz/zicboz_insts.sail:66.42-66.43"
                   (memory_exception (sub_virtaddr_xlenbits vaddr negative_offset) e)))))
 
 def execute_ZICBOM (arg0 : cbop_zicbom) (arg1 : regidx) : SailM ExecutionResult := do
@@ -4513,7 +4528,7 @@ def execute_UTYPE (imm : (BitVec 20)) (rd : regidx) (op : uop) : SailM Execution
 /-- Type quantifiers: width : Nat, List.elem width [1, 2, 4, 8] -/
 def execute_STORE (imm : (BitVec 12)) (rs2 : regidx) (rs1 : regidx) (width : Nat) : SailM ExecutionResult := do
   let offset : xlenbits := (sign_extend (m := 64) imm)
-  assert (width ≤b xlen_bytes) "extensions/I/base_insts.sail:320.28-320.29"
+  sail_assert (width ≤b xlen_bytes) "extensions/I/base_insts.sail:320.28-320.29"
   let data ← do (pure (Sail.BitVec.extractLsb (← (rX_bits rs2)) ((width *i 8) -i 1) 0))
   match (← (vmem_write rs1 offset width data (Store Data) false false false)) with
   | .Ok _ => (pure RETIRE_SUCCESS)
@@ -4524,7 +4539,8 @@ def execute_SRET (_ : Unit) : SailM ExecutionResult := do
     match (← readReg cur_privilege) with
     | .User => (pure true)
     | .Supervisor =>
-      (pure ((not (← (currentlyEnabled Ext_S))) || ((_get_Mstatus_TSR (← readReg mstatus)) == 1#1)))
+      (pure (not (← (currentlyEnabled Ext_S)))) <||> (do
+        (pure ((_get_Mstatus_TSR (← readReg mstatus)) == 1#1)))
     | .Machine => (pure (not (← (currentlyEnabled Ext_S))))
     | .VirtualUser =>
       (internal_error "extensions/I/base_insts.sail" 607 "Hypervisor extension not supported")
@@ -4652,7 +4668,7 @@ def execute_RTYPE (rs2 : regidx) (rs1 : regidx) (rd : regidx) (op : rop) : SailM
             (Sail.BitVec.extractLsb (← (rX_bits rs2)) (log2_xlen -i 1) 0)))))
   (pure RETIRE_SUCCESS)
 
-/-- Type quantifiers: k_ex482316_ : Bool -/
+/-- Type quantifiers: k_ex481108_ : Bool -/
 def execute_REMW (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) : SailM ExecutionResult := do
   let rs1_bits ← do (pure (Sail.BitVec.extractLsb (← (rX_bits rs1)) 31 0))
   let rs2_bits ← do (pure (Sail.BitVec.extractLsb (← (rX_bits rs2)) 31 0))
@@ -4671,7 +4687,7 @@ def execute_REMW (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool
   (wX_bits rd (sign_extend (m := 64) (to_bits_truncate (l := 32) remainder)))
   (pure RETIRE_SUCCESS)
 
-/-- Type quantifiers: k_ex482317_ : Bool -/
+/-- Type quantifiers: k_ex481109_ : Bool -/
 def execute_REM (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) : SailM ExecutionResult := do
   let rs1_bits ← do (rX_bits rs1)
   let rs2_bits ← do (rX_bits rs2)
@@ -4762,10 +4778,10 @@ def execute_LPAD (lpl : (BitVec 20)) : SailM ExecutionResult := do
           (pure RETIRE_SUCCESS)))
   else (pure RETIRE_SUCCESS)
 
-/-- Type quantifiers: width : Nat, k_ex482318_ : Bool, List.elem width [1, 2, 4, 8] -/
+/-- Type quantifiers: width : Nat, k_ex481110_ : Bool, List.elem width [1, 2, 4, 8] -/
 def execute_LOAD (imm : (BitVec 12)) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) (width : Nat) : SailM ExecutionResult := do
   let offset : xlenbits := (sign_extend (m := 64) imm)
-  assert (width ≤b xlen_bytes) "extensions/I/base_insts.sail:289.28-289.29"
+  sail_assert (width ≤b xlen_bytes) "extensions/I/base_insts.sail:289.28-289.29"
   match (← (vmem_read rs1 offset width (Load Data) false false false)) with
   | .Ok data =>
     (do
@@ -4852,7 +4868,7 @@ def execute_ECALL (_ : Unit) : SailM ExecutionResult := do
 def execute_EBREAK (_ : Unit) : SailM ExecutionResult := do
   (trap (make_sync_exception (E_Breakpoint Brk_Software) (← readReg PC)))
 
-/-- Type quantifiers: k_ex482320_ : Bool -/
+/-- Type quantifiers: k_ex481112_ : Bool -/
 def execute_DIVW (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) : SailM ExecutionResult := do
   let rs1_bits ← do (pure (Sail.BitVec.extractLsb (← (rX_bits rs1)) 31 0))
   let rs2_bits ← do (pure (Sail.BitVec.extractLsb (← (rX_bits rs2)) 31 0))
@@ -4875,7 +4891,7 @@ def execute_DIVW (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool
   (wX_bits rd (sign_extend (m := 64) (to_bits_truncate (l := 32) quotient)))
   (pure RETIRE_SUCCESS)
 
-/-- Type quantifiers: k_ex482321_ : Bool -/
+/-- Type quantifiers: k_ex481113_ : Bool -/
 def execute_DIV (rs2 : regidx) (rs1 : regidx) (rd : regidx) (is_unsigned : Bool) : SailM ExecutionResult := do
   let rs1_bits ← do (rX_bits rs1)
   let rs2_bits ← do (rX_bits rs2)

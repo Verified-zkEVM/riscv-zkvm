@@ -403,7 +403,8 @@ def legalize_mip (o : (BitVec 64)) (v : (BitVec 64)) : SailM (BitVec 64) := do
         if ((← (currentlyEnabled Ext_S)) : Bool)
         then
           (do
-            if (((← (currentlyEnabled Ext_Sstc)) && ((_get_MEnvcfg_STCE (← readReg menvcfg)) == 1#1)) : Bool)
+            if ((←((currentlyEnabled Ext_Sstc) <&&> (do
+                 (pure ((_get_MEnvcfg_STCE (← readReg menvcfg)) == 1#1))))) : Bool)
             then (pure (_get_Minterrupts_STI o))
             else (pure (_get_Minterrupts_STI v)))
         else (pure 0#1))))

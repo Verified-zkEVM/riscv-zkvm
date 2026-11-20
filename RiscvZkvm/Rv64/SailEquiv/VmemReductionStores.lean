@@ -69,25 +69,25 @@ theorem getD_writeChain8 (mem : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) (v : Bi
   rcases (show i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 by omega)
     with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · simp only [Nat.add_zero, Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_neg (by simp), if_neg (by simp), if_neg (by simp),
-        if_neg (by simp), if_neg (by simp), if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp),
+        ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_neg (by simp), if_neg (by simp), if_neg (by simp),
-        if_neg (by simp), if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp),
+        ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_neg (by simp), if_neg (by simp), if_neg (by simp),
-        if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp),
+        ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_neg (by simp), if_neg (by simp), if_neg (by simp),
-        if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp),
+        ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_neg (by simp), if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_pos (by simp)]
+    rw [ite_eq_left (by simp)]
 
 /-- Bytes outside `[a, a+8)` are untouched by the width-8 write chain. -/
 theorem getD_writeChain8_out (mem : Std.ExtHashMap Nat (BitVec 8)) (a x : Nat)
@@ -98,9 +98,9 @@ theorem getD_writeChain8_out (mem : Std.ExtHashMap Nat (BitVec 8)) (a x : Nat)
       (a+6) (v.extractLsb' 48 8)).insert (a+7) (v.extractLsb' 56 8)).getD x 0
       = mem.getD x 0 := by
   simp only [Std.ExtHashMap.getD_insert]
-  rw [if_neg (by simp; omega), if_neg (by simp; omega), if_neg (by simp; omega),
-      if_neg (by simp; omega), if_neg (by simp; omega), if_neg (by simp; omega),
-      if_neg (by simp; omega), if_neg (by simp; omega)]
+  rw [ite_eq_right (by simp; omega), ite_eq_right (by simp; omega), ite_eq_right (by simp; omega),
+      ite_eq_right (by simp; omega), ite_eq_right (by simp; omega), ite_eq_right (by simp; omega),
+      ite_eq_right (by simp; omega), ite_eq_right (by simp; omega)]
 
 -- ============================================================================
 -- The little-endian slices are the bytes of the value
@@ -212,7 +212,7 @@ theorem sd_sail_equiv (sRv : MachineState) (sSail : SailState)
   refine ⟨sSail', ?_, ?_, ?_, ?_⟩
   · -- SAIL execution succeeds with RETIRE_SUCCESS
     unfold execute_STORE
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (rX_bits (regToRegidx rs2)) sSail = some (v, sSail) from by
       simp only [runSail, h_rs2]]
     simp +decide only []
@@ -267,13 +267,13 @@ theorem getD_writeChain4 (mem : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) (v : Bi
       = v.extractLsb' (8 * i) 8 := by
   rcases (show i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 by omega) with rfl | rfl | rfl | rfl
   · simp only [Nat.add_zero, Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_neg (by simp), if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_pos (by simp)]
+    rw [ite_eq_left (by simp)]
 
 /-- Bytes outside `[a, a+4)` are untouched by the width-4 write chain. -/
 theorem getD_writeChain4_out (mem : Std.ExtHashMap Nat (BitVec 8)) (a x : Nat)
@@ -282,8 +282,8 @@ theorem getD_writeChain4_out (mem : Std.ExtHashMap Nat (BitVec 8)) (a x : Nat)
       (a+2) (v.extractLsb' 16 8)).insert (a+3) (v.extractLsb' 24 8)).getD x 0
       = mem.getD x 0 := by
   simp only [Std.ExtHashMap.getD_insert]
-  rw [if_neg (by simp; omega), if_neg (by simp; omega), if_neg (by simp; omega),
-      if_neg (by simp; omega)]
+  rw [ite_eq_right (by simp; omega), ite_eq_right (by simp; omega), ite_eq_right (by simp; omega),
+      ite_eq_right (by simp; omega)]
 
 /-- **Read-modify-write bridge (width 4).**  Reconstructing the containing dword after a
     4-byte store at word-position `pos` is `replaceWord32` of the old dword. -/
@@ -408,7 +408,7 @@ theorem sw_sail_equiv (sRv : MachineState) (sSail : SailState)
   refine ⟨sSail', ?_, ?_, ?_, ?_⟩
   · -- SAIL execution succeeds with RETIRE_SUCCESS
     unfold execute_STORE
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (rX_bits (regToRegidx rs2)) sSail = some (sRv.getReg rs2, sSail) from by
       simp only [runSail, h_rs2]]
     simp +decide only []
@@ -470,9 +470,9 @@ theorem getD_writeChain2 (mem : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) (v : Bi
       = v.extractLsb' (8 * i) 8 := by
   rcases (show i = 0 ∨ i = 1 by omega) with rfl | rfl
   · simp only [Nat.add_zero, Std.ExtHashMap.getD_insert]
-    rw [if_neg (by simp), if_pos (by simp)]
+    rw [ite_eq_right (by simp), ite_eq_left (by simp)]
   · simp only [Std.ExtHashMap.getD_insert]
-    rw [if_pos (by simp)]
+    rw [ite_eq_left (by simp)]
 
 /-- Bytes outside `[a, a+2)` are untouched by the width-2 write chain. -/
 theorem getD_writeChain2_out (mem : Std.ExtHashMap Nat (BitVec 8)) (a x : Nat)
@@ -480,7 +480,7 @@ theorem getD_writeChain2_out (mem : Std.ExtHashMap Nat (BitVec 8)) (a x : Nat)
     ((mem.insert a (v.extractLsb' 0 8)).insert (a+1) (v.extractLsb' 8 8)).getD x 0
       = mem.getD x 0 := by
   simp only [Std.ExtHashMap.getD_insert]
-  rw [if_neg (by simp; omega), if_neg (by simp; omega)]
+  rw [ite_eq_right (by simp; omega), ite_eq_right (by simp; omega)]
 
 /-- **Read-modify-write bridge (width 2).** -/
 theorem reconstructDword_writeChain2_replace (mem : Std.ExtHashMap Nat (BitVec 8))
@@ -546,14 +546,14 @@ theorem getD_writeChain1 (mem : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) (v : Bi
     (mem.insert a (v.extractLsb' 0 8)).getD (a + i) 0 = v.extractLsb' (8 * i) 8 := by
   rcases (show i = 0 by omega) with rfl
   simp only [Nat.add_zero, Std.ExtHashMap.getD_insert]
-  rw [if_pos (by simp)]
+  rw [ite_eq_left (by simp)]
 
 /-- Bytes other than `a` are untouched by the width-1 write chain. -/
 theorem getD_writeChain1_out (mem : Std.ExtHashMap Nat (BitVec 8)) (a x : Nat)
     (v : BitVec (8*1)) (hout : x < a ∨ a + 1 ≤ x) :
     (mem.insert a (v.extractLsb' 0 8)).getD x 0 = mem.getD x 0 := by
   simp only [Std.ExtHashMap.getD_insert]
-  rw [if_neg (by simp; omega)]
+  rw [ite_eq_right (by simp; omega)]
 
 /-- **Read-modify-write bridge (width 1).** -/
 theorem reconstructDword_writeChain1_replace (mem : Std.ExtHashMap Nat (BitVec 8))
@@ -661,7 +661,7 @@ theorem sh_sail_equiv (sRv : MachineState) (sSail : SailState)
     have := byteOffset_lt_8 (addr := addr); omega
   refine ⟨sSail', ?_, ?_, ?_, ?_⟩
   · unfold execute_STORE
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (rX_bits (regToRegidx rs2)) sSail = some (sRv.getReg rs2, sSail) from by
       simp only [runSail, h_rs2]]
     simp +decide only []
@@ -761,7 +761,7 @@ theorem sb_sail_equiv (sRv : MachineState) (sSail : SailState)
   have hposlt : byteOffset addr < 8 := byteOffset_lt_8
   refine ⟨sSail', ?_, ?_, ?_, ?_⟩
   · unfold execute_STORE
-    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.assert, if_true]
+    simp +decide only [soff, runSail_bind, runSail_pure, PreSail.sail_assert, ite_true]
     rw [show runSail (rX_bits (regToRegidx rs2)) sSail = some (sRv.getReg rs2, sSail) from by
       simp only [runSail, h_rs2]]
     simp +decide only []

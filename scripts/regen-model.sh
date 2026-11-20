@@ -26,8 +26,8 @@ read -r -a SAIL_MODULES <<< "$modules_text"
 
 SAIL_BIN_DIR="${SAIL_BIN_DIR:-}"
 Z3_BIN_DIR="${Z3_BIN_DIR:-$SAIL_BIN_DIR}"
-if [[ -n "$SAIL_BIN_DIR" ]]; then PATH="${SAIL_BIN_DIR}:${PATH}"; fi
 if [[ -n "$Z3_BIN_DIR" ]]; then PATH="${Z3_BIN_DIR}:${PATH}"; fi
+if [[ -n "$SAIL_BIN_DIR" ]]; then PATH="${SAIL_BIN_DIR}:${PATH}"; fi
 export PATH
 
 mode="${1:---plan}"
@@ -44,9 +44,10 @@ Pinned proof-model regeneration
   modules:    ${SAIL_MODULES[*]}
   config:     ${CONFIG_FILE}
 
-Prerequisites: Sail ${SAIL_REQUIRED_VERSION}, Z3, git, and about 8 GiB RAM.
-The official Sail binary release bundles Z3. Set SAIL_BIN_DIR and Z3_BIN_DIR
-to its bin directory when they are not already on PATH.
+Prerequisites: the pinned patched Sail compiler, Z3, git, and about 8 GiB RAM.
+Build the compiler with scripts/build-pinned-sail.sh /absolute/install/prefix
+and set SAIL_BIN_DIR to that prefix's bin directory. The official Sail binary
+release bundles Z3; set Z3_BIN_DIR to its bin directory separately.
 
   $0 --check   regenerate in a temporary directory and compare
   $0 --write   regenerate and replace RiscvZkvm/Sail.lean + RiscvZkvm/Sail/

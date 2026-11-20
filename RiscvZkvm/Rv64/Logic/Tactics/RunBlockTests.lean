@@ -156,4 +156,38 @@ example (base ptr v : Word) (offset : BitVec 12) :
       ((.x5 ↦ᵣ v) ** ((ptr + signExtend12 offset) ↦ₘ v)) := by
   runBlock
 
+-- Long adjacent blocks exercise code-range composition without changing the
+-- default elaboration budget. The triples are hypotheses so this checks the
+-- composition tactic independently of individual instruction specifications.
+example (base : Word) (P : Assertion)
+    (h1 : cpsTripleWithin 15 base (base + 60)
+      (CodeReq.ofProg base (List.replicate 15 (.LD .x5 .x12 3960))) P P)
+    (h2 : cpsTripleWithin 12 (base + 60) (base + 108)
+      (CodeReq.ofProg (base + 60) (List.replicate 12 (.LD .x5 .x12 3968))) P P) :
+    cpsTripleWithin 27 base (base + 108)
+      ((CodeReq.ofProg base (List.replicate 15 (.LD .x5 .x12 3960))).union
+        (CodeReq.ofProg (base + 60) (List.replicate 12 (.LD .x5 .x12 3968)))) P P := by
+  seqFrame h1 h2
+
+private def equivalentCode1 (base : Word) : CodeReq :=
+  CodeReq.singleton base (.LI .x5 1)
+
+private def equivalentCode2 (base : Word) : CodeReq :=
+  CodeReq.singleton base (.LI .x5 1)
+
+-- Regular definitions may hide a shared requirement from the cheap comparison.
+example (base : Word) (P : Assertion)
+    (h1 : cpsTripleWithin 1 base (base + 4) (equivalentCode1 base) P P)
+    (h2 : cpsTripleWithin 1 (base + 4) (base + 8) (equivalentCode2 base) P P) :
+    cpsTripleWithin 2 base (base + 8) (equivalentCode1 base) P P := by
+  seqFrame h1 h2
+
+-- An overlapping requirement with a different instruction cannot be composed.
+example (base : Word) (P : Assertion)
+    (_h1 : cpsTripleWithin 1 base (base + 4) (CodeReq.singleton base (.LI .x5 0)) P P)
+    (_h2 : cpsTripleWithin 1 (base + 4) (base + 8) (CodeReq.singleton base (.LI .x5 1)) P P) :
+    True := by
+  fail_if_success seqFrame _h1 _h2
+  trivial
+
 end RiscvZkvm.Rv64.Tactics.RunBlockTests
