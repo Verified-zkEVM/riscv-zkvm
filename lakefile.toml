@@ -71,7 +71,7 @@ srcDir = "scripts"
 root = "AxiomSweep"
 supportInterpreter = true
 
-# Official lean-sail v8, validated on Lean 4.35.0. The retained model uses the
+# Official lean-sail v8, validated on Lean 4.35.0 and 4.36.0. The retained model uses the
 # concurrency-v1 API; regeneration preserves the established names via exports.
 [[require]]
 name = "Sail"

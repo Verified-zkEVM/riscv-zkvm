@@ -1,5 +1,9 @@
 # Lean 4.35.0 upstream and zkEVM standards review
 
+Update on 2026-11-20: v0.5.0 moves to stable Lean 4.36.0. No source change was needed;
+only `lean-toolchain` changed, and all five libraries build. The rest of this review records
+the Lean 4.35.0 state.
+
 Reviewed on 2026-10-28. The v0.5.0 candidate adopts the completely tested
 model-0.13.1 stack from trial `6d89b05`:
 

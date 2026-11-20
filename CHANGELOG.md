@@ -1,13 +1,13 @@
 # Changelog
 
-## v0.5.0 — Lean 4.35.0, official lean-sail v8 and the SP1 backend
+## v0.5.0 — Lean 4.36.0, official lean-sail v8 and the SP1 backend
 
 **Breaking** against v0.4.0. This release merges branch `sp1-backend` into `main`
-(#96), adds the remaining RV64 word ops (#99) and moves to Lean 4.35.0 (#19).
+(#96), adds the remaining RV64 word ops (#99) and moves to Lean 4.36.0 (#19).
 
-### Lean 4.35.0 and official lean-sail v8
+### Lean 4.36.0 and official lean-sail v8
 
-- Update to Lean 4.35.0 and official lean-sail v8. The upstream runtime now
+- Update to Lean 4.36.0 and official lean-sail v8. The upstream runtime now
   includes the finite-choice and namespace-warning fixes needed for source
   compilation and portable release-cache reuse.
 - Regenerate Sail RISC-V 0.13.1 with pinned upstream Sail development commit

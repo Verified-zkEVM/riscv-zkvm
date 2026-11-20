@@ -35,7 +35,7 @@ need only Lean and Lake; Sail, OCaml, CMake, and Z3 are regeneration tools.
 
 ## Use as a dependency
 
-`v0.5.0` uses Lean 4.35.0 and official lean-sail v8. `v0.4.0` (Lean 4.33.1) is the
+`v0.5.0` uses Lean 4.36.0 and official lean-sail v8. `v0.4.0` (Lean 4.33.1) is the
 last release compatible with [evm-asm](https://github.com/Verified-zkEVM/evm-asm);
 see [evm-asm](#evm-asm) below. Its prebuilt olean archive is not reused by consumers
 (an upstream runtime warning records an absolute path; see the
